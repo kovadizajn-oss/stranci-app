@@ -50,6 +50,23 @@ function Field({ label, required, children }: { label: string; required?: boolea
 const inputCls = "w-full px-3 py-2.5 rounded-lg border text-sm transition-all"
 const inputStyle = { borderColor: '#D1D5DB', color: '#1E293B', background: 'white' }
 
+function Section({ icon, title, desc, children }: { icon: string; title: string; desc: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-xl p-6 mb-4" style={{ border: '1px solid #E2E8F0' }}>
+      <div className="flex items-start gap-3 mb-5" style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: 16 }}>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#EFF6FF' }}>
+          <span>{icon}</span>
+        </div>
+        <div>
+          <p className="font-semibold text-sm" style={{ color: '#1E293B' }}>{title}</p>
+          <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>{desc}</p>
+        </div>
+      </div>
+      {children}
+    </div>
+  )
+}
+
 export default function NoviZaposlenik() {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
@@ -159,23 +176,6 @@ export default function NoviZaposlenik() {
       setError(err.message || 'Greška pri spremanju. Pokušajte ponovo.')
       setSaving(false)
     }
-  }
-
-  function Section({ icon, title, desc, children }: { icon: string; title: string; desc: string; children: React.ReactNode }) {
-    return (
-      <div className="bg-white rounded-xl p-6 mb-4" style={{ border: '1px solid #E2E8F0' }}>
-        <div className="flex items-start gap-3 mb-5" style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: 16 }}>
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#EFF6FF' }}>
-            <span>{icon}</span>
-          </div>
-          <div>
-            <p className="font-semibold text-sm" style={{ color: '#1E293B' }}>{title}</p>
-            <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>{desc}</p>
-          </div>
-        </div>
-        {children}
-      </div>
-    )
   }
 
   return (
