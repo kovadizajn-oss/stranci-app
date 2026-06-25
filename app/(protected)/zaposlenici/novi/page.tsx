@@ -79,7 +79,7 @@ export default function NoviZaposlenik() {
     ime: '', prezime: '', datum_rodjenja: '', mjesto_rodjenja: '',
     drzava_rodjenja: '', drzava_drzavljanstva: '', adresa_prebivalista: '',
     email: '', telefon: '',
-    adresa_boravista: '', datum_ulaska_egp: '', mjesto_ulaska_egp: '',
+    adresa_boravista: '', datum_isteka_smjestaja: '', datum_ulaska_egp: '', mjesto_ulaska_egp: '',
     poslodavac: '', radno_mjesto: '',
   })
   const [documents, setDocuments] = useState<DocEntry[]>([emptyDoc()])
@@ -122,7 +122,7 @@ export default function NoviZaposlenik() {
           adresa_prebivalista: form.adresa_prebivalista || null,
           email: form.email || null,
           telefon: form.telefon || null,
-          adresa_boravista: form.adresa_boravista || null,
+          datum_isteka_smjestaja: form.datum_isteka_smjestaja || null,
           datum_ulaska_egp: form.datum_ulaska_egp || null,
           mjesto_ulaska_egp: form.mjesto_ulaska_egp || null,
           poslodavac: form.poslodavac || null,
@@ -133,6 +133,16 @@ export default function NoviZaposlenik() {
 
       if (empErr) throw empErr
       const empId = emp.id
+
+      // Save current address to addresses table
+      if (form.adresa_boravista) {
+        await supabase.from('addresses').insert({
+          employee_id: empId,
+          adresa: form.adresa_boravista,
+          datum_od: new Date().toISOString().split('T')[0],
+          is_current: true,
+        })
+      }
 
       // Upload photo
       if (photo) {
@@ -375,6 +385,10 @@ export default function NoviZaposlenik() {
                 <input className={inputCls} style={inputStyle} value={form.adresa_boravista} onChange={e => setF('adresa_boravista', e.target.value)} placeholder="Ulica i broj, grad" />
               </Field>
             </div>
+            <Field label="Datum isteka smještaja">
+              <input type="date" className={inputCls} style={inputStyle} value={form.datum_isteka_smjestaja} onChange={e => setF('datum_isteka_smjestaja', e.target.value)} />
+            </Field>
+            <div />
             <Field label="Datum ulaska u EGP">
               <input type="date" className={inputCls} style={inputStyle} value={form.datum_ulaska_egp} onChange={e => setF('datum_ulaska_egp', e.target.value)} />
             </Field>

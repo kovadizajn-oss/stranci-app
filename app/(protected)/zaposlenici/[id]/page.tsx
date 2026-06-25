@@ -88,6 +88,7 @@ export default function EmployeeDetail() {
   const [sickLeaves, setSickLeaves] = useState<any[]>([])
 
   // Track deleted IDs
+  const [showAddressHistory, setShowAddressHistory] = useState(false)
   const [deletedAddressIds, setDeletedAddressIds] = useState<string[]>([])
   const [deletedVacationIds, setDeletedVacationIds] = useState<string[]>([])
   const [deletedSickIds, setDeletedSickIds] = useState<string[]>([])
@@ -332,51 +333,25 @@ export default function EmployeeDetail() {
 
         {/* Boravak */}
         <Section icon="🏠" title="Boravak stranca" desc="Podaci o boravištu u Republici Hrvatskoj.">
-          {/* Address history */}
-          <div className="mb-5">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium" style={{ color: '#374151' }}>Povijest adresa boravišta</p>
-              <button type="button" onClick={() => setAddresses(prev => [{ adresa: '', datum_od: '', datum_do: '', is_current: false, _new: true }, ...prev])}
-                className="text-xs font-medium" style={{ color: '#2563EB' }}>+ Dodaj adresu</button>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            {/* Current address — the is_current entry */}
+            <div className="col-span-2">
+              <Field label="Trenutna adresa boravišta">
+                <input
+                  className={inputCls} style={inputStyle}
+                  placeholder="Ulica i broj, grad"
+                  value={addresses.find((a: any) => a.is_current)?.adresa || ''}
+                  onChange={e => {
+                    const currentIdx = addresses.findIndex((a: any) => a.is_current)
+                    if (currentIdx >= 0) {
+                      setAddresses(prev => prev.map((a, j) => j === currentIdx ? { ...a, adresa: e.target.value } : a))
+                    } else {
+                      setAddresses(prev => [...prev, { adresa: e.target.value, datum_od: new Date().toISOString().split('T')[0], datum_do: '', is_current: true, _new: true }])
+                    }
+                  }}
+                />
+              </Field>
             </div>
-            {addresses.map((addr, i) => (
-              <div key={addr.id || i} className="mb-3 p-3 rounded-lg" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-2">
-                    <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: '#374151' }}>
-                      <input type="checkbox" checked={addr.is_current || false}
-                        onChange={e => setAddresses(prev => prev.map((a, j) => j === i ? { ...a, is_current: e.target.checked } : a))} />
-                      Trenutna adresa
-                    </label>
-                    {addr.is_current && <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: '#DCFCE7', color: '#16A34A' }}>Aktivna</span>}
-                  </div>
-                  <button type="button" onClick={() => {
-                    if (addr.id) setDeletedAddressIds(prev => [...prev, addr.id])
-                    setAddresses(prev => prev.filter((_, j) => j !== i))
-                  }} className="text-xs" style={{ color: '#EF4444' }}>Ukloni</button>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="col-span-3">
-                    <input className={inputCls} style={inputStyle} placeholder="Ulica i broj, grad" value={addr.adresa || ''}
-                      onChange={e => setAddresses(prev => prev.map((a, j) => j === i ? { ...a, adresa: e.target.value } : a))} />
-                  </div>
-                  <div>
-                    <p className="text-xs mb-1" style={{ color: '#64748B' }}>Od</p>
-                    <input type="date" className={inputCls} style={inputStyle} value={addr.datum_od || ''}
-                      onChange={e => setAddresses(prev => prev.map((a, j) => j === i ? { ...a, datum_od: e.target.value } : a))} />
-                  </div>
-                  <div>
-                    <p className="text-xs mb-1" style={{ color: '#64748B' }}>Do</p>
-                    <input type="date" className={inputCls} style={inputStyle} value={addr.datum_do || ''}
-                      onChange={e => setAddresses(prev => prev.map((a, j) => j === i ? { ...a, datum_do: e.target.value } : a))} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Smještaj expiry + EGP */}
-          <div className="grid grid-cols-2 gap-4">
             <Field label="Datum isteka smještaja">
               <input type="date" className={inputCls} style={inputStyle} value={form.datum_isteka_smjestaja} onChange={e => setF('datum_isteka_smjestaja', e.target.value)} />
             </Field>
@@ -384,6 +359,59 @@ export default function EmployeeDetail() {
             <Field label="Datum ulaska u EGP"><input type="date" className={inputCls} style={inputStyle} value={form.datum_ulaska_egp} onChange={e => setF('datum_ulaska_egp', e.target.value)} /></Field>
             <Field label="Mjesto ulaska u EGP"><input className={inputCls} style={inputStyle} value={form.mjesto_ulaska_egp} onChange={e => setF('mjesto_ulaska_egp', e.target.value)} /></Field>
           </div>
+
+          {/* Collapsible address history */}
+          <button
+            type="button"
+            onClick={() => setShowAddressHistory(prev => !prev)}
+            className="flex items-center gap-1.5 text-sm font-medium mb-3"
+            style={{ color: '#2563EB' }}
+          >
+            <span style={{ fontSize: 12 }}>{showAddressHistory ? '▼' : '▶'}</span>
+            Povijest adresa {addresses.filter((a: any) => !a.is_current).length > 0 && `(${addresses.filter((a: any) => !a.is_current).length})`}
+          </button>
+
+          {showAddressHistory && (
+            <div>
+              {addresses.filter((a: any) => !a.is_current).length === 0 && (
+                <p className="text-xs mb-3" style={{ color: '#94A3B8' }}>Nema starijih adresa.</p>
+              )}
+              {addresses.map((addr, i) => {
+                if (addr.is_current) return null
+                return (
+                  <div key={addr.id || i} className="mb-3 p-3 rounded-lg" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                    <div className="flex justify-end mb-2">
+                      <button type="button" onClick={() => {
+                        if (addr.id) setDeletedAddressIds(prev => [...prev, addr.id])
+                        setAddresses(prev => prev.filter((_, j) => j !== i))
+                      }} className="text-xs" style={{ color: '#EF4444' }}>Ukloni</button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-3">
+                        <input className={inputCls} style={inputStyle} placeholder="Ulica i broj, grad" value={addr.adresa || ''}
+                          onChange={e => setAddresses(prev => prev.map((a, j) => j === i ? { ...a, adresa: e.target.value } : a))} />
+                      </div>
+                      <div>
+                        <p className="text-xs mb-1" style={{ color: '#64748B' }}>Od</p>
+                        <input type="date" className={inputCls} style={inputStyle} value={addr.datum_od || ''}
+                          onChange={e => setAddresses(prev => prev.map((a, j) => j === i ? { ...a, datum_od: e.target.value } : a))} />
+                      </div>
+                      <div>
+                        <p className="text-xs mb-1" style={{ color: '#64748B' }}>Do</p>
+                        <input type="date" className={inputCls} style={inputStyle} value={addr.datum_do || ''}
+                          onChange={e => setAddresses(prev => prev.map((a, j) => j === i ? { ...a, datum_do: e.target.value } : a))} />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+              <button type="button"
+                onClick={() => setAddresses(prev => [...prev, { adresa: '', datum_od: '', datum_do: '', is_current: false, _new: true }])}
+                className="text-xs font-medium" style={{ color: '#2563EB' }}>
+                + Dodaj stariju adresu
+              </button>
+            </div>
+          )}
         </Section>
 
         {/* Rad */}
