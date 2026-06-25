@@ -154,7 +154,7 @@ export default function ZaposleniciPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold" style={{ color: '#1E293B' }}>Zaposlenici</h1>
@@ -199,8 +199,8 @@ export default function ZaposleniciPage() {
         </span>
       </div>
 
-      <div className="bg-white rounded-xl overflow-hidden" style={{ border: '1px solid #E2E8F0' }}>
-        <table className="w-full">
+      <div className="bg-white rounded-xl overflow-hidden overflow-x-auto" style={{ border: '1px solid #E2E8F0' }}>
+        <table className="w-full" style={{ minWidth: 600 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
               {['Zaposlenik', 'Država', 'Dokument', 'Poslodavac', 'Istek', 'Status', 'Akcije'].map(col => (

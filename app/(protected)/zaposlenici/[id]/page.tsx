@@ -215,7 +215,7 @@ export default function EmployeeDetail() {
   if (loading) return <div className="p-8 text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</div>
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 md:p-8 max-w-3xl">
       <Link href="/zaposlenici" className="text-sm" style={{ color: '#64748B' }}>← Zaposlenici</Link>
       <div className="flex items-center gap-4 mt-2 mb-6">
         <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg" style={{ background: '#EFF6FF', color: '#2563EB' }}>

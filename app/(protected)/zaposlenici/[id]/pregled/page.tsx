@@ -97,11 +97,11 @@ export default function CandidatePregled() {
   const ljBadge = expiryBadge(lijecnicki?.datum_isteka)
 
   return (
-    <div className="p-8" style={{ maxWidth: 1000 }}>
+    <div className="p-4 md:p-8" style={{ maxWidth: 1000 }}>
       <Link href="/zaposlenici" className="text-sm" style={{ color: '#64748B' }}>← Zaposlenici</Link>
 
       {/* Header */}
-      <div className="flex items-start justify-between mt-4 mb-8">
+      <div className="flex items-start justify-between mt-4 mb-6 gap-3">
         <div className="flex items-center gap-5">
           <div className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-xl flex-shrink-0"
             style={{ background: '#EFF6FF', color: '#2563EB', border: '3px solid #E2E8F0' }}>
@@ -142,7 +142,7 @@ export default function CandidatePregled() {
       </div>
 
       {/* Main grid */}
-      <div className="grid gap-4" style={{ gridTemplateColumns: '1fr 360px' }}>
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-[1fr_360px]">
 
         {/* LEFT */}
         <div className="flex flex-col gap-4">

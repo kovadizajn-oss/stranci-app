@@ -114,7 +114,7 @@ export default function DashboardPage() {
     : '—'
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-semibold" style={{ color: '#1E293B' }}>
@@ -124,7 +124,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-2 gap-3 mb-6">
         {[
           {
             label: 'Najbliži rok',

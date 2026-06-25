@@ -111,7 +111,7 @@ export default function NoviZaposlenik() {
   }
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 md:p-8 max-w-3xl">
       <Link href="/zaposlenici" className="text-sm" style={{ color: '#64748B' }}>← Zaposlenici</Link>
       <h1 className="text-2xl font-semibold mt-2 mb-1" style={{ color: '#1E293B' }}>Novi zaposlenik</h1>
       <p className="text-sm mb-6" style={{ color: '#64748B' }}>Polja označena * su obavezna.</p>
@@ -120,7 +120,7 @@ export default function NoviZaposlenik() {
 
       <form onSubmit={handleSubmit}>
         <Section icon="👤" title="Osobni podaci" desc="Osnovni podaci radnika.">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Ime" required><input className={inputCls} style={inputStyle} value={form.ime} onChange={e => setF('ime', e.target.value)} required /></Field>
             <Field label="Prezime" required><input className={inputCls} style={inputStyle} value={form.prezime} onChange={e => setF('prezime', e.target.value)} required /></Field>
             <div className="col-span-2">

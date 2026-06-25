@@ -149,7 +149,7 @@ export default function KalendarPage() {
   const selectedEvents = selectedDay ? (eventsByDay[selectedDay] || []) : []
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold" style={{ color: '#1E293B' }}>Kalendar</h1>
         <p className="text-sm mt-1" style={{ color: '#64748B' }}>Pregled godišnjih odmora, bolovanja i rokova isteka.</p>
