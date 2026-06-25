@@ -215,18 +215,40 @@ export default function CandidatePregled() {
 
           {/* Rad */}
           <Card title="Rad stranca" icon="💼">
-            {(() => {
-              const currentJob = workHistory.find((w: any) => w.is_current)
-              const pastJobs = workHistory.filter((w: any) => !w.is_current)
+            {workHistory.length === 0 && !emp.poslodavac ? (
+              <p className="text-sm" style={{ color: '#CBD5E1' }}>Nema podataka o zaposlenju.</p>
+            ) : (() => {
+              // Most recent job is first (ordered by datum_od DESC)
+              const latestJob = workHistory[0] || null
+              const isActive = latestJob?.is_current && !latestJob?.datum_do
+              const pastJobs = workHistory.slice(1)
+
               return (
                 <>
                   <div className="grid grid-cols-2 gap-x-6 mb-3">
-                    <Row label="Poslodavac / firma" value={currentJob?.poslodavac || emp.poslodavac} />
-                    <Row label="Radno mjesto" value={currentJob?.radno_mjesto || emp.radno_mjesto} />
-                    {currentJob?.datum_od && (
-                      <Row label="Zaposleni od" value={formatDate(currentJob.datum_od)} />
+                    <Row label="Poslodavac / firma" value={latestJob?.poslodavac || emp.poslodavac} />
+                    <Row label="Radno mjesto" value={latestJob?.radno_mjesto || emp.radno_mjesto} />
+                    {latestJob?.datum_od && (
+                      <Row label="Zaposleni od" value={formatDate(latestJob.datum_od)} />
+                    )}
+                    {latestJob?.datum_do && (
+                      <div className="flex flex-col mb-3">
+                        <span className="text-xs mb-0.5" style={{ color: '#94A3B8' }}>Zaposleni do</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium w-fit"
+                          style={{ background: '#FEE2E2', color: '#DC2626' }}>
+                          {formatDate(latestJob.datum_do)}
+                        </span>
+                      </div>
                     )}
                   </div>
+                  {!isActive && latestJob && (
+                    <div className="mb-3">
+                      <span className="text-xs px-2 py-1 rounded-full font-medium"
+                        style={{ background: '#F1F5F9', color: '#64748B' }}>
+                        Bez aktivnog zaposlenja
+                      </span>
+                    </div>
+                  )}
                   {pastJobs.length > 0 && (
                     <div className="mt-3 pt-3" style={{ borderTop: '1px dashed #E2E8F0' }}>
                       <p className="text-xs font-medium mb-2" style={{ color: '#64748B' }}>Radna povijest</p>
