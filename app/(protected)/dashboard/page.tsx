@@ -124,25 +124,13 @@ export default function DashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 gap-4 mb-8">
         {[
-          {
-            label: 'Otvorenih obaveza',
-            value: loading ? '...' : stats.openObligations,
-            sub: `od ukupno ${stats.openObligations}`,
-            dot: '#F59E0B',
-          },
           {
             label: 'Najbliži rok',
             value: loading ? '...' : nearestLabel,
             sub: stats.nearestDays !== null && stats.nearestDays >= 0 ? `za ${stats.nearestDays} dana` : '',
             dot: '#EF4444',
-          },
-          {
-            label: 'Dovršeno ovaj mj.',
-            value: loading ? '...' : stats.doneThisMonth,
-            sub: '+0 ovaj tjedan',
-            dot: '#22C55E',
           },
           {
             label: 'Dokumenata',
