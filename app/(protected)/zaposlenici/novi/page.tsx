@@ -6,11 +6,22 @@ import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 const COUNTRIES = [
-  'Albanija','Austrija','Belgija','Bosna i Hercegovina','Bugarska','Češka','Crna Gora',
-  'Danska','Estonija','Finska','Francuska','Grčka','Hrvatska','Irska','Italija','Kosovo',
-  'Latvija','Litva','Mađarska','Makedonija','Moldova','Njemačka','Nizozemska','Norveška',
-  'Poljska','Portugal','Rumunjska','Rusija','Slovačka','Slovenija','Srbija','Španjolska',
-  'Švedska','Švicarska','Turska','Ukrajina','Ujedinjeno Kraljevstvo',
+  'Afganistan','Albanija','Alžir','Angola','Argentina','Armenija','Australija','Austrija',
+  'Azerbajdžan','Bangladeš','Belgija','Bjelarus','Bolivija','Bosna i Hercegovina','Brazil',
+  'Bugarska','Burkina Faso','Čad','Češka','Čile','Crna Gora','Demokratska Republika Kongo',
+  'Danska','Egipat','Ekvador','Eritreja','Estonija','Etiopija','Filipini','Finska','Francuska',
+  'Gana','Grčka','Gruzija','Gvatemala','Honduras','Hrvatska','Indija','Indonezija','Irak',
+  'Iran','Irska','Italija','Izrael','Jamajka','Japan','Jemen','Jordan','Južna Afrika',
+  'Južna Koreja','Kamerun','Kanada','Kazahstan','Kenija','Kina','Kolumbija','Kosovo',
+  'Kuba','Kuvajt','Laos','Latvija','Libanon','Liberija','Libija','Litva','Madagaskar',
+  'Mađarska','Makedonija','Malezija','Mali','Maroko','Meksiko','Moldova','Mozambik',
+  'Mjanmar','Nepal','Niger','Nigerija','Nikaragva','Nizozemska','Norveška','Novi Zeland',
+  'Pakistan','Panama','Paragvaj','Peru','Poljska','Portugal','Rumunjska','Rusija',
+  'Ruanda','Saudijska Arabija','Senegal','Sijera Leone','Sirija','Slovačka','Slovenija',
+  'Somalija','Srbija','Šri Lanka','Španjolska','Sudan','Švedska','Švicarska',
+  'Tajland','Tajvan','Tanzanija','Tunis','Turska','Uganda','Ujedinjeni Arapski Emirati',
+  'Ujedinjeno Kraljevstvo','Ukrajina','Urugvaj','Uzbekistan','Venezuela','Vijetnam',
+  'Zambija','Zimbabve',
 ]
 
 const DOC_TYPES = [
