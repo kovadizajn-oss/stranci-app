@@ -38,7 +38,7 @@ export default function LoginPage() {
             <span className="text-white font-bold text-xl">K</span>
           </div>
           <h1 className="text-2xl font-semibold" style={{ color: '#1E293B' }}>Kvantus App</h1>
-          <p className="text-sm mt-1" style={{ color: '#64748B' }}>Upravljanje stranim radnicima</p>
+          <p className="text-sm mt-1" style={{ color: '#64748B' }}>Evidencija i praćenje stranih radnika</p>
         </div>
 
         {/* Card */}
