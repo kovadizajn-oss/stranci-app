@@ -59,6 +59,17 @@ function Section({ icon, title, desc, children }: { icon: string; title: string;
   )
 }
 
+function fileNameFromUrl(url: string) {
+  try {
+    const parts = decodeURIComponent(url).split('/')
+    const raw = parts[parts.length - 1]
+    // Strip the timestamp prefix (e.g. "doc_1234567890_filename.pdf" → "filename.pdf")
+    return raw.replace(/^(doc|att|photo)_\d+_/, '')
+  } catch {
+    return 'Datoteka'
+  }
+}
+
 function formatDateHR(d: string) {
   if (!d) return ''
   const dt = new Date(d)
@@ -176,10 +187,20 @@ export default function EmployeeDetail() {
       // Attachments
       for (const att of attachments) {
         if (!att.tip_dokumenta) continue
+        let fileUrl = att.file_url || null
+        if (att._newFile) {
+          const { data: uploaded, error: uploadErr } = await supabase.storage
+            .from('dokumenti')
+            .upload(`${id}/att_${Date.now()}_${att._newFile.name}`, att._newFile, { upsert: true })
+          if (!uploadErr && uploaded) {
+            const { data: urlData } = supabase.storage.from('dokumenti').getPublicUrl(uploaded.path)
+            fileUrl = urlData.publicUrl
+          }
+        }
         if (att._new || !att.id) {
-          await supabase.from('attachments').insert({ employee_id: id, tip_dokumenta: att.tip_dokumenta, datum_izdavanja: att.datum_izdavanja || null, datum_isteka: att.datum_isteka || null })
+          await supabase.from('attachments').insert({ employee_id: id, tip_dokumenta: att.tip_dokumenta, datum_izdavanja: att.datum_izdavanja || null, datum_isteka: att.datum_isteka || null, file_url: fileUrl })
         } else {
-          await supabase.from('attachments').update({ tip_dokumenta: att.tip_dokumenta, datum_izdavanja: att.datum_izdavanja || null, datum_isteka: att.datum_isteka || null }).eq('id', att.id)
+          await supabase.from('attachments').update({ tip_dokumenta: att.tip_dokumenta, datum_izdavanja: att.datum_izdavanja || null, datum_isteka: att.datum_isteka || null, file_url: fileUrl }).eq('id', att.id)
         }
       }
 
@@ -310,23 +331,28 @@ export default function EmployeeDetail() {
                 <Field label="Datum isteka"><input type="date" className={inputCls} style={inputStyle} value={doc.datum_isteka || ''} onChange={e => setDocuments(prev => prev.map((d, j) => j === i ? { ...d, datum_isteka: e.target.value } : d))} /></Field>
                 <div className="col-span-2">
                   <p className="text-sm font-medium mb-1.5" style={{ color: '#374151' }}>Preslika dokumenta <span style={{ color: '#94A3B8', fontWeight: 400 }}>(opcionalno)</span></p>
-                  {doc.file_url ? (
+                  {doc._newFile ? (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+                      <span className="text-xs" style={{ color: '#16A34A' }}>✓ {doc._newFile.name}</span>
+                      <button type="button" onClick={() => setDocuments(prev => prev.map((d, j) => j === i ? { ...d, _newFile: null } : d))} className="text-xs ml-auto" style={{ color: '#94A3B8' }}>✕</button>
+                    </div>
+                  ) : doc.file_url ? (
                     <div className="flex items-center gap-2">
-                      <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
-                        className="text-xs px-3 py-2 rounded-lg" style={{ background: '#EFF6FF', color: '#2563EB' }}>
-                        Pogledaj datoteku ↗
-                      </a>
-                      <label className="cursor-pointer text-xs px-3 py-2 rounded-lg" style={{ background: '#F1F5F9', color: '#374151' }}>
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg flex-1" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                        <span style={{ color: '#64748B', fontSize: 14 }}>📄</span>
+                        <span className="text-xs truncate" style={{ color: '#374151' }}>{fileNameFromUrl(doc.file_url)}</span>
+                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-xs ml-auto flex-shrink-0" style={{ color: '#2563EB' }}>↗</a>
+                      </div>
+                      <label className="cursor-pointer text-xs px-3 py-2 rounded-lg flex-shrink-0" style={{ background: '#F1F5F9', color: '#374151' }}>
                         Zamijeni
                         <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
                           onChange={e => setDocuments(prev => prev.map((d, j) => j === i ? { ...d, _newFile: e.target.files?.[0] || null } : d))} />
                       </label>
-                      {doc._newFile && <span className="text-xs" style={{ color: '#64748B' }}>{doc._newFile.name}</span>}
                     </div>
                   ) : (
                     <label className="flex items-center gap-2 cursor-pointer px-3 py-2.5 rounded-lg border text-sm"
                       style={{ borderColor: '#D1D5DB', background: 'white', color: '#374151' }}>
-                      ↑ {doc._newFile ? doc._newFile.name : 'Učitaj (PDF, JPG, PNG do 10 MB)'}
+                      ↑ Učitaj (PDF, JPG, PNG do 10 MB)
                       <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
                         onChange={e => setDocuments(prev => prev.map((d, j) => j === i ? { ...d, _newFile: e.target.files?.[0] || null } : d))} />
                     </label>
@@ -345,7 +371,6 @@ export default function EmployeeDetail() {
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-medium" style={{ color: '#374151' }}>Prilog {i + 1}</p>
                 <div className="flex gap-2">
-                  {att.file_url && <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="text-xs px-2 py-1 rounded" style={{ background: '#EFF6FF', color: '#2563EB' }}>Pogledaj ↗</a>}
                   {attachments.length > 1 && <button type="button" onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))} className="text-xs" style={{ color: '#EF4444' }}>Ukloni</button>}
                 </div>
               </div>
@@ -359,6 +384,35 @@ export default function EmployeeDetail() {
                 <div />
                 <Field label="Datum izdavanja"><input type="date" className={inputCls} style={inputStyle} value={att.datum_izdavanja || ''} onChange={e => setAttachments(prev => prev.map((a, j) => j === i ? { ...a, datum_izdavanja: e.target.value } : a))} /></Field>
                 <Field label="Datum isteka"><input type="date" className={inputCls} style={inputStyle} value={att.datum_isteka || ''} onChange={e => setAttachments(prev => prev.map((a, j) => j === i ? { ...a, datum_isteka: e.target.value } : a))} /></Field>
+                <div className="col-span-2">
+                  <p className="text-sm font-medium mb-1.5" style={{ color: '#374151' }}>Preslika dokumenta <span style={{ color: '#94A3B8', fontWeight: 400 }}>(opcionalno)</span></p>
+                  {att._newFile ? (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+                      <span className="text-xs" style={{ color: '#16A34A' }}>✓ {att._newFile.name}</span>
+                      <button type="button" onClick={() => setAttachments(prev => prev.map((a, j) => j === i ? { ...a, _newFile: null } : a))} className="text-xs ml-auto" style={{ color: '#94A3B8' }}>✕</button>
+                    </div>
+                  ) : att.file_url ? (
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg flex-1" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                        <span style={{ color: '#64748B', fontSize: 14 }}>📄</span>
+                        <span className="text-xs truncate" style={{ color: '#374151' }}>{fileNameFromUrl(att.file_url)}</span>
+                        <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="text-xs ml-auto flex-shrink-0" style={{ color: '#2563EB' }}>↗</a>
+                      </div>
+                      <label className="cursor-pointer text-xs px-3 py-2 rounded-lg flex-shrink-0" style={{ background: '#F1F5F9', color: '#374151' }}>
+                        Zamijeni
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+                          onChange={e => setAttachments(prev => prev.map((a, j) => j === i ? { ...a, _newFile: e.target.files?.[0] || null } : a))} />
+                      </label>
+                    </div>
+                  ) : (
+                    <label className="flex items-center gap-2 cursor-pointer px-3 py-2.5 rounded-lg border text-sm"
+                      style={{ borderColor: '#D1D5DB', background: 'white', color: '#374151' }}>
+                      ↑ Učitaj (PDF, JPG, PNG do 10 MB)
+                      <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+                        onChange={e => setAttachments(prev => prev.map((a, j) => j === i ? { ...a, _newFile: e.target.files?.[0] || null } : a))} />
+                    </label>
+                  )}
+                </div>
               </div>
             </div>
           ))}
