@@ -269,13 +269,11 @@ export default function EmployeeDetail() {
             {vacations.map((vac, i) => (
               <div key={vac.id || i} className="flex items-center gap-3 mb-2 p-3 rounded-lg" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
                 <span className="text-sm">🌴</span>
-                <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-2">
+                <div className="flex-1 grid grid-cols-2 gap-2">
                   <div><p className="text-xs mb-1" style={{ color: '#64748B' }}>Od</p>
                     <input type="date" className={inputCls} style={inputStyle} value={vac.datum_od || ''} onChange={e => setVacations(prev => prev.map((v, j) => j === i ? { ...v, datum_od: e.target.value } : v))} /></div>
                   <div><p className="text-xs mb-1" style={{ color: '#64748B' }}>Do</p>
                     <input type="date" className={inputCls} style={inputStyle} value={vac.datum_do || ''} onChange={e => setVacations(prev => prev.map((v, j) => j === i ? { ...v, datum_do: e.target.value } : v))} /></div>
-                  <div className="hidden md:block"><p className="text-xs mb-1" style={{ color: '#64748B' }}>Napomena</p>
-                    <input className={inputCls} style={inputStyle} placeholder="Opcionalno" value={vac.napomena || ''} onChange={e => setVacations(prev => prev.map((v, j) => j === i ? { ...v, napomena: e.target.value } : v))} /></div>
                 </div>
                 <button type="button" onClick={() => { if (vac.id) setDeletedVacationIds(prev => [...prev, vac.id]); setVacations(prev => prev.filter((_, j) => j !== i)) }}
                   className="text-xs flex-shrink-0" style={{ color: '#EF4444' }}>Ukloni</button>
@@ -293,13 +291,11 @@ export default function EmployeeDetail() {
             {sickLeaves.map((sick, i) => (
               <div key={sick.id || i} className="flex items-center gap-3 mb-2 p-3 rounded-lg" style={{ background: '#FEFCE8', border: '1px solid #FEF08A' }}>
                 <span className="text-sm">🏥</span>
-                <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-2">
+                <div className="flex-1 grid grid-cols-2 gap-2">
                   <div><p className="text-xs mb-1" style={{ color: '#64748B' }}>Od</p>
                     <input type="date" className={inputCls} style={inputStyle} value={sick.datum_od || ''} onChange={e => setSickLeaves(prev => prev.map((s, j) => j === i ? { ...s, datum_od: e.target.value } : s))} /></div>
                   <div><p className="text-xs mb-1" style={{ color: '#64748B' }}>Do</p>
                     <input type="date" className={inputCls} style={inputStyle} value={sick.datum_do || ''} onChange={e => setSickLeaves(prev => prev.map((s, j) => j === i ? { ...s, datum_do: e.target.value } : s))} /></div>
-                  <div className="hidden md:block"><p className="text-xs mb-1" style={{ color: '#64748B' }}>Napomena</p>
-                    <input className={inputCls} style={inputStyle} placeholder="Opcionalno" value={sick.napomena || ''} onChange={e => setSickLeaves(prev => prev.map((s, j) => j === i ? { ...s, napomena: e.target.value } : s))} /></div>
                 </div>
                 <button type="button" onClick={() => { if (sick.id) setDeletedSickIds(prev => [...prev, sick.id]); setSickLeaves(prev => prev.filter((_, j) => j !== i)) }}
                   className="text-xs flex-shrink-0" style={{ color: '#EF4444' }}>Ukloni</button>
