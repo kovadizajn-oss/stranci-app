@@ -68,6 +68,14 @@ export default function DashboardPage() {
         .gte('datum_isteka', todayStr)
         .order('datum_isteka')
 
+      // Fetch employees with expiring smještaj
+      const { data: smjestajEmps } = await supabase
+        .from('employees')
+        .select('id, ime, prezime, datum_isteka_smjestaja')
+        .lte('datum_isteka_smjestaja', in60Str)
+        .gte('datum_isteka_smjestaja', todayStr)
+        .order('datum_isteka_smjestaja')
+
       // Fetch open obligations with employee info
       const { data: obs } = await supabase
         .from('obligations')
@@ -103,6 +111,18 @@ export default function DashboardPage() {
           title: DOCUMENT_TYPE_LABELS[d.tip_dokumenta] || d.tip_dokumenta || 'Dokument',
           description: d.broj_dokumenta ? `Br. dokumenta: ${d.broj_dokumenta}` : '',
           dueDate: d.datum_isteka,
+          type: 'document',
+        })
+      })
+
+      smjestajEmps?.forEach((emp: any) => {
+        items.push({
+          id: `smjestaj-${emp.id}`,
+          employeeId: emp.id,
+          employeeName: `${emp.ime} ${emp.prezime}`,
+          title: 'Istek smještaja',
+          description: '',
+          dueDate: emp.datum_isteka_smjestaja,
           type: 'document',
         })
       })

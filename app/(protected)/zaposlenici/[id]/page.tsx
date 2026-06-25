@@ -59,6 +59,12 @@ function Section({ icon, title, desc, children }: { icon: string; title: string;
   )
 }
 
+function formatDateHR(d: string) {
+  if (!d) return ''
+  const dt = new Date(d)
+  return `${dt.getDate().toString().padStart(2,'0')}.${(dt.getMonth()+1).toString().padStart(2,'0')}.${dt.getFullYear()}.`
+}
+
 export default function EmployeeDetail() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
@@ -71,11 +77,20 @@ export default function EmployeeDetail() {
     ime: '', prezime: '', datum_rodjenja: '', mjesto_rodjenja: '',
     drzava_rodjenja: '', drzava_drzavljanstva: '', adresa_prebivalista: '',
     email: '', telefon: '',
-    adresa_boravista: '', datum_ulaska_egp: '', mjesto_ulaska_egp: '',
+    datum_ulaska_egp: '', mjesto_ulaska_egp: '',
+    datum_isteka_smjestaja: '',
     poslodavac: '', radno_mjesto: '', photo_url: '',
   })
   const [documents, setDocuments] = useState<any[]>([])
   const [attachments, setAttachments] = useState<any[]>([])
+  const [addresses, setAddresses] = useState<any[]>([])
+  const [vacations, setVacations] = useState<any[]>([])
+  const [sickLeaves, setSickLeaves] = useState<any[]>([])
+
+  // Track deleted IDs
+  const [deletedAddressIds, setDeletedAddressIds] = useState<string[]>([])
+  const [deletedVacationIds, setDeletedVacationIds] = useState<string[]>([])
+  const [deletedSickIds, setDeletedSickIds] = useState<string[]>([])
 
   function setF(key: string, value: string) {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -91,15 +106,24 @@ export default function EmployeeDetail() {
         drzava_rodjenja: emp.drzava_rodjenja || '', drzava_drzavljanstva: emp.drzava_drzavljanstva || '',
         adresa_prebivalista: emp.adresa_prebivalista || '',
         email: emp.email || '', telefon: emp.telefon || '',
-        adresa_boravista: emp.adresa_boravista || '', datum_ulaska_egp: emp.datum_ulaska_egp || '',
+        datum_ulaska_egp: emp.datum_ulaska_egp || '',
         mjesto_ulaska_egp: emp.mjesto_ulaska_egp || '',
+        datum_isteka_smjestaja: emp.datum_isteka_smjestaja || '',
         poslodavac: emp.poslodavac || '', radno_mjesto: emp.radno_mjesto || '',
         photo_url: emp.photo_url || '',
       })
+
       const { data: docs } = await supabase.from('documents').select('*').eq('employee_id', id)
       const { data: atts } = await supabase.from('attachments').select('*').eq('employee_id', id)
-      setDocuments(docs || [{ tip_dokumenta: '', broj_dokumenta: '', datum_izdavanja: '', datum_isteka: '', file_url: '', _new: true }])
-      setAttachments(atts || [{ tip_dokumenta: '', datum_izdavanja: '', datum_isteka: '', file_url: '', _new: true }])
+      const { data: addrs } = await supabase.from('addresses').select('*').eq('employee_id', id).order('datum_od', { ascending: false })
+      const { data: vacs } = await supabase.from('vacations').select('*').eq('employee_id', id).order('datum_od', { ascending: false })
+      const { data: sick } = await supabase.from('sick_leaves').select('*').eq('employee_id', id).order('datum_od', { ascending: false })
+
+      setDocuments(docs?.length ? docs : [{ tip_dokumenta: '', broj_dokumenta: '', datum_izdavanja: '', datum_isteka: '', file_url: '', _new: true }])
+      setAttachments(atts?.length ? atts : [{ tip_dokumenta: '', datum_izdavanja: '', datum_isteka: '', file_url: '', _new: true }])
+      setAddresses(addrs?.length ? addrs : [{ adresa: '', datum_od: '', datum_do: '', is_current: true, _new: true }])
+      setVacations(vacs || [])
+      setSickLeaves(sick || [])
       setLoading(false)
     }
     load()
@@ -121,53 +145,75 @@ export default function EmployeeDetail() {
         adresa_prebivalista: form.adresa_prebivalista || null,
         email: form.email || null,
         telefon: form.telefon || null,
-        adresa_boravista: form.adresa_boravista || null,
         datum_ulaska_egp: form.datum_ulaska_egp || null,
         mjesto_ulaska_egp: form.mjesto_ulaska_egp || null,
+        datum_isteka_smjestaja: form.datum_isteka_smjestaja || null,
         poslodavac: form.poslodavac || null,
         radno_mjesto: form.radno_mjesto || null,
       }).eq('id', id)
 
-      // Upsert documents
+      // Documents
       for (const doc of documents) {
         if (!doc.tip_dokumenta) continue
         if (doc._new || !doc.id) {
-          await supabase.from('documents').insert({
-            employee_id: id,
-            tip_dokumenta: doc.tip_dokumenta,
-            broj_dokumenta: doc.broj_dokumenta || null,
-            datum_izdavanja: doc.datum_izdavanja || null,
-            datum_isteka: doc.datum_isteka || null,
-          })
+          await supabase.from('documents').insert({ employee_id: id, tip_dokumenta: doc.tip_dokumenta, broj_dokumenta: doc.broj_dokumenta || null, datum_izdavanja: doc.datum_izdavanja || null, datum_isteka: doc.datum_isteka || null })
         } else {
-          await supabase.from('documents').update({
-            tip_dokumenta: doc.tip_dokumenta,
-            broj_dokumenta: doc.broj_dokumenta || null,
-            datum_izdavanja: doc.datum_izdavanja || null,
-            datum_isteka: doc.datum_isteka || null,
-          }).eq('id', doc.id)
+          await supabase.from('documents').update({ tip_dokumenta: doc.tip_dokumenta, broj_dokumenta: doc.broj_dokumenta || null, datum_izdavanja: doc.datum_izdavanja || null, datum_isteka: doc.datum_isteka || null }).eq('id', doc.id)
         }
       }
 
-      // Upsert attachments
+      // Attachments
       for (const att of attachments) {
         if (!att.tip_dokumenta) continue
         if (att._new || !att.id) {
-          await supabase.from('attachments').insert({
-            employee_id: id,
-            tip_dokumenta: att.tip_dokumenta,
-            datum_izdavanja: att.datum_izdavanja || null,
-            datum_isteka: att.datum_isteka || null,
-          })
+          await supabase.from('attachments').insert({ employee_id: id, tip_dokumenta: att.tip_dokumenta, datum_izdavanja: att.datum_izdavanja || null, datum_isteka: att.datum_isteka || null })
         } else {
-          await supabase.from('attachments').update({
-            tip_dokumenta: att.tip_dokumenta,
-            datum_izdavanja: att.datum_izdavanja || null,
-            datum_isteka: att.datum_isteka || null,
-          }).eq('id', att.id)
+          await supabase.from('attachments').update({ tip_dokumenta: att.tip_dokumenta, datum_izdavanja: att.datum_izdavanja || null, datum_isteka: att.datum_isteka || null }).eq('id', att.id)
         }
       }
 
+      // Addresses - delete removed ones
+      for (const addrId of deletedAddressIds) {
+        await supabase.from('addresses').delete().eq('id', addrId)
+      }
+      for (const addr of addresses) {
+        if (!addr.adresa) continue
+        if (addr._new || !addr.id) {
+          await supabase.from('addresses').insert({ employee_id: id, adresa: addr.adresa, datum_od: addr.datum_od || null, datum_do: addr.datum_do || null, is_current: addr.is_current || false })
+        } else {
+          await supabase.from('addresses').update({ adresa: addr.adresa, datum_od: addr.datum_od || null, datum_do: addr.datum_do || null, is_current: addr.is_current || false }).eq('id', addr.id)
+        }
+      }
+
+      // Vacations
+      for (const vacId of deletedVacationIds) {
+        await supabase.from('vacations').delete().eq('id', vacId)
+      }
+      for (const vac of vacations) {
+        if (!vac.datum_od || !vac.datum_do) continue
+        if (vac._new || !vac.id) {
+          await supabase.from('vacations').insert({ employee_id: id, datum_od: vac.datum_od, datum_do: vac.datum_do, napomena: vac.napomena || null })
+        } else {
+          await supabase.from('vacations').update({ datum_od: vac.datum_od, datum_do: vac.datum_do, napomena: vac.napomena || null }).eq('id', vac.id)
+        }
+      }
+
+      // Sick leaves
+      for (const sickId of deletedSickIds) {
+        await supabase.from('sick_leaves').delete().eq('id', sickId)
+      }
+      for (const sick of sickLeaves) {
+        if (!sick.datum_od || !sick.datum_do) continue
+        if (sick._new || !sick.id) {
+          await supabase.from('sick_leaves').insert({ employee_id: id, datum_od: sick.datum_od, datum_do: sick.datum_do, napomena: sick.napomena || null })
+        } else {
+          await supabase.from('sick_leaves').update({ datum_od: sick.datum_od, datum_do: sick.datum_do, napomena: sick.napomena || null }).eq('id', sick.id)
+        }
+      }
+
+      setDeletedAddressIds([])
+      setDeletedVacationIds([])
+      setDeletedSickIds([])
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
@@ -177,9 +223,7 @@ export default function EmployeeDetail() {
     }
   }
 
-  if (loading) {
-    return <div className="p-8 text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</div>
-  }
+  if (loading) return <div className="p-8 text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</div>
 
   return (
     <div className="p-8 max-w-3xl">
@@ -199,6 +243,7 @@ export default function EmployeeDetail() {
       {success && <div className="mb-4 p-3 rounded-lg text-sm" style={{ background: '#F0FDF4', color: '#16A34A' }}>Podaci uspješno spremljeni.</div>}
 
       <form onSubmit={handleSave}>
+        {/* Osobni podaci */}
         <Section icon="👤" title="Osobni podaci" desc="Osnovni identifikacijski podaci radnika.">
           <div className="grid grid-cols-2 gap-4">
             <Field label="Ime"><input className={inputCls} style={inputStyle} value={form.ime} onChange={e => setF('ime', e.target.value)} required /></Field>
@@ -217,10 +262,13 @@ export default function EmployeeDetail() {
                 {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </Field>
-            <div className="col-span-2"><Field label="Adresa prebivališta"><input className={inputCls} style={inputStyle} value={form.adresa_prebivalista} onChange={e => setF('adresa_prebivalista', e.target.value)} /></Field></div>
+            <div className="col-span-2">
+              <Field label="Adresa prebivališta"><input className={inputCls} style={inputStyle} value={form.adresa_prebivalista} onChange={e => setF('adresa_prebivalista', e.target.value)} /></Field>
+            </div>
           </div>
         </Section>
 
+        {/* Kontakt */}
         <Section icon="✉️" title="Kontakt podaci" desc="Kako kontaktirati radnika.">
           <div className="grid grid-cols-2 gap-4">
             <Field label="Email"><input type="email" className={inputCls} style={inputStyle} value={form.email} onChange={e => setF('email', e.target.value)} /></Field>
@@ -228,89 +276,117 @@ export default function EmployeeDetail() {
           </div>
         </Section>
 
+        {/* Osobni dokumenti */}
         <Section icon="🪪" title="Osobni dokumenti" desc="Podaci iz putovnice i dokumenta boravka.">
           {documents.map((doc, i) => (
             <div key={doc.id || i} className="mb-4 pb-4" style={{ borderBottom: i < documents.length - 1 ? '1px dashed #E2E8F0' : 'none' }}>
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-medium" style={{ color: '#374151' }}>Dokument {i + 1}</p>
-                {doc.file_url && (
-                  <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
-                    className="text-xs px-2 py-1 rounded" style={{ background: '#EFF6FF', color: '#2563EB' }}>
-                    Pogledaj datoteku ↗
-                  </a>
-                )}
+                <div className="flex gap-2">
+                  {doc.file_url && <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-xs px-2 py-1 rounded" style={{ background: '#EFF6FF', color: '#2563EB' }}>Pogledaj ↗</a>}
+                  {documents.length > 1 && <button type="button" onClick={() => setDocuments(prev => prev.filter((_, j) => j !== i))} className="text-xs" style={{ color: '#EF4444' }}>Ukloni</button>}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Tip dokumenta">
-                  <select className={inputCls} style={inputStyle} value={doc.tip_dokumenta || ''}
-                    onChange={e => setDocuments(prev => prev.map((d, j) => j === i ? { ...d, tip_dokumenta: e.target.value } : d))}>
+                  <select className={inputCls} style={inputStyle} value={doc.tip_dokumenta || ''} onChange={e => setDocuments(prev => prev.map((d, j) => j === i ? { ...d, tip_dokumenta: e.target.value } : d))}>
                     <option value="">Odaberite...</option>
                     {DOC_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </Field>
-                <Field label="Broj dokumenta">
-                  <input className={inputCls} style={inputStyle} value={doc.broj_dokumenta || ''}
-                    onChange={e => setDocuments(prev => prev.map((d, j) => j === i ? { ...d, broj_dokumenta: e.target.value } : d))} />
-                </Field>
-                <Field label="Datum izdavanja">
-                  <input type="date" className={inputCls} style={inputStyle} value={doc.datum_izdavanja || ''}
-                    onChange={e => setDocuments(prev => prev.map((d, j) => j === i ? { ...d, datum_izdavanja: e.target.value } : d))} />
-                </Field>
-                <Field label="Datum isteka">
-                  <input type="date" className={inputCls} style={inputStyle} value={doc.datum_isteka || ''}
-                    onChange={e => setDocuments(prev => prev.map((d, j) => j === i ? { ...d, datum_isteka: e.target.value } : d))} />
-                </Field>
+                <Field label="Broj dokumenta"><input className={inputCls} style={inputStyle} value={doc.broj_dokumenta || ''} onChange={e => setDocuments(prev => prev.map((d, j) => j === i ? { ...d, broj_dokumenta: e.target.value } : d))} /></Field>
+                <Field label="Datum izdavanja"><input type="date" className={inputCls} style={inputStyle} value={doc.datum_izdavanja || ''} onChange={e => setDocuments(prev => prev.map((d, j) => j === i ? { ...d, datum_izdavanja: e.target.value } : d))} /></Field>
+                <Field label="Datum isteka"><input type="date" className={inputCls} style={inputStyle} value={doc.datum_isteka || ''} onChange={e => setDocuments(prev => prev.map((d, j) => j === i ? { ...d, datum_isteka: e.target.value } : d))} /></Field>
               </div>
             </div>
           ))}
-          <button type="button" onClick={() => setDocuments(prev => [...prev, { tip_dokumenta: '', broj_dokumenta: '', datum_izdavanja: '', datum_isteka: '', _new: true }])}
-            className="text-sm font-medium" style={{ color: '#2563EB' }}>+ Dodaj dokument</button>
+          <button type="button" onClick={() => setDocuments(prev => [...prev, { tip_dokumenta: '', broj_dokumenta: '', datum_izdavanja: '', datum_isteka: '', _new: true }])} className="text-sm font-medium" style={{ color: '#2563EB' }}>+ Dodaj dokument</button>
         </Section>
 
+        {/* Prateći dokumenti */}
         <Section icon="📎" title="Prateći dokumenti" desc="Ugovori, potvrde i ostali prateći dokumenti.">
           {attachments.map((att, i) => (
             <div key={att.id || i} className="mb-4 pb-4" style={{ borderBottom: i < attachments.length - 1 ? '1px dashed #E2E8F0' : 'none' }}>
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-medium" style={{ color: '#374151' }}>Prilog {i + 1}</p>
-                {att.file_url && (
-                  <a href={att.file_url} target="_blank" rel="noopener noreferrer"
-                    className="text-xs px-2 py-1 rounded" style={{ background: '#EFF6FF', color: '#2563EB' }}>
-                    Pogledaj datoteku ↗
-                  </a>
-                )}
+                <div className="flex gap-2">
+                  {att.file_url && <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="text-xs px-2 py-1 rounded" style={{ background: '#EFF6FF', color: '#2563EB' }}>Pogledaj ↗</a>}
+                  {attachments.length > 1 && <button type="button" onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))} className="text-xs" style={{ color: '#EF4444' }}>Ukloni</button>}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Tip dokumenta">
-                  <select className={inputCls} style={inputStyle} value={att.tip_dokumenta || ''}
-                    onChange={e => setAttachments(prev => prev.map((a, j) => j === i ? { ...a, tip_dokumenta: e.target.value } : a))}>
+                  <select className={inputCls} style={inputStyle} value={att.tip_dokumenta || ''} onChange={e => setAttachments(prev => prev.map((a, j) => j === i ? { ...a, tip_dokumenta: e.target.value } : a))}>
                     <option value="">Odaberite...</option>
                     {ATTACHMENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </Field>
                 <div />
-                <Field label="Datum izdavanja">
-                  <input type="date" className={inputCls} style={inputStyle} value={att.datum_izdavanja || ''}
-                    onChange={e => setAttachments(prev => prev.map((a, j) => j === i ? { ...a, datum_izdavanja: e.target.value } : a))} />
-                </Field>
-                <Field label="Datum isteka">
-                  <input type="date" className={inputCls} style={inputStyle} value={att.datum_isteka || ''}
-                    onChange={e => setAttachments(prev => prev.map((a, j) => j === i ? { ...a, datum_isteka: e.target.value } : a))} />
-                </Field>
+                <Field label="Datum izdavanja"><input type="date" className={inputCls} style={inputStyle} value={att.datum_izdavanja || ''} onChange={e => setAttachments(prev => prev.map((a, j) => j === i ? { ...a, datum_izdavanja: e.target.value } : a))} /></Field>
+                <Field label="Datum isteka"><input type="date" className={inputCls} style={inputStyle} value={att.datum_isteka || ''} onChange={e => setAttachments(prev => prev.map((a, j) => j === i ? { ...a, datum_isteka: e.target.value } : a))} /></Field>
               </div>
             </div>
           ))}
-          <button type="button" onClick={() => setAttachments(prev => [...prev, { tip_dokumenta: '', datum_izdavanja: '', datum_isteka: '', _new: true }])}
-            className="text-sm font-medium" style={{ color: '#2563EB' }}>+ Dodaj prilog</button>
+          <button type="button" onClick={() => setAttachments(prev => [...prev, { tip_dokumenta: '', datum_izdavanja: '', datum_isteka: '', _new: true }])} className="text-sm font-medium" style={{ color: '#2563EB' }}>+ Dodaj prilog</button>
         </Section>
 
+        {/* Boravak */}
         <Section icon="🏠" title="Boravak stranca" desc="Podaci o boravištu u Republici Hrvatskoj.">
+          {/* Address history */}
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium" style={{ color: '#374151' }}>Povijest adresa boravišta</p>
+              <button type="button" onClick={() => setAddresses(prev => [{ adresa: '', datum_od: '', datum_do: '', is_current: false, _new: true }, ...prev])}
+                className="text-xs font-medium" style={{ color: '#2563EB' }}>+ Dodaj adresu</button>
+            </div>
+            {addresses.map((addr, i) => (
+              <div key={addr.id || i} className="mb-3 p-3 rounded-lg" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: '#374151' }}>
+                      <input type="checkbox" checked={addr.is_current || false}
+                        onChange={e => setAddresses(prev => prev.map((a, j) => j === i ? { ...a, is_current: e.target.checked } : a))} />
+                      Trenutna adresa
+                    </label>
+                    {addr.is_current && <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: '#DCFCE7', color: '#16A34A' }}>Aktivna</span>}
+                  </div>
+                  <button type="button" onClick={() => {
+                    if (addr.id) setDeletedAddressIds(prev => [...prev, addr.id])
+                    setAddresses(prev => prev.filter((_, j) => j !== i))
+                  }} className="text-xs" style={{ color: '#EF4444' }}>Ukloni</button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="col-span-3">
+                    <input className={inputCls} style={inputStyle} placeholder="Ulica i broj, grad" value={addr.adresa || ''}
+                      onChange={e => setAddresses(prev => prev.map((a, j) => j === i ? { ...a, adresa: e.target.value } : a))} />
+                  </div>
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: '#64748B' }}>Od</p>
+                    <input type="date" className={inputCls} style={inputStyle} value={addr.datum_od || ''}
+                      onChange={e => setAddresses(prev => prev.map((a, j) => j === i ? { ...a, datum_od: e.target.value } : a))} />
+                  </div>
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: '#64748B' }}>Do</p>
+                    <input type="date" className={inputCls} style={inputStyle} value={addr.datum_do || ''}
+                      onChange={e => setAddresses(prev => prev.map((a, j) => j === i ? { ...a, datum_do: e.target.value } : a))} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Smještaj expiry + EGP */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2"><Field label="Adresa boravišta"><input className={inputCls} style={inputStyle} value={form.adresa_boravista} onChange={e => setF('adresa_boravista', e.target.value)} /></Field></div>
+            <Field label="Datum isteka smještaja">
+              <input type="date" className={inputCls} style={inputStyle} value={form.datum_isteka_smjestaja} onChange={e => setF('datum_isteka_smjestaja', e.target.value)} />
+            </Field>
+            <div />
             <Field label="Datum ulaska u EGP"><input type="date" className={inputCls} style={inputStyle} value={form.datum_ulaska_egp} onChange={e => setF('datum_ulaska_egp', e.target.value)} /></Field>
             <Field label="Mjesto ulaska u EGP"><input className={inputCls} style={inputStyle} value={form.mjesto_ulaska_egp} onChange={e => setF('mjesto_ulaska_egp', e.target.value)} /></Field>
           </div>
         </Section>
 
+        {/* Rad */}
         <Section icon="💼" title="Rad stranca" desc="Zanimanje, poslodavac i dozvola za rad.">
           <div className="grid grid-cols-2 gap-4">
             <Field label="Poslodavac / firma"><input className={inputCls} style={inputStyle} value={form.poslodavac} onChange={e => setF('poslodavac', e.target.value)} /></Field>
@@ -318,11 +394,88 @@ export default function EmployeeDetail() {
           </div>
         </Section>
 
+        {/* Godišnji odmor & Bolovanje */}
+        <Section icon="📅" title="Godišnji odmor & Bolovanje" desc="Evidencija odsutnosti radnika.">
+          {/* Godišnji odmor */}
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold" style={{ color: '#374151' }}>Godišnji odmor</p>
+              <button type="button" onClick={() => setVacations(prev => [...prev, { datum_od: '', datum_do: '', napomena: '', _new: true }])}
+                className="text-xs font-medium" style={{ color: '#2563EB' }}>+ Dodaj</button>
+            </div>
+            {vacations.length === 0 && (
+              <p className="text-xs" style={{ color: '#94A3B8' }}>Nema unesenih godišnjih odmora.</p>
+            )}
+            {vacations.map((vac, i) => (
+              <div key={vac.id || i} className="flex items-center gap-3 mb-2 p-3 rounded-lg" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+                <span className="text-sm">🌴</span>
+                <div className="flex-1 grid grid-cols-3 gap-2">
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: '#64748B' }}>Od</p>
+                    <input type="date" className={inputCls} style={inputStyle} value={vac.datum_od || ''}
+                      onChange={e => setVacations(prev => prev.map((v, j) => j === i ? { ...v, datum_od: e.target.value } : v))} />
+                  </div>
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: '#64748B' }}>Do</p>
+                    <input type="date" className={inputCls} style={inputStyle} value={vac.datum_do || ''}
+                      onChange={e => setVacations(prev => prev.map((v, j) => j === i ? { ...v, datum_do: e.target.value } : v))} />
+                  </div>
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: '#64748B' }}>Napomena</p>
+                    <input className={inputCls} style={inputStyle} placeholder="Opcionalno" value={vac.napomena || ''}
+                      onChange={e => setVacations(prev => prev.map((v, j) => j === i ? { ...v, napomena: e.target.value } : v))} />
+                  </div>
+                </div>
+                <button type="button" onClick={() => {
+                  if (vac.id) setDeletedVacationIds(prev => [...prev, vac.id])
+                  setVacations(prev => prev.filter((_, j) => j !== i))
+                }} className="text-xs flex-shrink-0" style={{ color: '#EF4444' }}>Ukloni</button>
+              </div>
+            ))}
+          </div>
+
+          {/* Bolovanje */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold" style={{ color: '#374151' }}>Bolovanje</p>
+              <button type="button" onClick={() => setSickLeaves(prev => [...prev, { datum_od: '', datum_do: '', napomena: '', _new: true }])}
+                className="text-xs font-medium" style={{ color: '#2563EB' }}>+ Dodaj</button>
+            </div>
+            {sickLeaves.length === 0 && (
+              <p className="text-xs" style={{ color: '#94A3B8' }}>Nema unesenih bolovanja.</p>
+            )}
+            {sickLeaves.map((sick, i) => (
+              <div key={sick.id || i} className="flex items-center gap-3 mb-2 p-3 rounded-lg" style={{ background: '#FEFCE8', border: '1px solid #FEF08A' }}>
+                <span className="text-sm">🏥</span>
+                <div className="flex-1 grid grid-cols-3 gap-2">
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: '#64748B' }}>Od</p>
+                    <input type="date" className={inputCls} style={inputStyle} value={sick.datum_od || ''}
+                      onChange={e => setSickLeaves(prev => prev.map((s, j) => j === i ? { ...s, datum_od: e.target.value } : s))} />
+                  </div>
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: '#64748B' }}>Do</p>
+                    <input type="date" className={inputCls} style={inputStyle} value={sick.datum_do || ''}
+                      onChange={e => setSickLeaves(prev => prev.map((s, j) => j === i ? { ...s, datum_do: e.target.value } : s))} />
+                  </div>
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: '#64748B' }}>Napomena</p>
+                    <input className={inputCls} style={inputStyle} placeholder="Opcionalno" value={sick.napomena || ''}
+                      onChange={e => setSickLeaves(prev => prev.map((s, j) => j === i ? { ...s, napomena: e.target.value } : s))} />
+                  </div>
+                </div>
+                <button type="button" onClick={() => {
+                  if (sick.id) setDeletedSickIds(prev => [...prev, sick.id])
+                  setSickLeaves(prev => prev.filter((_, j) => j !== i))
+                }} className="text-xs flex-shrink-0" style={{ color: '#EF4444' }}>Ukloni</button>
+              </div>
+            ))}
+          </div>
+        </Section>
+
         <div className="flex justify-end gap-3 pb-8">
-          <Link href="/zaposlenici" className="px-4 py-2.5 rounded-lg text-sm font-medium"
-            style={{ background: '#F1F5F9', color: '#374151' }}>Odustani</Link>
-          <button type="submit" disabled={saving}
-            className="px-5 py-2.5 rounded-lg text-sm font-medium text-white"
+          <Link href="/zaposlenici" className="px-4 py-2.5 rounded-lg text-sm font-medium" style={{ background: '#F1F5F9', color: '#374151' }}>Odustani</Link>
+          <button type="submit" disabled={saving} className="px-5 py-2.5 rounded-lg text-sm font-medium text-white"
             style={{ background: saving ? '#93C5FD' : '#2563EB', cursor: saving ? 'not-allowed' : 'pointer' }}>
             {saving ? 'Spremanje...' : '✓ Spremi promjene'}
           </button>
