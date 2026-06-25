@@ -171,19 +171,19 @@ export default function ZaposleniciPage() {
         </Link>
       </div>
 
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-5">
         <input
           type="text"
           placeholder="Pretraži zaposlenike..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="px-3 py-2 rounded-lg border text-sm"
+          className="w-full md:w-auto px-3 py-2 rounded-lg border text-sm"
           style={{ borderColor: '#D1D5DB', minWidth: 220, background: 'white' }}
         />
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="px-3 py-2 rounded-lg border text-sm"
+          className="w-full md:w-auto px-3 py-2 rounded-lg border text-sm"
           style={{ borderColor: '#D1D5DB', background: 'white', color: '#374151' }}
         >
           <option value="svi">Svi statusi</option>
