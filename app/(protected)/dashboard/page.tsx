@@ -58,7 +58,7 @@ export default function DashboardPage() {
       // Fetch expiring documents with employee info
       const { data: docs } = await supabase
         .from('documents')
-        .select('id, employee_id, tip_dokumenta, broj_dokumenta, datum_isteka, employees(ime, prezime)')
+        .select('id, employee_id, tip_dokumenta, datum_isteka, employees(ime, prezime)')
         .lte('datum_isteka', in60Str)
         .gte('datum_isteka', todayStr)
         .order('datum_isteka')
@@ -76,7 +76,7 @@ export default function DashboardPage() {
           employeeId: d.employee_id,
           employeeName: emp ? `${emp.ime} ${emp.prezime}` : 'Nepoznat',
           title: DOCUMENT_TYPE_LABELS[d.tip_dokumenta] || d.tip_dokumenta || 'Dokument',
-          description: d.broj_dokumenta ? `Br. dokumenta: ${d.broj_dokumenta}` : '',
+          description: '',
           dueDate: d.datum_isteka,
           type: 'document',
         })

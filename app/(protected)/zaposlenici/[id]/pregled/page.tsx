@@ -62,7 +62,6 @@ export default function CandidatePregled() {
   const [emp, setEmp] = useState<any>(null)
   const [radnaDozvola, setRadnaDozvola] = useState<any>(null)
   const [lijecnicki, setLijecnicki] = useState<any>(null)
-  const [workHistory, setWorkHistory] = useState<any[]>([])
   const [vacations, setVacations] = useState<any[]>([])
   const [sickLeaves, setSickLeaves] = useState<any[]>([])
 
@@ -74,16 +73,14 @@ export default function CandidatePregled() {
       if (!employee) return
       setEmp(employee)
 
-      const [{ data: docs }, { data: wh }, { data: vacs }, { data: sick }] = await Promise.all([
+      const [{ data: docs }, { data: vacs }, { data: sick }] = await Promise.all([
         supabase.from('documents').select('*').eq('employee_id', id),
-        supabase.from('work_history').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
         supabase.from('vacations').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
         supabase.from('sick_leaves').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
       ])
 
       setRadnaDozvola(docs?.find((d: any) => d.tip_dokumenta === 'radna_dozvola') || null)
       setLijecnicki(docs?.find((d: any) => d.tip_dokumenta === 'lijecnicki') || null)
-      setWorkHistory(wh || [])
       setVacations(vacs || [])
       setSickLeaves(sick || [])
       setLoading(false)
@@ -98,10 +95,6 @@ export default function CandidatePregled() {
   const onSickLeave = sickLeaves.some((s: any) => s.datum_od <= today && s.datum_do >= today)
   const rdBadge = expiryBadge(radnaDozvola?.datum_isteka)
   const ljBadge = expiryBadge(lijecnicki?.datum_isteka)
-
-  const latestJob = workHistory[0] || null
-  const isActiveJob = latestJob?.is_current && !latestJob?.datum_do
-  const pastJobs = workHistory.slice(1)
 
   return (
     <div className="p-8" style={{ maxWidth: 1000 }}>
@@ -122,14 +115,14 @@ export default function CandidatePregled() {
                   🌍 {emp.drzava_rodjenja}
                 </span>
               )}
-              {latestJob?.poslodavac && (
+              {emp.poslodavac && (
                 <span className="text-xs px-2.5 py-1 rounded-full" style={{ background: '#F1F5F9', color: '#475569' }}>
-                  💼 {latestJob.poslodavac}
+                  💼 {emp.poslodavac}
                 </span>
               )}
-              {latestJob?.radno_mjesto && (
+              {emp.radno_mjesto && (
                 <span className="text-xs px-2.5 py-1 rounded-full" style={{ background: '#F1F5F9', color: '#475569' }}>
-                  {latestJob.radno_mjesto}
+                  {emp.radno_mjesto}
                 </span>
               )}
               {onVacation && (
@@ -167,43 +160,13 @@ export default function CandidatePregled() {
 
           {/* Rad stranca */}
           <Card title="Rad stranca" icon="💼">
-            {workHistory.length === 0 && !emp.poslodavac ? (
+            {!emp.poslodavac && !emp.radno_mjesto ? (
               <p className="text-sm" style={{ color: '#CBD5E1' }}>Nema podataka o zaposlenju.</p>
             ) : (
-              <>
-                <div className="grid grid-cols-2 gap-x-6 mb-2">
-                  <Row label="Poslodavac / firma" value={latestJob?.poslodavac || emp.poslodavac} />
-                  <Row label="Radno mjesto" value={latestJob?.radno_mjesto || emp.radno_mjesto} />
-                  {latestJob?.datum_od && <Row label="Zaposleni od" value={formatDate(latestJob.datum_od)} />}
-                  {latestJob?.datum_do && (
-                    <div className="flex flex-col mb-3">
-                      <span className="text-xs mb-0.5" style={{ color: '#94A3B8' }}>Zaposleni do</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium w-fit" style={{ background: '#FEE2E2', color: '#DC2626' }}>
-                        {formatDate(latestJob.datum_do)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                {!isActiveJob && latestJob && (
-                  <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: '#F1F5F9', color: '#64748B' }}>
-                    Bez aktivnog zaposlenja
-                  </span>
-                )}
-                {pastJobs.length > 0 && (
-                  <div className="mt-3 pt-3" style={{ borderTop: '1px dashed #E2E8F0' }}>
-                    <p className="text-xs font-medium mb-2" style={{ color: '#64748B' }}>Radna povijest</p>
-                    {pastJobs.map((job: any, i: number) => (
-                      <div key={job.id || i} className="text-xs mb-1.5" style={{ color: '#475569' }}>
-                        <span className="font-medium">{job.poslodavac}</span>
-                        {job.radno_mjesto && <span style={{ color: '#94A3B8' }}> · {job.radno_mjesto}</span>}
-                        {(job.datum_od || job.datum_do) && (
-                          <span style={{ color: '#94A3B8' }}> · {formatDate(job.datum_od)} – {formatDate(job.datum_do)}</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
+              <div className="grid grid-cols-2 gap-x-6">
+                <Row label="Poslodavac / firma" value={emp.poslodavac} />
+                <Row label="Radno mjesto" value={emp.radno_mjesto} />
+              </div>
             )}
           </Card>
 
@@ -257,8 +220,6 @@ export default function CandidatePregled() {
               <p className="text-sm" style={{ color: '#CBD5E1' }}>Nije unesena.</p>
             ) : (
               <>
-                {radnaDozvola.broj_dokumenta && <Row label="Broj dozvole" value={radnaDozvola.broj_dokumenta} />}
-                {radnaDozvola.datum_izdavanja && <Row label="Datum izdavanja" value={formatDate(radnaDozvola.datum_izdavanja)} />}
                 <div className="flex flex-col mb-3">
                   <span className="text-xs mb-1" style={{ color: '#94A3B8' }}>Datum isteka</span>
                   {rdBadge ? (
@@ -282,8 +243,6 @@ export default function CandidatePregled() {
               <p className="text-sm" style={{ color: '#CBD5E1' }}>Nije unesen.</p>
             ) : (
               <>
-                {lijecnicki.broj_dokumenta && <Row label="Broj dokumenta" value={lijecnicki.broj_dokumenta} />}
-                {lijecnicki.datum_izdavanja && <Row label="Datum izdavanja" value={formatDate(lijecnicki.datum_izdavanja)} />}
                 <div className="flex flex-col mb-3">
                   <span className="text-xs mb-1" style={{ color: '#94A3B8' }}>Datum isteka</span>
                   {ljBadge ? (

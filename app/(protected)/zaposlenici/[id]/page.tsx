@@ -60,7 +60,7 @@ function fileNameFromUrl(url: string) {
   } catch { return 'Datoteka' }
 }
 
-type DocState = { id?: string; broj: string; datum_izdavanja: string; datum_isteka: string; file_url: string; _newFile?: File | null }
+type DocState = { id?: string; datum_isteka: string; file_url: string; _newFile?: File | null }
 
 export default function EmployeeDetail() {
   const { id } = useParams<{ id: string }>()
@@ -70,13 +70,9 @@ export default function EmployeeDetail() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  const [form, setForm] = useState({ ime: '', prezime: '', drzava_rodjenja: '' })
-  const [radnaDozvola, setRD] = useState<DocState>({ broj: '', datum_izdavanja: '', datum_isteka: '', file_url: '' })
-  const [lijecnicki, setLJ] = useState<DocState>({ broj: '', datum_izdavanja: '', datum_isteka: '', file_url: '' })
-
-  const [workHistory, setWorkHistory] = useState<any[]>([])
-  const [showWorkHistory, setShowWorkHistory] = useState(false)
-  const [deletedWorkHistoryIds, setDeletedWorkHistoryIds] = useState<string[]>([])
+  const [form, setForm] = useState({ ime: '', prezime: '', drzava_rodjenja: '', poslodavac: '', radno_mjesto: '' })
+  const [radnaDozvola, setRD] = useState<DocState>({ datum_isteka: '', file_url: '' })
+  const [lijecnicki, setLJ] = useState<DocState>({ datum_isteka: '', file_url: '' })
 
   const [vacations, setVacations] = useState<any[]>([])
   const [sickLeaves, setSickLeaves] = useState<any[]>([])
@@ -90,23 +86,21 @@ export default function EmployeeDetail() {
       const { data: emp } = await supabase.from('employees').select('*').eq('id', id).single()
       if (!emp) { router.push('/zaposlenici'); return }
 
-      setForm({ ime: emp.ime || '', prezime: emp.prezime || '', drzava_rodjenja: emp.drzava_rodjenja || '' })
+      setForm({ ime: emp.ime || '', prezime: emp.prezime || '', drzava_rodjenja: emp.drzava_rodjenja || '', poslodavac: emp.poslodavac || '', radno_mjesto: emp.radno_mjesto || '' })
 
-      const [{ data: docs }, { data: vacs }, { data: sick }, { data: wh }] = await Promise.all([
+      const [{ data: docs }, { data: vacs }, { data: sick }] = await Promise.all([
         supabase.from('documents').select('*').eq('employee_id', id),
         supabase.from('vacations').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
         supabase.from('sick_leaves').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
-        supabase.from('work_history').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
       ])
 
       const rdDoc = docs?.find((d: any) => d.tip_dokumenta === 'radna_dozvola')
       const ljDoc = docs?.find((d: any) => d.tip_dokumenta === 'lijecnicki')
-      setRD({ id: rdDoc?.id, broj: rdDoc?.broj_dokumenta || '', datum_izdavanja: rdDoc?.datum_izdavanja || '', datum_isteka: rdDoc?.datum_isteka || '', file_url: rdDoc?.file_url || '' })
-      setLJ({ id: ljDoc?.id, broj: ljDoc?.broj_dokumenta || '', datum_izdavanja: ljDoc?.datum_izdavanja || '', datum_isteka: ljDoc?.datum_isteka || '', file_url: ljDoc?.file_url || '' })
+      setRD({ id: rdDoc?.id, datum_isteka: rdDoc?.datum_isteka || '', file_url: rdDoc?.file_url || '' })
+      setLJ({ id: ljDoc?.id, datum_isteka: ljDoc?.datum_isteka || '', file_url: ljDoc?.file_url || '' })
 
       setVacations(vacs || [])
       setSickLeaves(sick || [])
-      setWorkHistory(wh?.length ? wh : [{ poslodavac: emp.poslodavac || '', radno_mjesto: emp.radno_mjesto || '', datum_od: '', datum_do: '', is_current: true, _new: true }])
       setLoading(false)
     }
     load()
@@ -121,10 +115,10 @@ export default function EmployeeDetail() {
         fileUrl = urlData.publicUrl
       }
     }
-    const payload = { employee_id: id, tip_dokumenta: tip, broj_dokumenta: doc.broj || null, datum_izdavanja: doc.datum_izdavanja || null, datum_isteka: doc.datum_isteka || null, file_url: fileUrl }
+    const payload = { employee_id: id, tip_dokumenta: tip, datum_isteka: doc.datum_isteka || null, file_url: fileUrl }
     if (doc.id) {
       await supabase.from('documents').update(payload).eq('id', doc.id)
-    } else if (doc.datum_isteka || doc.broj) {
+    } else if (doc.datum_isteka || doc._newFile) {
       const { data: inserted } = await supabase.from('documents').insert(payload).select('id').single()
       if (tip === 'radna_dozvola' && inserted) setRD(p => ({ ...p, id: inserted.id }))
       if (tip === 'lijecnicki' && inserted) setLJ(p => ({ ...p, id: inserted.id }))
@@ -138,30 +132,15 @@ export default function EmployeeDetail() {
     setSuccess(false)
 
     try {
-      const currentJob = workHistory.find((w: any) => w.is_current && !w.datum_do)
       await supabase.from('employees').update({
         ime: form.ime, prezime: form.prezime,
         drzava_rodjenja: form.drzava_rodjenja || null,
-        poslodavac: currentJob?.poslodavac || null,
-        radno_mjesto: currentJob?.radno_mjesto || null,
+        poslodavac: form.poslodavac || null,
+        radno_mjesto: form.radno_mjesto || null,
       }).eq('id', id)
 
       await saveDoc(radnaDozvola, 'radna_dozvola')
       await saveDoc(lijecnicki, 'lijecnicki')
-
-      // Work history
-      for (const whId of deletedWorkHistoryIds) {
-        await supabase.from('work_history').delete().eq('id', whId)
-      }
-      for (const wh of workHistory) {
-        if (!wh.poslodavac) continue
-        const isCurrent = wh.is_current && !wh.datum_do
-        if (wh._new || !wh.id) {
-          await supabase.from('work_history').insert({ employee_id: id, poslodavac: wh.poslodavac, radno_mjesto: wh.radno_mjesto || null, datum_od: wh.datum_od || null, datum_do: wh.datum_do || null, is_current: isCurrent })
-        } else {
-          await supabase.from('work_history').update({ poslodavac: wh.poslodavac, radno_mjesto: wh.radno_mjesto || null, datum_od: wh.datum_od || null, datum_do: wh.datum_do || null, is_current: isCurrent }).eq('id', wh.id)
-        }
-      }
 
       // Vacations
       for (const vacId of deletedVacationIds) await supabase.from('vacations').delete().eq('id', vacId)
@@ -185,7 +164,6 @@ export default function EmployeeDetail() {
         }
       }
 
-      setDeletedWorkHistoryIds([])
       setDeletedVacationIds([])
       setDeletedSickIds([])
       setSuccess(true)
@@ -199,12 +177,10 @@ export default function EmployeeDetail() {
 
   function DocSection({ label, icon, doc, setDoc }: { label: string; icon: string; doc: DocState; setDoc: (fn: (p: DocState) => DocState) => void }) {
     return (
-      <Section icon={icon} title={label} desc={`Podaci o dokumentu: ${label.toLowerCase()}.`}>
+      <Section icon={icon} title={label} desc={`Datum isteka dokumenta: ${label.toLowerCase()}.`}>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Broj dokumenta"><input className={inputCls} style={inputStyle} value={doc.broj} onChange={e => setDoc(p => ({ ...p, broj: e.target.value }))} /></Field>
-          <div />
-          <Field label="Datum izdavanja"><input type="date" className={inputCls} style={inputStyle} value={doc.datum_izdavanja} onChange={e => setDoc(p => ({ ...p, datum_izdavanja: e.target.value }))} /></Field>
           <Field label="Datum isteka"><input type="date" className={inputCls} style={inputStyle} value={doc.datum_isteka} onChange={e => setDoc(p => ({ ...p, datum_isteka: e.target.value }))} /></Field>
+          <div />
           <div className="col-span-2">
             <p className="text-sm font-medium mb-1.5" style={{ color: '#374151' }}>Preslika <span style={{ color: '#94A3B8', fontWeight: 400 }}>(opcionalno)</span></p>
             {doc._newFile ? (
@@ -247,7 +223,7 @@ export default function EmployeeDetail() {
         </div>
         <div>
           <h1 className="text-2xl font-semibold" style={{ color: '#1E293B' }}>{form.ime} {form.prezime}</h1>
-          <p className="text-sm" style={{ color: '#64748B' }}>{form.drzava_rodjenja || 'Nepoznata država'} · {workHistory.find((w: any) => w.is_current && !w.datum_do)?.poslodavac || 'Bez poslodavca'}</p>
+          <p className="text-sm" style={{ color: '#64748B' }}>{form.drzava_rodjenja || 'Nepoznata država'} · {form.poslodavac || 'Bez poslodavca'}</p>
         </div>
       </div>
 
@@ -275,81 +251,10 @@ export default function EmployeeDetail() {
 
         {/* Rad stranca */}
         <Section icon="💼" title="Rad stranca" desc="Poslodavac i radno mjesto.">
-          {(() => {
-            const currentIdx = workHistory.findIndex((w: any) => w.is_current)
-            const current = workHistory[currentIdx] || {}
-            return (
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <Field label="Poslodavac / firma">
-                  <input className={inputCls} style={inputStyle} value={current.poslodavac || ''}
-                    onChange={e => setWorkHistory(prev => prev.map((w, j) => j === currentIdx ? { ...w, poslodavac: e.target.value } : w))} />
-                </Field>
-                <Field label="Radno mjesto">
-                  <input className={inputCls} style={inputStyle} value={current.radno_mjesto || ''}
-                    onChange={e => setWorkHistory(prev => prev.map((w, j) => j === currentIdx ? { ...w, radno_mjesto: e.target.value } : w))} />
-                </Field>
-                <Field label="Datum početka">
-                  <input type="date" className={inputCls} style={inputStyle} value={current.datum_od || ''}
-                    onChange={e => setWorkHistory(prev => prev.map((w, j) => j === currentIdx ? { ...w, datum_od: e.target.value } : w))} />
-                </Field>
-                <Field label="Datum završetka">
-                  <input type="date" className={inputCls} style={inputStyle} value={current.datum_do || ''}
-                    onChange={e => setWorkHistory(prev => prev.map((w, j) => j === currentIdx ? { ...w, datum_do: e.target.value } : w))} />
-                </Field>
-              </div>
-            )
-          })()}
-
-          <button type="button"
-            onClick={() => {
-              const today = new Date().toISOString().split('T')[0]
-              setWorkHistory(prev => [
-                { poslodavac: '', radno_mjesto: '', datum_od: today, datum_do: '', is_current: true, _new: true },
-                ...prev.map((w: any) => w.is_current ? { ...w, is_current: false, datum_do: w.datum_do || today } : w),
-              ])
-            }}
-            className="text-xs font-medium mb-4 block" style={{ color: '#2563EB' }}>
-            + Promijeni poslodavca
-          </button>
-
-          <button type="button" onClick={() => setShowWorkHistory(prev => !prev)}
-            className="flex items-center gap-1.5 text-sm font-medium" style={{ color: '#2563EB' }}>
-            <span style={{ fontSize: 12 }}>{showWorkHistory ? '▼' : '▶'}</span>
-            Radna povijest {workHistory.filter((w: any) => !w.is_current).length > 0 && `(${workHistory.filter((w: any) => !w.is_current).length})`}
-          </button>
-
-          {showWorkHistory && (
-            <div className="mt-3">
-              {workHistory.filter((w: any) => !w.is_current).length === 0 && (
-                <p className="text-xs mb-3" style={{ color: '#94A3B8' }}>Nema prethodnih poslodavaca.</p>
-              )}
-              {workHistory.map((work, i) => {
-                if (work.is_current) return null
-                return (
-                  <div key={work.id || i} className="mb-3 p-3 rounded-lg" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                    <div className="flex justify-end mb-2">
-                      <button type="button" onClick={() => {
-                        if (work.id) setDeletedWorkHistoryIds(prev => [...prev, work.id])
-                        setWorkHistory(prev => prev.filter((_, j) => j !== i))
-                      }} className="text-xs" style={{ color: '#EF4444' }}>Ukloni</button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 mb-2">
-                      <div><p className="text-xs mb-1" style={{ color: '#64748B' }}>Poslodavac</p>
-                        <input className={inputCls} style={inputStyle} value={work.poslodavac || ''} onChange={e => setWorkHistory(prev => prev.map((w, j) => j === i ? { ...w, poslodavac: e.target.value } : w))} /></div>
-                      <div><p className="text-xs mb-1" style={{ color: '#64748B' }}>Radno mjesto</p>
-                        <input className={inputCls} style={inputStyle} value={work.radno_mjesto || ''} onChange={e => setWorkHistory(prev => prev.map((w, j) => j === i ? { ...w, radno_mjesto: e.target.value } : w))} /></div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div><p className="text-xs mb-1" style={{ color: '#64748B' }}>Od</p>
-                        <input type="date" className={inputCls} style={inputStyle} value={work.datum_od || ''} onChange={e => setWorkHistory(prev => prev.map((w, j) => j === i ? { ...w, datum_od: e.target.value } : w))} /></div>
-                      <div><p className="text-xs mb-1" style={{ color: '#64748B' }}>Do</p>
-                        <input type="date" className={inputCls} style={inputStyle} value={work.datum_do || ''} onChange={e => setWorkHistory(prev => prev.map((w, j) => j === i ? { ...w, datum_do: e.target.value } : w))} /></div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Poslodavac / firma"><input className={inputCls} style={inputStyle} value={form.poslodavac} onChange={e => setF('poslodavac', e.target.value)} /></Field>
+            <Field label="Radno mjesto"><input className={inputCls} style={inputStyle} value={form.radno_mjesto} onChange={e => setF('radno_mjesto', e.target.value)} /></Field>
+          </div>
         </Section>
 
         {/* Godišnji odmor & Bolovanje */}

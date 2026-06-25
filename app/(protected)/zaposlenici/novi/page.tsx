@@ -55,7 +55,7 @@ function Section({ icon, title, desc, children }: { icon: string; title: string;
   )
 }
 
-type DocState = { broj: string; datum_izdavanja: string; datum_isteka: string; file: File | null }
+type DocState = { datum_isteka: string; file: File | null }
 
 export default function NoviZaposlenik() {
   const router = useRouter()
@@ -63,11 +63,10 @@ export default function NoviZaposlenik() {
   const [error, setError] = useState('')
 
   const [form, setForm] = useState({ ime: '', prezime: '', drzava_rodjenja: '' })
-  const [radnaDozvola, setRD] = useState<DocState>({ broj: '', datum_izdavanja: '', datum_isteka: '', file: null })
-  const [lijecnicki, setLJ] = useState<DocState>({ broj: '', datum_izdavanja: '', datum_isteka: '', file: null })
+  const [radnaDozvola, setRD] = useState<DocState>({ datum_isteka: '', file: null })
+  const [lijecnicki, setLJ] = useState<DocState>({ datum_isteka: '', file: null })
   const [poslodavac, setPoslodavac] = useState('')
   const [radnoMjesto, setRadnoMjesto] = useState('')
-  const [datumPocetka, setDatumPocetka] = useState('')
 
   function setF(key: string, value: string) { setForm(prev => ({ ...prev, [key]: value })) }
 
@@ -92,20 +91,16 @@ export default function NoviZaposlenik() {
       if (empErr) throw empErr
       const empId = emp.id
 
-      if (poslodavac) {
-        await supabase.from('work_history').insert({ employee_id: empId, poslodavac, radno_mjesto: radnoMjesto || null, datum_od: datumPocetka || new Date().toISOString().split('T')[0], is_current: true })
-      }
-
-      if (radnaDozvola.datum_isteka || radnaDozvola.broj) {
+      if (radnaDozvola.datum_isteka || radnaDozvola.file) {
         let fileUrl = null
         if (radnaDozvola.file) fileUrl = await uploadFile(radnaDozvola.file, `${empId}/doc_${Date.now()}_${radnaDozvola.file.name}`)
-        await supabase.from('documents').insert({ employee_id: empId, tip_dokumenta: 'radna_dozvola', broj_dokumenta: radnaDozvola.broj || null, datum_izdavanja: radnaDozvola.datum_izdavanja || null, datum_isteka: radnaDozvola.datum_isteka || null, file_url: fileUrl })
+        await supabase.from('documents').insert({ employee_id: empId, tip_dokumenta: 'radna_dozvola', datum_isteka: radnaDozvola.datum_isteka || null, file_url: fileUrl })
       }
 
-      if (lijecnicki.datum_isteka || lijecnicki.broj) {
+      if (lijecnicki.datum_isteka || lijecnicki.file) {
         let fileUrl = null
         if (lijecnicki.file) fileUrl = await uploadFile(lijecnicki.file, `${empId}/doc_${Date.now()}_${lijecnicki.file.name}`)
-        await supabase.from('documents').insert({ employee_id: empId, tip_dokumenta: 'lijecnicki', broj_dokumenta: lijecnicki.broj || null, datum_izdavanja: lijecnicki.datum_izdavanja || null, datum_isteka: lijecnicki.datum_isteka || null, file_url: fileUrl })
+        await supabase.from('documents').insert({ employee_id: empId, tip_dokumenta: 'lijecnicki', datum_isteka: lijecnicki.datum_isteka || null, file_url: fileUrl })
       }
 
       router.push('/zaposlenici')
@@ -139,12 +134,10 @@ export default function NoviZaposlenik() {
           </div>
         </Section>
 
-        <Section icon="📋" title="Radna dozvola" desc="Podaci o radnoj dozvoli radnika.">
+        <Section icon="📋" title="Radna dozvola" desc="Datum isteka radne dozvole radnika.">
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Broj dozvole"><input className={inputCls} style={inputStyle} value={radnaDozvola.broj} onChange={e => setRD(p => ({ ...p, broj: e.target.value }))} /></Field>
-            <div />
-            <Field label="Datum izdavanja"><input type="date" className={inputCls} style={inputStyle} value={radnaDozvola.datum_izdavanja} onChange={e => setRD(p => ({ ...p, datum_izdavanja: e.target.value }))} /></Field>
             <Field label="Datum isteka"><input type="date" className={inputCls} style={inputStyle} value={radnaDozvola.datum_isteka} onChange={e => setRD(p => ({ ...p, datum_isteka: e.target.value }))} /></Field>
+            <div />
             <div className="col-span-2">
               <label className="block text-sm font-medium mb-1.5" style={{ color: '#374151' }}>Preslika <span style={{ color: '#94A3B8', fontWeight: 400 }}>(opcionalno)</span></label>
               <label className="flex items-center gap-2 cursor-pointer px-3 py-2.5 rounded-lg border text-sm" style={{ borderColor: '#D1D5DB', background: 'white', color: '#374151' }}>
@@ -155,12 +148,10 @@ export default function NoviZaposlenik() {
           </div>
         </Section>
 
-        <Section icon="🏥" title="Liječnički pregled" desc="Potvrda o radnoj sposobnosti radnika.">
+        <Section icon="🏥" title="Liječnički pregled" desc="Datum isteka liječničkog pregleda radnika.">
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Broj dokumenta"><input className={inputCls} style={inputStyle} value={lijecnicki.broj} onChange={e => setLJ(p => ({ ...p, broj: e.target.value }))} /></Field>
-            <div />
-            <Field label="Datum izdavanja"><input type="date" className={inputCls} style={inputStyle} value={lijecnicki.datum_izdavanja} onChange={e => setLJ(p => ({ ...p, datum_izdavanja: e.target.value }))} /></Field>
             <Field label="Datum isteka"><input type="date" className={inputCls} style={inputStyle} value={lijecnicki.datum_isteka} onChange={e => setLJ(p => ({ ...p, datum_isteka: e.target.value }))} /></Field>
+            <div />
             <div className="col-span-2">
               <label className="block text-sm font-medium mb-1.5" style={{ color: '#374151' }}>Preslika <span style={{ color: '#94A3B8', fontWeight: 400 }}>(opcionalno)</span></label>
               <label className="flex items-center gap-2 cursor-pointer px-3 py-2.5 rounded-lg border text-sm" style={{ borderColor: '#D1D5DB', background: 'white', color: '#374151' }}>
@@ -175,7 +166,6 @@ export default function NoviZaposlenik() {
           <div className="grid grid-cols-2 gap-4">
             <Field label="Poslodavac / firma"><input className={inputCls} style={inputStyle} value={poslodavac} onChange={e => setPoslodavac(e.target.value)} /></Field>
             <Field label="Radno mjesto"><input className={inputCls} style={inputStyle} value={radnoMjesto} onChange={e => setRadnoMjesto(e.target.value)} /></Field>
-            <Field label="Datum početka"><input type="date" className={inputCls} style={inputStyle} value={datumPocetka} onChange={e => setDatumPocetka(e.target.value)} /></Field>
           </div>
         </Section>
 

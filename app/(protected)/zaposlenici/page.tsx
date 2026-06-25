@@ -190,7 +190,7 @@ export default function ZaposleniciPage() {
         <table className="w-full">
           <thead>
             <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-              {['Zaposlenik', 'Država', 'Dokument', 'Broj dokumenta', 'Poslodavac', 'Istek', 'Status', 'Akcije'].map(col => (
+              {['Zaposlenik', 'Država', 'Dokument', 'Poslodavac', 'Istek', 'Status', 'Akcije'].map(col => (
                 <th key={col} className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>
                   {col}
                 </th>
@@ -199,9 +199,9 @@ export default function ZaposleniciPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</td></tr>
+              <tr><td colSpan={7} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={8} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>
+              <tr><td colSpan={7} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>
                 {employees.length === 0 ? 'Još nema zaposlenika. Dodajte prvog zaposlenika klikom na gumb gore.' : 'Nema rezultata za unesene filtere.'}
               </td></tr>
             ) : (
@@ -238,7 +238,6 @@ export default function ZaposleniciPage() {
                     </td>
                     <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{emp.drzava_rodjenja || '—'}</td>
                     <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{emp.doc_tip ? (DOC_TYPES[emp.doc_tip] || emp.doc_tip) : '—'}</td>
-                    <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{emp.doc_broj || '—'}</td>
                     <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{emp.poslodavac || '—'}</td>
                     <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{formatDateHR(emp.doc_isteka)}</td>
                     <td className="px-4 py-3">
