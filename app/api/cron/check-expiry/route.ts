@@ -1,8 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
-import { Resend } from 'resend'
 import { NextResponse } from 'next/server'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -103,11 +101,18 @@ export async function GET(request: Request) {
       <p style="text-align:center;font-size:11px;color:#94A3B8;margin-top:16px;">Kvantus automatska obavijest</p>
     </div>`
 
-  await resend.emails.send({
-    from: 'Kvantus <onboarding@resend.dev>',
-    to: ['kovadizajn@gmail.com'],
-    subject: `Kvantus — ${docs.length} ${docs.length === 1 ? 'dokument istječe' : 'dokumenata istječe'} uskoro`,
-    html,
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'Kvantus <onboarding@resend.dev>',
+      to: ['kovadizajn@gmail.com'],
+      subject: `Kvantus — ${docs.length} ${docs.length === 1 ? 'dokument istječe' : 'dokumenata istječe'} uskoro`,
+      html,
+    }),
   })
 
   return NextResponse.json({ sent: true, count: docs.length })
