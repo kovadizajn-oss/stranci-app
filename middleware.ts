@@ -8,6 +8,7 @@ export function middleware(request: NextRequest) {
   const isPublic =
     pathname === '/login' ||
     pathname.startsWith('/api/login') ||
+    pathname.startsWith('/api/cron') ||
     pathname.startsWith('/_next') ||
     pathname === '/favicon.ico'
 
