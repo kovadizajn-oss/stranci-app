@@ -12,10 +12,10 @@ type EmployeeRow = {
   drzava_rodjenja: string | null
   poslodavac: string | null
   doc_tip: string | null
-  doc_broj: string | null
   doc_isteka: string | null
   on_vacation: boolean
   on_sick_leave: boolean
+  no_sick_6mo: boolean
 }
 
 function statusFromExpiry(dateStr: string | null) {
@@ -47,7 +47,11 @@ export default function ZaposleniciPage() {
 
   useEffect(() => {
     async function fetchEmployees() {
-      const today = new Date().toISOString().split('T')[0]
+      const today = new Date()
+      const todayStr = today.toISOString().split('T')[0]
+      const sixMonthsAgo = new Date(today)
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+      const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0]
 
       const { data: emps } = await supabase
         .from('employees')
@@ -60,23 +64,30 @@ export default function ZaposleniciPage() {
       const { data: vacations } = await supabase
         .from('vacations')
         .select('employee_id')
-        .lte('datum_od', today)
-        .gte('datum_do', today)
+        .lte('datum_od', todayStr)
+        .gte('datum_do', todayStr)
 
       const { data: sickLeaves } = await supabase
         .from('sick_leaves')
         .select('employee_id')
-        .lte('datum_od', today)
-        .gte('datum_do', today)
+        .lte('datum_od', todayStr)
+        .gte('datum_do', todayStr)
+
+      // Sick leaves in last 6 months
+      const { data: recentSick } = await supabase
+        .from('sick_leaves')
+        .select('employee_id')
+        .gte('datum_do', sixMonthsAgoStr)
 
       const vacationIds = new Set((vacations || []).map((v: any) => v.employee_id))
       const sickIds = new Set((sickLeaves || []).map((s: any) => s.employee_id))
+      const recentSickIds = new Set((recentSick || []).map((s: any) => s.employee_id))
 
       const rows: EmployeeRow[] = await Promise.all(
         emps.map(async (emp: any) => {
           const { data: docs } = await supabase
             .from('documents')
-            .select('tip_dokumenta, broj_dokumenta, datum_isteka')
+            .select('tip_dokumenta, datum_isteka')
             .eq('employee_id', emp.id)
             .order('datum_isteka', { ascending: true })
             .limit(1)
@@ -90,10 +101,10 @@ export default function ZaposleniciPage() {
             drzava_rodjenja: emp.drzava_rodjenja,
             poslodavac: emp.poslodavac,
             doc_tip: doc?.tip_dokumenta || null,
-            doc_broj: doc?.broj_dokumenta || null,
             doc_isteka: doc?.datum_isteka || null,
             on_vacation: vacationIds.has(emp.id),
             on_sick_leave: sickIds.has(emp.id),
+            no_sick_6mo: !recentSickIds.has(emp.id),
           }
         })
       )
@@ -129,6 +140,7 @@ export default function ZaposleniciPage() {
         if (statusFilter === 'isteklo') return s === 'Isteklo'
         if (statusFilter === 'godisnjem') return e.on_vacation
         if (statusFilter === 'bolovanju') return e.on_sick_leave
+        if (statusFilter === 'nagradi') return e.no_sick_6mo
         return true
       })
     }
@@ -180,6 +192,7 @@ export default function ZaposleniciPage() {
           <option value="isteklo">Isteklo</option>
           <option value="godisnjem">Na godišnjem</option>
           <option value="bolovanju">Na bolovanju</option>
+          <option value="nagradi">🏆 Bez bolovanja 6mj.</option>
         </select>
         <span className="text-sm" style={{ color: '#94A3B8' }}>
           {filtered.length} {filtered.length === 1 ? 'zaposlenik' : 'zaposlenika'}
@@ -230,6 +243,13 @@ export default function ZaposleniciPage() {
                               <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
                                 style={{ background: '#FEF9C3', color: '#CA8A04' }}>
                                 Na bolovanju
+                              </span>
+                            )}
+                            {emp.no_sick_6mo && !emp.on_sick_leave && (
+                              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                                style={{ background: '#FEF3C7', color: '#92400E' }}
+                                title="Nije koristio bolovanje 6+ mj.">
+                                🏆
                               </span>
                             )}
                           </div>
