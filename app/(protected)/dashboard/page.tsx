@@ -186,25 +186,18 @@ export default function DashboardPage() {
                 >
                   {/* Date badge */}
                   <div
-                    className="w-14 h-14 rounded-lg flex flex-col items-center justify-center flex-shrink-0"
+                    className="w-12 h-12 rounded-lg flex flex-col items-center justify-center flex-shrink-0"
                     style={{ background: bg }}
                   >
-                    <span className="text-xl font-bold leading-none" style={{ color: text }}>{day}</span>
+                    <span className="text-lg font-bold leading-none" style={{ color: text }}>{day}</span>
                     <span className="text-xs font-medium mt-0.5" style={{ color: text }}>{month}</span>
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-sm" style={{ color: '#1E293B' }}>{item.title}</p>
-                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#F1F5F9', color: '#64748B' }}>
-                        {item.employeeName}
-                      </span>
-                    </div>
-                    {item.description && (
-                      <p className="text-xs mt-0.5 truncate" style={{ color: '#64748B' }}>{item.description}</p>
-                    )}
-                    <p className="text-xs mt-1" style={{ color: days < 0 ? '#DC2626' : '#94A3B8' }}>
+                    <p className="font-medium text-sm truncate" style={{ color: '#1E293B' }}>{item.title}</p>
+                    <p className="text-xs truncate mt-0.5" style={{ color: '#64748B' }}>{item.employeeName}</p>
+                    <p className="text-xs mt-0.5" style={{ color: days < 0 ? '#DC2626' : '#94A3B8' }}>
                       {days < 0 ? `Isteklo prije ${Math.abs(days)} dana` : days === 0 ? 'Danas' : `Za ${days} dana`}
                     </p>
                   </div>
@@ -212,7 +205,7 @@ export default function DashboardPage() {
                   {/* Action */}
                   <Link
                     href={`/zaposlenici/${item.employeeId}/pregled`}
-                    className="text-xs px-3 py-1.5 rounded-lg font-medium"
+                    className="text-xs px-2.5 py-1.5 rounded-lg font-medium flex-shrink-0"
                     style={{ background: '#EFF6FF', color: '#2563EB' }}
                   >
                     Pogledaj
