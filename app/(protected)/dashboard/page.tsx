@@ -211,7 +211,7 @@ export default function DashboardPage() {
 
                   {/* Action */}
                   <Link
-                    href={`/zaposlenici/${item.employeeId}`}
+                    href={`/zaposlenici/${item.employeeId}/pregled`}
                     className="text-xs px-3 py-1.5 rounded-lg font-medium"
                     style={{ background: '#EFF6FF', color: '#2563EB' }}
                   >
