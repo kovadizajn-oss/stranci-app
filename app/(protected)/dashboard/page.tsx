@@ -156,7 +156,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-semibold" style={{ color: '#1E293B' }}>
-          Dobar dan, <span style={{ color: '#2563EB', fontStyle: 'italic' }}>Karlo</span>
+          Dobar dan, <span style={{ color: '#2563EB', fontStyle: 'italic' }}>Kvantus!</span>
         </h1>
         <p className="text-sm mt-1" style={{ color: '#64748B' }}>Evo što slijedi za vas u idućim tjednima.</p>
       </div>
