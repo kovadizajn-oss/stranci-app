@@ -283,7 +283,7 @@ export default function KalendarPage() {
                   style={{ borderBottom: i < agendaEvents.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cfg.color }} />
                   <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium" style={{ color: '#1E293B' }}>{ev.employeeName}</span>
+                    <Link href={`/zaposlenici/${ev.employeeId}/pregled`} className="text-sm font-medium hover:underline" style={{ color: '#1E293B' }}>{ev.employeeName}</Link>
                     <span className="text-xs px-2 py-0.5 rounded-full"
                       style={{ background: cfg.bg, color: cfg.color }}>
                       {cfg.icon} {ev.label}
