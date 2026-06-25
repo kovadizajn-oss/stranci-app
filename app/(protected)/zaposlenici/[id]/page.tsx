@@ -152,7 +152,7 @@ export default function EmployeeDetail() {
     setSuccess(false)
 
     try {
-      const currentJob = workHistory.find((w: any) => w.is_current)
+      const currentJob = workHistory.find((w: any) => w.is_current && !w.datum_do)
       await supabase.from('employees').update({
         ime: form.ime, prezime: form.prezime,
         datum_rodjenja: form.datum_rodjenja || null,
@@ -254,10 +254,12 @@ export default function EmployeeDetail() {
       }
       for (const wh of workHistory) {
         if (!wh.poslodavac) continue
+        // If the "current" job has an end date filled, it's no longer current
+        const isCurrent = wh.is_current && !wh.datum_do
         if (wh._new || !wh.id) {
-          await supabase.from('work_history').insert({ employee_id: id, poslodavac: wh.poslodavac, radno_mjesto: wh.radno_mjesto || null, datum_od: wh.datum_od || null, datum_do: wh.datum_do || null, is_current: wh.is_current || false })
+          await supabase.from('work_history').insert({ employee_id: id, poslodavac: wh.poslodavac, radno_mjesto: wh.radno_mjesto || null, datum_od: wh.datum_od || null, datum_do: wh.datum_do || null, is_current: isCurrent })
         } else {
-          await supabase.from('work_history').update({ poslodavac: wh.poslodavac, radno_mjesto: wh.radno_mjesto || null, datum_od: wh.datum_od || null, datum_do: wh.datum_do || null, is_current: wh.is_current || false }).eq('id', wh.id)
+          await supabase.from('work_history').update({ poslodavac: wh.poslodavac, radno_mjesto: wh.radno_mjesto || null, datum_od: wh.datum_od || null, datum_do: wh.datum_do || null, is_current: isCurrent }).eq('id', wh.id)
         }
       }
 
@@ -539,6 +541,11 @@ export default function EmployeeDetail() {
                 <Field label="Datum početka">
                   <input type="date" className={inputCls} style={inputStyle} value={current.datum_od || ''}
                     onChange={e => setWorkHistory(prev => prev.map((w, j) => j === currentIdx ? { ...w, datum_od: e.target.value } : w))} />
+                </Field>
+                <Field label="Datum završetka">
+                  <input type="date" className={inputCls} style={inputStyle} value={current.datum_do || ''}
+                    placeholder="Prazno = još radi"
+                    onChange={e => setWorkHistory(prev => prev.map((w, j) => j === currentIdx ? { ...w, datum_do: e.target.value } : w))} />
                 </Field>
               </div>
             )
