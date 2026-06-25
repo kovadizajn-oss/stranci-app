@@ -159,27 +159,36 @@ export default function KalendarPage() {
       <div className="bg-white rounded-xl mb-6" style={{ border: '1px solid #E2E8F0' }}>
 
         {/* Calendar header */}
-        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #E2E8F0' }}>
-          <div className="flex items-center gap-3">
-            <button onClick={prevMonth}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-lg font-medium transition-colors"
-              style={{ background: '#F8FAFC', color: '#374151' }}>‹</button>
-            <h2 className="text-lg font-semibold" style={{ color: '#1E293B', minWidth: 180, textAlign: 'center' }}>
-              {MONTH_NAMES[month]} {year}
-            </h2>
-            <button onClick={nextMonth}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-lg font-medium transition-colors"
-              style={{ background: '#F8FAFC', color: '#374151' }}>›</button>
-            <button onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()); setSelectedDay(todayStr) }}
-              className="ml-2 px-3 py-1 rounded-lg text-xs font-medium"
-              style={{ background: '#EFF6FF', color: '#2563EB' }}>Danas</button>
+        <div className="px-4 md:px-6 py-4" style={{ borderBottom: '1px solid #E2E8F0' }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button onClick={prevMonth}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-lg font-medium"
+                style={{ background: '#F8FAFC', color: '#374151' }}>‹</button>
+              <h2 className="text-base md:text-lg font-semibold" style={{ color: '#1E293B', minWidth: 140, textAlign: 'center' }}>
+                {MONTH_NAMES[month]} {year}
+              </h2>
+              <button onClick={nextMonth}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-lg font-medium"
+                style={{ background: '#F8FAFC', color: '#374151' }}>›</button>
+            </div>
+
+            {/* Legend — desktop only */}
+            <div className="hidden md:flex items-center gap-5">
+              {(Object.entries(EVENT_CONFIG) as [keyof typeof EVENT_CONFIG, typeof EVENT_CONFIG[keyof typeof EVENT_CONFIG]][]).map(([type, cfg]) => (
+                <div key={type} className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cfg.color }} />
+                  <span className="text-xs" style={{ color: '#64748B' }}>{cfg.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Legend */}
-          <div className="flex items-center gap-5">
+          {/* Legend — mobile only, below nav */}
+          <div className="flex md:hidden items-center gap-4 mt-3 flex-wrap">
             {(Object.entries(EVENT_CONFIG) as [keyof typeof EVENT_CONFIG, typeof EVENT_CONFIG[keyof typeof EVENT_CONFIG]][]).map(([type, cfg]) => (
               <div key={type} className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cfg.color }} />
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: cfg.color }} />
                 <span className="text-xs" style={{ color: '#64748B' }}>{cfg.label}</span>
               </div>
             ))}
@@ -279,21 +288,23 @@ export default function KalendarPage() {
               const cfg = EVENT_CONFIG[ev.type]
               const isRange = ev.dateFrom !== ev.dateTo
               return (
-                <div key={ev.id + i} className="flex items-center gap-4 px-6 py-3"
+                <div key={ev.id + i} className="flex items-center gap-3 px-4 md:px-6 py-3"
                   style={{ borderBottom: i < agendaEvents.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cfg.color }} />
-                  <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-                    <Link href={`/zaposlenici/${ev.employeeId}/pregled`} className="text-sm font-medium hover:underline" style={{ color: '#1E293B' }}>{ev.employeeName}</Link>
-                    <span className="text-xs px-2 py-0.5 rounded-full"
-                      style={{ background: cfg.bg, color: cfg.color }}>
-                      {cfg.icon} {ev.label}
-                    </span>
+                  <div className="flex-1 min-w-0">
+                    <Link href={`/zaposlenici/${ev.employeeId}/pregled`} className="text-sm font-medium hover:underline truncate block" style={{ color: '#1E293B' }}>{ev.employeeName}</Link>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-xs px-2 py-0.5 rounded-full"
+                        style={{ background: cfg.bg, color: cfg.color }}>
+                        {cfg.icon} {ev.label}
+                      </span>
+                      <span className="text-xs" style={{ color: '#64748B' }}>
+                        {isRange
+                          ? `${formatHR(ev.dateFrom)} – ${formatHR(ev.dateTo)}`
+                          : formatHR(ev.dateFrom)}
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-xs flex-shrink-0" style={{ color: '#64748B' }}>
-                    {isRange
-                      ? `${formatHR(ev.dateFrom)} – ${formatHR(ev.dateTo)}`
-                      : formatHR(ev.dateFrom)}
-                  </span>
                   <Link href={`/zaposlenici/${ev.employeeId}/pregled`}
                     className="text-xs px-2.5 py-1 rounded-lg flex-shrink-0"
                     style={{ background: '#EFF6FF', color: '#2563EB' }}>
