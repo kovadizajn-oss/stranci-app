@@ -245,13 +245,6 @@ export default function ZaposleniciPage() {
                                 Na bolovanju
                               </span>
                             )}
-                            {emp.no_sick_6mo && !emp.on_sick_leave && (
-                              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-                                style={{ background: '#FEF3C7', color: '#92400E' }}
-                                title="Nije koristio bolovanje 6+ mj.">
-                                🏆
-                              </span>
-                            )}
                           </div>
                         </div>
                       </div>

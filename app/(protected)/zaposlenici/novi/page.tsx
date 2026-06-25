@@ -67,8 +67,6 @@ export default function NoviZaposlenik() {
   const [lijecnicki, setLJ] = useState<DocState>({ datum_isteka: '', file: null })
   const [poslodavac, setPoslodavac] = useState('')
   const [radnoMjesto, setRadnoMjesto] = useState('')
-  const [vacations, setVacations] = useState<any[]>([])
-  const [sickLeaves, setSickLeaves] = useState<any[]>([])
 
   function setF(key: string, value: string) { setForm(prev => ({ ...prev, [key]: value })) }
 
@@ -103,16 +101,6 @@ export default function NoviZaposlenik() {
         let fileUrl = null
         if (lijecnicki.file) fileUrl = await uploadFile(lijecnicki.file, `${empId}/doc_${Date.now()}_${lijecnicki.file.name}`)
         await supabase.from('documents').insert({ employee_id: empId, tip_dokumenta: 'lijecnicki', datum_isteka: lijecnicki.datum_isteka || null, file_url: fileUrl })
-      }
-
-      for (const vac of vacations) {
-        if (!vac.datum_od || !vac.datum_do) continue
-        await supabase.from('vacations').insert({ employee_id: empId, datum_od: vac.datum_od, datum_do: vac.datum_do, napomena: vac.napomena || null })
-      }
-
-      for (const sick of sickLeaves) {
-        if (!sick.datum_od || !sick.datum_do) continue
-        await supabase.from('sick_leaves').insert({ employee_id: empId, datum_od: sick.datum_od, datum_do: sick.datum_do, napomena: sick.napomena || null })
       }
 
       router.push('/zaposlenici')
@@ -178,56 +166,6 @@ export default function NoviZaposlenik() {
           <div className="grid grid-cols-2 gap-4">
             <Field label="Poslodavac / firma"><input className={inputCls} style={inputStyle} value={poslodavac} onChange={e => setPoslodavac(e.target.value)} /></Field>
             <Field label="Radno mjesto"><input className={inputCls} style={inputStyle} value={radnoMjesto} onChange={e => setRadnoMjesto(e.target.value)} /></Field>
-          </div>
-        </Section>
-
-        <Section icon="📅" title="Godišnji odmor & Bolovanje" desc="Unesite prošle odsutnosti ako postoje.">
-          <div className="mb-5">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold" style={{ color: '#374151' }}>Godišnji odmor</p>
-              <button type="button" onClick={() => setVacations(prev => [...prev, { datum_od: '', datum_do: '', napomena: '' }])}
-                className="text-xs font-medium" style={{ color: '#2563EB' }}>+ Dodaj</button>
-            </div>
-            {vacations.length === 0 && <p className="text-xs" style={{ color: '#94A3B8' }}>Nema unesenih godišnjih odmora.</p>}
-            {vacations.map((vac, i) => (
-              <div key={i} className="flex items-center gap-3 mb-2 p-3 rounded-lg" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
-                <span className="text-sm">🌴</span>
-                <div className="flex-1 grid grid-cols-3 gap-2">
-                  <div><p className="text-xs mb-1" style={{ color: '#64748B' }}>Od</p>
-                    <input type="date" className={inputCls} style={inputStyle} value={vac.datum_od} onChange={e => setVacations(prev => prev.map((v, j) => j === i ? { ...v, datum_od: e.target.value } : v))} /></div>
-                  <div><p className="text-xs mb-1" style={{ color: '#64748B' }}>Do</p>
-                    <input type="date" className={inputCls} style={inputStyle} value={vac.datum_do} onChange={e => setVacations(prev => prev.map((v, j) => j === i ? { ...v, datum_do: e.target.value } : v))} /></div>
-                  <div><p className="text-xs mb-1" style={{ color: '#64748B' }}>Napomena</p>
-                    <input className={inputCls} style={inputStyle} placeholder="Opcionalno" value={vac.napomena} onChange={e => setVacations(prev => prev.map((v, j) => j === i ? { ...v, napomena: e.target.value } : v))} /></div>
-                </div>
-                <button type="button" onClick={() => setVacations(prev => prev.filter((_, j) => j !== i))}
-                  className="text-xs flex-shrink-0" style={{ color: '#EF4444' }}>Ukloni</button>
-              </div>
-            ))}
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold" style={{ color: '#374151' }}>Bolovanje</p>
-              <button type="button" onClick={() => setSickLeaves(prev => [...prev, { datum_od: '', datum_do: '', napomena: '' }])}
-                className="text-xs font-medium" style={{ color: '#2563EB' }}>+ Dodaj</button>
-            </div>
-            {sickLeaves.length === 0 && <p className="text-xs" style={{ color: '#94A3B8' }}>Nema unesenih bolovanja.</p>}
-            {sickLeaves.map((sick, i) => (
-              <div key={i} className="flex items-center gap-3 mb-2 p-3 rounded-lg" style={{ background: '#FEFCE8', border: '1px solid #FEF08A' }}>
-                <span className="text-sm">🏥</span>
-                <div className="flex-1 grid grid-cols-3 gap-2">
-                  <div><p className="text-xs mb-1" style={{ color: '#64748B' }}>Od</p>
-                    <input type="date" className={inputCls} style={inputStyle} value={sick.datum_od} onChange={e => setSickLeaves(prev => prev.map((s, j) => j === i ? { ...s, datum_od: e.target.value } : s))} /></div>
-                  <div><p className="text-xs mb-1" style={{ color: '#64748B' }}>Do</p>
-                    <input type="date" className={inputCls} style={inputStyle} value={sick.datum_do} onChange={e => setSickLeaves(prev => prev.map((s, j) => j === i ? { ...s, datum_do: e.target.value } : s))} /></div>
-                  <div><p className="text-xs mb-1" style={{ color: '#64748B' }}>Napomena</p>
-                    <input className={inputCls} style={inputStyle} placeholder="Opcionalno" value={sick.napomena} onChange={e => setSickLeaves(prev => prev.map((s, j) => j === i ? { ...s, napomena: e.target.value } : s))} /></div>
-                </div>
-                <button type="button" onClick={() => setSickLeaves(prev => prev.filter((_, j) => j !== i))}
-                  className="text-xs flex-shrink-0" style={{ color: '#EF4444' }}>Ukloni</button>
-              </div>
-            ))}
           </div>
         </Section>
 
