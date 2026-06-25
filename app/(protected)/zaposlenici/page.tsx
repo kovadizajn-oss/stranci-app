@@ -221,9 +221,9 @@ export default function ZaposleniciPage() {
                           {emp.ime[0]}{emp.prezime[0]}
                         </div>
                         <div>
-                          <span className="text-sm font-medium" style={{ color: '#1E293B' }}>
+                          <Link href={`/zaposlenici/${emp.id}/pregled`} className="text-sm font-medium hover:underline" style={{ color: '#1E293B' }}>
                             {emp.ime} {emp.prezime}
-                          </span>
+                          </Link>
                           <div className="flex gap-1 mt-0.5">
                             {emp.on_vacation && (
                               <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
