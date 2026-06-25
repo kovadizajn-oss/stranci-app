@@ -192,7 +192,6 @@ export default function ZaposleniciPage() {
           <option value="isteklo">Isteklo</option>
           <option value="godisnjem">Na godišnjem</option>
           <option value="bolovanju">Na bolovanju</option>
-          <option value="nagradi">🏆 Bez bolovanja 6mj.</option>
         </select>
         <span className="text-sm" style={{ color: '#94A3B8' }}>
           {filtered.length} {filtered.length === 1 ? 'zaposlenik' : 'zaposlenika'}
@@ -203,7 +202,7 @@ export default function ZaposleniciPage() {
         <table className="w-full" style={{ minWidth: 600 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-              {['Zaposlenik', 'Država', 'Dokument', 'Poslodavac', 'Istek', 'Status', 'Akcije'].map(col => (
+              {['Zaposlenik', 'Nadolazeći istek', 'Status', 'Akcije'].map(col => (
                 <th key={col} className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>
                   {col}
                 </th>
@@ -212,9 +211,9 @@ export default function ZaposleniciPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</td></tr>
+              <tr><td colSpan={4} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>
+              <tr><td colSpan={4} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>
                 {employees.length === 0 ? 'Još nema zaposlenika. Dodajte prvog zaposlenika klikom na gumb gore.' : 'Nema rezultata za unesene filtere.'}
               </td></tr>
             ) : (
@@ -249,9 +248,6 @@ export default function ZaposleniciPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{emp.drzava_rodjenja || '—'}</td>
-                    <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{emp.doc_tip ? (DOC_TYPES[emp.doc_tip] || emp.doc_tip) : '—'}</td>
-                    <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{emp.poslodavac || '—'}</td>
                     <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{formatDateHR(emp.doc_isteka)}</td>
                     <td className="px-4 py-3">
                       <span className="text-xs px-2.5 py-1 rounded-full font-medium"
