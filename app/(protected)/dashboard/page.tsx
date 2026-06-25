@@ -43,6 +43,7 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
 
 export default function DashboardPage() {
   const [deadlines, setDeadlines] = useState<DeadlineItem[]>([])
+  const [expired, setExpired] = useState<DeadlineItem[]>([])
   const [stats, setStats] = useState({ openObligations: 0, nearestDays: null as number | null, doneThisMonth: 0, totalDocs: 0 })
   const [loading, setLoading] = useState(true)
 
@@ -55,23 +56,23 @@ export default function DashboardPage() {
       const in60Str = in60.toISOString().split('T')[0]
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
 
-      // Fetch expiring documents with employee info
-      const { data: docs } = await supabase
-        .from('documents')
-        .select('id, employee_id, tip_dokumenta, datum_isteka, employees(ime, prezime)')
-        .lte('datum_isteka', in60Str)
-        .gte('datum_isteka', todayStr)
-        .order('datum_isteka')
+      const [{ data: docs }, { data: expiredDocs }, { count: docCount }] = await Promise.all([
+        supabase.from('documents')
+          .select('id, employee_id, tip_dokumenta, datum_isteka, employees(ime, prezime)')
+          .lte('datum_isteka', in60Str)
+          .gte('datum_isteka', todayStr)
+          .order('datum_isteka'),
+        supabase.from('documents')
+          .select('id, employee_id, tip_dokumenta, datum_isteka, employees(ime, prezime)')
+          .lt('datum_isteka', todayStr)
+          .order('datum_isteka'),
+        supabase.from('documents')
+          .select('id', { count: 'exact', head: true }),
+      ])
 
-      const { count: docCount } = await supabase
-        .from('documents')
-        .select('id', { count: 'exact', head: true })
-
-      const items: DeadlineItem[] = []
-
-      docs?.forEach((d: any) => {
+      const toItem = (d: any): DeadlineItem => {
         const emp = d.employees
-        items.push({
+        return {
           id: d.id,
           employeeId: d.employee_id,
           employeeName: emp ? `${emp.ime} ${emp.prezime}` : 'Nepoznat',
@@ -79,18 +80,18 @@ export default function DashboardPage() {
           description: '',
           dueDate: d.datum_isteka,
           type: 'document',
-        })
-      })
+        }
+      }
 
-      items.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+      const items = (docs || []).map(toItem)
+      const expiredItems = (expiredDocs || []).map(toItem)
 
       // Nearest deadline
       let nearestDays: number | null = null
-      if (items.length > 0) {
-        nearestDays = daysUntil(items[0].dueDate)
-      }
+      if (items.length > 0) nearestDays = daysUntil(items[0].dueDate)
 
       setDeadlines(items)
+      setExpired(expiredItems)
       setStats({
         openObligations: 0,
         nearestDays,
@@ -153,6 +154,47 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Expired documents */}
+      {!loading && expired.length > 0 && (
+        <div className="bg-white rounded-xl mb-4" style={{ border: '2px solid #FECACA' }}>
+          <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #FEE2E2', background: '#FEF2F2', borderRadius: '10px 10px 0 0' }}>
+            <div>
+              <h2 className="font-semibold" style={{ color: '#DC2626' }}>⚠️ Isteklo</h2>
+              <p className="text-xs mt-0.5" style={{ color: '#EF4444' }}>Ažurirajte datume kada se dokumenti obnove</p>
+            </div>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: '#FEE2E2', color: '#DC2626' }}>
+              {expired.length} {expired.length === 1 ? 'dokument' : 'dokumenta'}
+            </span>
+          </div>
+          <div>
+            {expired.map((item, i) => {
+              const days = Math.abs(daysUntil(item.dueDate))
+              const { day, month } = formatDate(item.dueDate)
+              return (
+                <div key={item.id} className="flex items-center gap-3 px-4 md:px-6 py-4"
+                  style={{ borderBottom: i < expired.length - 1 ? '1px solid #FEE2E2' : 'none' }}>
+                  <div className="w-12 h-12 rounded-lg flex flex-col items-center justify-center flex-shrink-0"
+                    style={{ background: '#FEE2E2' }}>
+                    <span className="text-lg font-bold leading-none" style={{ color: '#DC2626' }}>{day}</span>
+                    <span className="text-xs font-medium mt-0.5" style={{ color: '#DC2626' }}>{month}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate" style={{ color: '#1E293B' }}>{item.title}</p>
+                    <p className="text-xs truncate mt-0.5" style={{ color: '#64748B' }}>{item.employeeName}</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#DC2626' }}>Isteklo prije {days} {days === 1 ? 'dana' : 'dana'}</p>
+                  </div>
+                  <Link href={`/zaposlenici/${item.employeeId}`}
+                    className="text-xs px-2.5 py-1.5 rounded-lg font-medium flex-shrink-0"
+                    style={{ background: '#FEE2E2', color: '#DC2626' }}>
+                    Uredi
+                  </Link>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Upcoming deadlines */}
       <div className="bg-white rounded-xl" style={{ border: '1px solid #E2E8F0' }}>
