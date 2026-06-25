@@ -6,7 +6,7 @@ import Link from 'next/link'
 
 type CalEvent = {
   id: string
-  type: 'vacation' | 'sick' | 'doc_expiry' | 'smjestaj_expiry'
+  type: 'vacation' | 'sick' | 'doc_expiry'
   employeeName: string
   employeeId: string
   dateFrom: string
@@ -18,7 +18,6 @@ const EVENT_CONFIG = {
   vacation:        { color: '#16A34A', bg: '#DCFCE7', border: '#BBF7D0', icon: '🌴', label: 'Godišnji odmor' },
   sick:            { color: '#CA8A04', bg: '#FEF9C3', border: '#FDE047', icon: '🏥', label: 'Bolovanje' },
   doc_expiry:      { color: '#DC2626', bg: '#FEE2E2', border: '#FECACA', icon: '📄', label: 'Istek dokumenta' },
-  smjestaj_expiry: { color: '#EA580C', bg: '#FED7AA', border: '#FDBA74', icon: '🏠', label: 'Istek smještaja' },
 }
 
 const MONTH_NAMES = ['Siječanj','Veljača','Ožujak','Travanj','Svibanj','Lipanj',
@@ -26,9 +25,8 @@ const MONTH_NAMES = ['Siječanj','Veljača','Ožujak','Travanj','Svibanj','Lipan
 const DAY_LABELS = ['Pon','Uto','Sri','Čet','Pet','Sub','Ned']
 
 const DOC_TYPE_LABELS: Record<string, string> = {
-  putovnica: 'Putovnica', dozvola_boravka: 'Dozvola boravka',
-  radna_dozvola: 'Radna dozvola', oib: 'OIB',
-  zdravstveno: 'Zdravstveno', ugovor_o_radu: 'Ugovor o radu', other: 'Ostalo',
+  radna_dozvola: 'Radna dozvola',
+  lijecnicki: 'Liječnički pregled',
 }
 
 function toDateStr(d: Date) {
@@ -56,12 +54,10 @@ export default function KalendarPage() {
         { data: vacs },
         { data: sick },
         { data: docs },
-        { data: emps },
       ] = await Promise.all([
         supabase.from('vacations').select('id, employee_id, datum_od, datum_do, employees(ime, prezime)'),
         supabase.from('sick_leaves').select('id, employee_id, datum_od, datum_do, employees(ime, prezime)'),
         supabase.from('documents').select('id, employee_id, tip_dokumenta, datum_isteka, employees(ime, prezime)').not('datum_isteka', 'is', null),
-        supabase.from('employees').select('id, ime, prezime, datum_isteka_smjestaja').not('datum_isteka_smjestaja', 'is', null),
       ])
 
       const all: CalEvent[] = []
@@ -85,10 +81,6 @@ export default function KalendarPage() {
         all.push({ id: `doc-${d.id}`, type: 'doc_expiry', employeeName: `${emp.ime} ${emp.prezime}`, employeeId: d.employee_id, dateFrom: d.datum_isteka, dateTo: d.datum_isteka, label: DOC_TYPE_LABELS[d.tip_dokumenta] || 'Dokument' })
       })
 
-      emps?.forEach((e: any) => {
-        if (!e.datum_isteka_smjestaja) return
-        all.push({ id: `smjestaj-${e.id}`, type: 'smjestaj_expiry', employeeName: `${e.ime} ${e.prezime}`, employeeId: e.id, dateFrom: e.datum_isteka_smjestaja, dateTo: e.datum_isteka_smjestaja, label: 'Istek smještaja' })
-      })
 
       setEvents(all)
       setLoading(false)

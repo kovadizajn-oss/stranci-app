@@ -9,7 +9,7 @@ type EmployeeRow = {
   ime: string
   prezime: string
   photo_url: string | null
-  drzava_drzavljanstva: string | null
+  drzava_rodjenja: string | null
   poslodavac: string | null
   doc_tip: string | null
   doc_broj: string | null
@@ -34,13 +34,8 @@ function formatDateHR(dateStr: string | null) {
 }
 
 const DOC_TYPES: Record<string, string> = {
-  putovnica: 'Putovnica',
-  dozvola_boravka: 'Dozvola boravka',
   radna_dozvola: 'Radna dozvola',
-  oib: 'OIB',
-  zdravstveno: 'Zdravstveno',
-  ugovor_o_radu: 'Ugovor o radu',
-  other: 'Ostalo',
+  lijecnicki: 'Liječnički pregled',
 }
 
 export default function ZaposleniciPage() {
@@ -56,7 +51,7 @@ export default function ZaposleniciPage() {
 
       const { data: emps } = await supabase
         .from('employees')
-        .select('id, ime, prezime, photo_url, drzava_drzavljanstva, poslodavac')
+        .select('id, ime, prezime, photo_url, drzava_rodjenja, poslodavac')
         .order('prezime')
 
       if (!emps) { setLoading(false); return }
@@ -92,7 +87,7 @@ export default function ZaposleniciPage() {
             ime: emp.ime,
             prezime: emp.prezime,
             photo_url: emp.photo_url,
-            drzava_drzavljanstva: emp.drzava_drzavljanstva,
+            drzava_rodjenja: emp.drzava_rodjenja,
             poslodavac: emp.poslodavac,
             doc_tip: doc?.tip_dokumenta || null,
             doc_broj: doc?.broj_dokumenta || null,
@@ -241,7 +236,7 @@ export default function ZaposleniciPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{emp.drzava_drzavljanstva || '—'}</td>
+                    <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{emp.drzava_rodjenja || '—'}</td>
                     <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{emp.doc_tip ? (DOC_TYPES[emp.doc_tip] || emp.doc_tip) : '—'}</td>
                     <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{emp.doc_broj || '—'}</td>
                     <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{emp.poslodavac || '—'}</td>

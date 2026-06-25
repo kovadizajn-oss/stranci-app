@@ -37,13 +37,8 @@ function badgeColor(days: number) {
 }
 
 const DOCUMENT_TYPE_LABELS: Record<string, string> = {
-  putovnica: 'Putovnica',
-  dozvola_boravka: 'Dozvola boravka',
   radna_dozvola: 'Radna dozvola',
-  oib: 'OIB',
-  zdravstveno: 'Zdravstveno osiguranje',
-  ugovor_o_radu: 'Ugovor o radu',
-  other: 'Ostalo',
+  lijecnicki: 'Liječnički pregled',
 }
 
 export default function DashboardPage() {
@@ -68,34 +63,6 @@ export default function DashboardPage() {
         .gte('datum_isteka', todayStr)
         .order('datum_isteka')
 
-      // Fetch employees with expiring smještaj
-      const { data: smjestajEmps } = await supabase
-        .from('employees')
-        .select('id, ime, prezime, datum_isteka_smjestaja')
-        .lte('datum_isteka_smjestaja', in60Str)
-        .gte('datum_isteka_smjestaja', todayStr)
-        .order('datum_isteka_smjestaja')
-
-      // Fetch open obligations with employee info
-      const { data: obs } = await supabase
-        .from('obligations')
-        .select('id, employee_id, naslov, opis, datum_dospieca, status, employees(ime, prezime)')
-        .eq('status', 'otvoreno')
-        .lte('datum_dospieca', in60Str)
-        .order('datum_dospieca')
-
-      // Stats
-      const { count: openCount } = await supabase
-        .from('obligations')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'otvoreno')
-
-      const { count: doneCount } = await supabase
-        .from('obligations')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'dovršeno')
-        .gte('created_at', monthStart)
-
       const { count: docCount } = await supabase
         .from('documents')
         .select('id', { count: 'exact', head: true })
@@ -115,31 +82,6 @@ export default function DashboardPage() {
         })
       })
 
-      smjestajEmps?.forEach((emp: any) => {
-        items.push({
-          id: `smjestaj-${emp.id}`,
-          employeeId: emp.id,
-          employeeName: `${emp.ime} ${emp.prezime}`,
-          title: 'Istek smještaja',
-          description: '',
-          dueDate: emp.datum_isteka_smjestaja,
-          type: 'document',
-        })
-      })
-
-      obs?.forEach((o: any) => {
-        const emp = o.employees
-        items.push({
-          id: o.id,
-          employeeId: o.employee_id,
-          employeeName: emp ? `${emp.ime} ${emp.prezime}` : 'Nepoznat',
-          title: o.naslov,
-          description: o.opis || '',
-          dueDate: o.datum_dospieca,
-          type: 'obligation',
-        })
-      })
-
       items.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
 
       // Nearest deadline
@@ -150,9 +92,9 @@ export default function DashboardPage() {
 
       setDeadlines(items)
       setStats({
-        openObligations: openCount || 0,
+        openObligations: 0,
         nearestDays,
-        doneThisMonth: doneCount || 0,
+        doneThisMonth: 0,
         totalDocs: docCount || 0,
       })
       setLoading(false)

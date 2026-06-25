@@ -5,24 +5,6 @@ import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
-const DOC_TYPE_LABELS: Record<string, string> = {
-  putovnica: 'Putovnica',
-  dozvola_boravka: 'Dozvola boravka',
-  radna_dozvola: 'Radna dozvola',
-  oib: 'OIB',
-  zdravstveno: 'Zdravstveno osiguranje',
-  ugovor_o_radu: 'Ugovor o radu',
-  other: 'Ostalo',
-}
-
-const ATT_TYPE_LABELS: Record<string, string> = {
-  ugovor_o_radu: 'Ugovor o radu',
-  potvrda_o_zaposlenju: 'Potvrda o zaposlenju',
-  potvrda_o_prijavi: 'Potvrda o prijavi boravišta',
-  najamninski_ugovor: 'Najamninski ugovor',
-  other: 'Ostalo',
-}
-
 function daysUntil(dateStr: string) {
   const today = new Date(); today.setHours(0,0,0,0)
   const due = new Date(dateStr); due.setHours(0,0,0,0)
@@ -42,15 +24,14 @@ function expiryBadge(dateStr: string | null) {
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return '—'
-  const d = new Date(dateStr)
-  return `${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getFullYear()}.`
+  const [y, m, d] = dateStr.split('-')
+  return `${d}.${m}.${y}.`
 }
 
 function fileNameFromUrl(url: string) {
   try {
     const parts = decodeURIComponent(url).split('/')
-    const raw = parts[parts.length - 1]
-    return raw.replace(/^(doc|att|photo)_\d+_/, '')
+    return parts[parts.length - 1].replace(/^(doc|att|photo)_\d+_/, '')
   } catch { return 'Datoteka' }
 }
 
@@ -79,12 +60,11 @@ export default function CandidatePregled() {
   const { id } = useParams<{ id: string }>()
   const [loading, setLoading] = useState(true)
   const [emp, setEmp] = useState<any>(null)
-  const [documents, setDocuments] = useState<any[]>([])
-  const [attachments, setAttachments] = useState<any[]>([])
-  const [addresses, setAddresses] = useState<any[]>([])
+  const [radnaDozvola, setRadnaDozvola] = useState<any>(null)
+  const [lijecnicki, setLijecnicki] = useState<any>(null)
+  const [workHistory, setWorkHistory] = useState<any[]>([])
   const [vacations, setVacations] = useState<any[]>([])
   const [sickLeaves, setSickLeaves] = useState<any[]>([])
-  const [workHistory, setWorkHistory] = useState<any[]>([])
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -94,21 +74,18 @@ export default function CandidatePregled() {
       if (!employee) return
       setEmp(employee)
 
-      const [{ data: docs }, { data: atts }, { data: addrs }, { data: vacs }, { data: sick }, { data: wh }] = await Promise.all([
-        supabase.from('documents').select('*').eq('employee_id', id).order('datum_isteka', { ascending: true }),
-        supabase.from('attachments').select('*').eq('employee_id', id),
-        supabase.from('addresses').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
+      const [{ data: docs }, { data: wh }, { data: vacs }, { data: sick }] = await Promise.all([
+        supabase.from('documents').select('*').eq('employee_id', id),
+        supabase.from('work_history').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
         supabase.from('vacations').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
         supabase.from('sick_leaves').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
-        supabase.from('work_history').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
       ])
 
-      setDocuments(docs || [])
-      setAttachments(atts || [])
-      setAddresses(addrs || [])
+      setRadnaDozvola(docs?.find((d: any) => d.tip_dokumenta === 'radna_dozvola') || null)
+      setLijecnicki(docs?.find((d: any) => d.tip_dokumenta === 'lijecnicki') || null)
+      setWorkHistory(wh || [])
       setVacations(vacs || [])
       setSickLeaves(sick || [])
-      setWorkHistory(wh || [])
       setLoading(false)
     }
     load()
@@ -117,66 +94,53 @@ export default function CandidatePregled() {
   if (loading) return <div className="p-8 text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</div>
   if (!emp) return <div className="p-8 text-sm" style={{ color: '#EF4444' }}>Zaposlenik nije pronađen.</div>
 
-  const currentAddress = addresses.find((a: any) => a.is_current)
-  const pastAddresses = addresses.filter((a: any) => !a.is_current)
-
   const onVacation = vacations.some((v: any) => v.datum_od <= today && v.datum_do >= today)
   const onSickLeave = sickLeaves.some((s: any) => s.datum_od <= today && s.datum_do >= today)
+  const rdBadge = expiryBadge(radnaDozvola?.datum_isteka)
+  const ljBadge = expiryBadge(lijecnicki?.datum_isteka)
 
-  const smjestajBadge = emp.datum_isteka_smjestaja ? expiryBadge(emp.datum_isteka_smjestaja) : null
+  const latestJob = workHistory[0] || null
+  const isActiveJob = latestJob?.is_current && !latestJob?.datum_do
+  const pastJobs = workHistory.slice(1)
 
   return (
-    <div className="p-8" style={{ maxWidth: 1100 }}>
-      {/* Back */}
+    <div className="p-8" style={{ maxWidth: 1000 }}>
       <Link href="/zaposlenici" className="text-sm" style={{ color: '#64748B' }}>← Zaposlenici</Link>
 
       {/* Header */}
       <div className="flex items-start justify-between mt-4 mb-8">
         <div className="flex items-center gap-5">
-          {/* Avatar / Photo */}
-          <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center font-bold text-2xl"
+          <div className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-xl flex-shrink-0"
             style={{ background: '#EFF6FF', color: '#2563EB', border: '3px solid #E2E8F0' }}>
-            {emp.photo_url
-              ? <img src={emp.photo_url} alt="Foto" className="w-full h-full object-cover" />
-              : `${emp.ime?.[0] || ''}${emp.prezime?.[0] || ''}`
-            }
+            {emp.ime?.[0]}{emp.prezime?.[0]}
           </div>
-
-          {/* Name + badges */}
           <div>
-            <h1 className="text-3xl font-semibold mb-2" style={{ color: '#1E293B' }}>
-              {emp.ime} {emp.prezime}
-            </h1>
+            <h1 className="text-3xl font-semibold mb-2" style={{ color: '#1E293B' }}>{emp.ime} {emp.prezime}</h1>
             <div className="flex flex-wrap items-center gap-2">
-              {emp.drzava_drzavljanstva && (
+              {emp.drzava_rodjenja && (
                 <span className="text-xs px-2.5 py-1 rounded-full" style={{ background: '#F1F5F9', color: '#475569' }}>
-                  🌍 {emp.drzava_drzavljanstva}
+                  🌍 {emp.drzava_rodjenja}
                 </span>
               )}
-              {emp.poslodavac && (
+              {latestJob?.poslodavac && (
                 <span className="text-xs px-2.5 py-1 rounded-full" style={{ background: '#F1F5F9', color: '#475569' }}>
-                  💼 {emp.poslodavac}
+                  💼 {latestJob.poslodavac}
                 </span>
               )}
-              {emp.radno_mjesto && (
+              {latestJob?.radno_mjesto && (
                 <span className="text-xs px-2.5 py-1 rounded-full" style={{ background: '#F1F5F9', color: '#475569' }}>
-                  {emp.radno_mjesto}
+                  {latestJob.radno_mjesto}
                 </span>
               )}
               {onVacation && (
-                <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: '#DCFCE7', color: '#16A34A' }}>
-                  🌴 Na godišnjem
-                </span>
+                <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: '#DCFCE7', color: '#16A34A' }}>🌴 Na godišnjem</span>
               )}
               {onSickLeave && (
-                <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: '#FEF9C3', color: '#CA8A04' }}>
-                  🏥 Na bolovanju
-                </span>
+                <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: '#FEF9C3', color: '#CA8A04' }}>🏥 Na bolovanju</span>
               )}
             </div>
           </div>
         </div>
-
         <Link href={`/zaposlenici/${id}`}
           className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white flex-shrink-0"
           style={{ background: '#2563EB' }}>
@@ -185,9 +149,9 @@ export default function CandidatePregled() {
       </div>
 
       {/* Main grid */}
-      <div className="grid gap-4" style={{ gridTemplateColumns: '1fr 380px' }}>
+      <div className="grid gap-4" style={{ gridTemplateColumns: '1fr 360px' }}>
 
-        {/* LEFT COLUMN */}
+        {/* LEFT */}
         <div className="flex flex-col gap-4">
 
           {/* Osobni podaci */}
@@ -195,117 +159,51 @@ export default function CandidatePregled() {
             <div className="grid grid-cols-2 gap-x-6">
               <Row label="Ime" value={emp.ime} />
               <Row label="Prezime" value={emp.prezime} />
-              <Row label="Datum rođenja" value={formatDate(emp.datum_rodjenja)} />
-              <Row label="Mjesto rođenja" value={emp.mjesto_rodjenja} />
-              <Row label="Država rođenja" value={emp.drzava_rodjenja} />
-              <Row label="Država državljanstva" value={emp.drzava_drzavljanstva} />
               <div className="col-span-2">
-                <Row label="Adresa prebivališta" value={emp.adresa_prebivalista} />
+                <Row label="Država rođenja" value={emp.drzava_rodjenja} />
               </div>
             </div>
           </Card>
 
-          {/* Kontakt */}
-          <Card title="Kontakt podaci" icon="✉️">
-            <div className="grid grid-cols-2 gap-x-6">
-              <Row label="Email" value={emp.email} />
-              <Row label="Telefon" value={emp.telefon} />
-            </div>
-          </Card>
-
-          {/* Rad */}
+          {/* Rad stranca */}
           <Card title="Rad stranca" icon="💼">
             {workHistory.length === 0 && !emp.poslodavac ? (
               <p className="text-sm" style={{ color: '#CBD5E1' }}>Nema podataka o zaposlenju.</p>
-            ) : (() => {
-              // Most recent job is first (ordered by datum_od DESC)
-              const latestJob = workHistory[0] || null
-              const isActive = latestJob?.is_current && !latestJob?.datum_do
-              const pastJobs = workHistory.slice(1)
-
-              return (
-                <>
-                  <div className="grid grid-cols-2 gap-x-6 mb-3">
-                    <Row label="Poslodavac / firma" value={latestJob?.poslodavac || emp.poslodavac} />
-                    <Row label="Radno mjesto" value={latestJob?.radno_mjesto || emp.radno_mjesto} />
-                    {latestJob?.datum_od && (
-                      <Row label="Zaposleni od" value={formatDate(latestJob.datum_od)} />
-                    )}
-                    {latestJob?.datum_do && (
-                      <div className="flex flex-col mb-3">
-                        <span className="text-xs mb-0.5" style={{ color: '#94A3B8' }}>Zaposleni do</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium w-fit"
-                          style={{ background: '#FEE2E2', color: '#DC2626' }}>
-                          {formatDate(latestJob.datum_do)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  {!isActive && latestJob && (
-                    <div className="mb-3">
-                      <span className="text-xs px-2 py-1 rounded-full font-medium"
-                        style={{ background: '#F1F5F9', color: '#64748B' }}>
-                        Bez aktivnog zaposlenja
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-x-6 mb-2">
+                  <Row label="Poslodavac / firma" value={latestJob?.poslodavac || emp.poslodavac} />
+                  <Row label="Radno mjesto" value={latestJob?.radno_mjesto || emp.radno_mjesto} />
+                  {latestJob?.datum_od && <Row label="Zaposleni od" value={formatDate(latestJob.datum_od)} />}
+                  {latestJob?.datum_do && (
+                    <div className="flex flex-col mb-3">
+                      <span className="text-xs mb-0.5" style={{ color: '#94A3B8' }}>Zaposleni do</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium w-fit" style={{ background: '#FEE2E2', color: '#DC2626' }}>
+                        {formatDate(latestJob.datum_do)}
                       </span>
                     </div>
                   )}
-                  {pastJobs.length > 0 && (
-                    <div className="mt-3 pt-3" style={{ borderTop: '1px dashed #E2E8F0' }}>
-                      <p className="text-xs font-medium mb-2" style={{ color: '#64748B' }}>Radna povijest</p>
-                      {pastJobs.map((job: any, i: number) => (
-                        <div key={job.id || i} className="text-xs mb-1.5" style={{ color: '#475569' }}>
-                          <span className="font-medium">{job.poslodavac}</span>
-                          {job.radno_mjesto && <span style={{ color: '#94A3B8' }}> · {job.radno_mjesto}</span>}
-                          {(job.datum_od || job.datum_do) && (
-                            <span style={{ color: '#94A3B8' }}> · {formatDate(job.datum_od)} – {formatDate(job.datum_do)}</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )
-            })()}
-          </Card>
-
-          {/* Boravak */}
-          <Card title="Boravak stranca" icon="🏠">
-            <div className="mb-3">
-              <span className="text-xs mb-0.5 block" style={{ color: '#94A3B8' }}>Trenutna adresa boravišta</span>
-              <span className="text-sm" style={{ color: currentAddress ? '#1E293B' : '#CBD5E1' }}>
-                {currentAddress?.adresa || '—'}
-              </span>
-              {currentAddress?.datum_od && (
-                <span className="text-xs ml-2" style={{ color: '#94A3B8' }}>od {formatDate(currentAddress.datum_od)}</span>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-x-6 mb-3">
-              <div>
-                <span className="text-xs mb-0.5 block" style={{ color: '#94A3B8' }}>Datum isteka smještaja</span>
-                {emp.datum_isteka_smjestaja ? (
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                    style={{ background: smjestajBadge?.bg, color: smjestajBadge?.color }}>
-                    {smjestajBadge?.label}
+                </div>
+                {!isActiveJob && latestJob && (
+                  <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: '#F1F5F9', color: '#64748B' }}>
+                    Bez aktivnog zaposlenja
                   </span>
-                ) : <span className="text-sm" style={{ color: '#CBD5E1' }}>—</span>}
-              </div>
-              <Row label="Datum ulaska u EGP" value={formatDate(emp.datum_ulaska_egp)} />
-            </div>
-            <Row label="Mjesto ulaska u EGP" value={emp.mjesto_ulaska_egp} />
-
-            {pastAddresses.length > 0 && (
-              <div className="mt-3 pt-3" style={{ borderTop: '1px dashed #E2E8F0' }}>
-                <p className="text-xs font-medium mb-2" style={{ color: '#64748B' }}>Prethodne adrese</p>
-                {pastAddresses.map((addr: any, i: number) => (
-                  <div key={addr.id || i} className="text-xs mb-1.5" style={{ color: '#475569' }}>
-                    {addr.adresa}
-                    {(addr.datum_od || addr.datum_do) && (
-                      <span style={{ color: '#94A3B8' }}> · {formatDate(addr.datum_od)} – {formatDate(addr.datum_do)}</span>
-                    )}
+                )}
+                {pastJobs.length > 0 && (
+                  <div className="mt-3 pt-3" style={{ borderTop: '1px dashed #E2E8F0' }}>
+                    <p className="text-xs font-medium mb-2" style={{ color: '#64748B' }}>Radna povijest</p>
+                    {pastJobs.map((job: any, i: number) => (
+                      <div key={job.id || i} className="text-xs mb-1.5" style={{ color: '#475569' }}>
+                        <span className="font-medium">{job.poslodavac}</span>
+                        {job.radno_mjesto && <span style={{ color: '#94A3B8' }}> · {job.radno_mjesto}</span>}
+                        {(job.datum_od || job.datum_do) && (
+                          <span style={{ color: '#94A3B8' }}> · {formatDate(job.datum_od)} – {formatDate(job.datum_do)}</span>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </Card>
 
@@ -325,9 +223,7 @@ export default function CandidatePregled() {
                         <span className="text-sm font-medium" style={{ color: '#1E293B' }}>Godišnji odmor</span>
                         {v.napomena && <span className="text-xs ml-2" style={{ color: '#64748B' }}>{v.napomena}</span>}
                       </div>
-                      <span className="text-xs" style={{ color: '#64748B' }}>
-                        {formatDate(v.datum_od)} – {formatDate(v.datum_do)}
-                      </span>
+                      <span className="text-xs" style={{ color: '#64748B' }}>{formatDate(v.datum_od)} – {formatDate(v.datum_do)}</span>
                       {active && <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#DCFCE7', color: '#16A34A' }}>Aktivno</span>}
                     </div>
                   )
@@ -342,9 +238,7 @@ export default function CandidatePregled() {
                         <span className="text-sm font-medium" style={{ color: '#1E293B' }}>Bolovanje</span>
                         {s.napomena && <span className="text-xs ml-2" style={{ color: '#64748B' }}>{s.napomena}</span>}
                       </div>
-                      <span className="text-xs" style={{ color: '#64748B' }}>
-                        {formatDate(s.datum_od)} – {formatDate(s.datum_do)}
-                      </span>
+                      <span className="text-xs" style={{ color: '#64748B' }}>{formatDate(s.datum_od)} – {formatDate(s.datum_do)}</span>
                       {active && <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#FEF9C3', color: '#CA8A04' }}>Aktivno</span>}
                     </div>
                   )
@@ -354,89 +248,56 @@ export default function CandidatePregled() {
           </Card>
         </div>
 
-        {/* RIGHT COLUMN */}
+        {/* RIGHT */}
         <div className="flex flex-col gap-4">
 
-          {/* Osobni dokumenti */}
-          <Card title="Osobni dokumenti" icon="🪪">
-            {documents.length === 0 ? (
-              <p className="text-sm" style={{ color: '#CBD5E1' }}>Nema unesenih dokumenata.</p>
+          {/* Radna dozvola */}
+          <Card title="Radna dozvola" icon="📋">
+            {!radnaDozvola ? (
+              <p className="text-sm" style={{ color: '#CBD5E1' }}>Nije unesena.</p>
             ) : (
-              <div className="flex flex-col gap-3">
-                {documents.map((doc: any, i: number) => {
-                  const badge = expiryBadge(doc.datum_isteka)
-                  return (
-                    <div key={doc.id || i} className="p-3 rounded-lg" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <p className="text-sm font-medium" style={{ color: '#1E293B' }}>
-                          {DOC_TYPE_LABELS[doc.tip_dokumenta] || doc.tip_dokumenta || '—'}
-                        </p>
-                        {doc.file_url && (
-                          <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
-                            className="text-xs px-2 py-0.5 rounded flex-shrink-0"
-                            style={{ background: '#EFF6FF', color: '#2563EB' }}>
-                            📄 Otvori
-                          </a>
-                        )}
-                      </div>
-                      {doc.broj_dokumenta && (
-                        <p className="text-xs mb-1.5" style={{ color: '#64748B' }}>Br. {doc.broj_dokumenta}</p>
-                      )}
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs" style={{ color: '#94A3B8' }}>
-                          {doc.datum_izdavanja ? `Izdano: ${formatDate(doc.datum_izdavanja)}` : ''}
-                        </span>
-                        {badge && (
-                          <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                            style={{ background: badge.bg, color: badge.color }}>
-                            {badge.label}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+              <>
+                {radnaDozvola.broj_dokumenta && <Row label="Broj dozvole" value={radnaDozvola.broj_dokumenta} />}
+                {radnaDozvola.datum_izdavanja && <Row label="Datum izdavanja" value={formatDate(radnaDozvola.datum_izdavanja)} />}
+                <div className="flex flex-col mb-3">
+                  <span className="text-xs mb-1" style={{ color: '#94A3B8' }}>Datum isteka</span>
+                  {rdBadge ? (
+                    <span className="text-xs px-2.5 py-1 rounded-full font-medium w-fit" style={{ background: rdBadge.bg, color: rdBadge.color }}>{rdBadge.label}</span>
+                  ) : <span className="text-sm" style={{ color: '#CBD5E1' }}>—</span>}
+                </div>
+                {radnaDozvola.file_url && (
+                  <a href={radnaDozvola.file_url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium mt-1"
+                    style={{ background: '#EFF6FF', color: '#2563EB' }}>
+                    📄 {fileNameFromUrl(radnaDozvola.file_url)}
+                  </a>
+                )}
+              </>
             )}
           </Card>
 
-          {/* Prateći dokumenti */}
-          <Card title="Prateći dokumenti" icon="📎">
-            {attachments.length === 0 ? (
-              <p className="text-sm" style={{ color: '#CBD5E1' }}>Nema unesenih dokumenata.</p>
+          {/* Liječnički pregled */}
+          <Card title="Liječnički pregled" icon="🏥">
+            {!lijecnicki ? (
+              <p className="text-sm" style={{ color: '#CBD5E1' }}>Nije unesen.</p>
             ) : (
-              <div className="flex flex-col gap-3">
-                {attachments.map((att: any, i: number) => {
-                  const badge = expiryBadge(att.datum_isteka)
-                  return (
-                    <div key={att.id || i} className="p-3 rounded-lg" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <p className="text-sm font-medium" style={{ color: '#1E293B' }}>
-                          {ATT_TYPE_LABELS[att.tip_dokumenta] || att.tip_dokumenta || '—'}
-                        </p>
-                        {att.file_url && (
-                          <a href={att.file_url} target="_blank" rel="noopener noreferrer"
-                            className="text-xs px-2 py-0.5 rounded flex-shrink-0"
-                            style={{ background: '#EFF6FF', color: '#2563EB' }}>
-                            📄 Otvori
-                          </a>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-xs" style={{ color: '#94A3B8' }}>
-                          {att.datum_izdavanja ? `Izdano: ${formatDate(att.datum_izdavanja)}` : ''}
-                        </span>
-                        {badge && (
-                          <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                            style={{ background: badge.bg, color: badge.color }}>
-                            {badge.label}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+              <>
+                {lijecnicki.broj_dokumenta && <Row label="Broj dokumenta" value={lijecnicki.broj_dokumenta} />}
+                {lijecnicki.datum_izdavanja && <Row label="Datum izdavanja" value={formatDate(lijecnicki.datum_izdavanja)} />}
+                <div className="flex flex-col mb-3">
+                  <span className="text-xs mb-1" style={{ color: '#94A3B8' }}>Datum isteka</span>
+                  {ljBadge ? (
+                    <span className="text-xs px-2.5 py-1 rounded-full font-medium w-fit" style={{ background: ljBadge.bg, color: ljBadge.color }}>{ljBadge.label}</span>
+                  ) : <span className="text-sm" style={{ color: '#CBD5E1' }}>—</span>}
+                </div>
+                {lijecnicki.file_url && (
+                  <a href={lijecnicki.file_url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium mt-1"
+                    style={{ background: '#EFF6FF', color: '#2563EB' }}>
+                    📄 {fileNameFromUrl(lijecnicki.file_url)}
+                  </a>
+                )}
+              </>
             )}
           </Card>
 
