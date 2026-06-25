@@ -90,7 +90,7 @@ export default function EmployeeDetail() {
     email: '', telefon: '',
     datum_ulaska_egp: '', mjesto_ulaska_egp: '',
     datum_isteka_smjestaja: '',
-    poslodavac: '', radno_mjesto: '', photo_url: '',
+    photo_url: '',
   })
   const [documents, setDocuments] = useState<any[]>([])
   const [attachments, setAttachments] = useState<any[]>([])
@@ -103,6 +103,9 @@ export default function EmployeeDetail() {
   const [deletedAddressIds, setDeletedAddressIds] = useState<string[]>([])
   const [deletedVacationIds, setDeletedVacationIds] = useState<string[]>([])
   const [deletedSickIds, setDeletedSickIds] = useState<string[]>([])
+  const [workHistory, setWorkHistory] = useState<any[]>([])
+  const [showWorkHistory, setShowWorkHistory] = useState(false)
+  const [deletedWorkHistoryIds, setDeletedWorkHistoryIds] = useState<string[]>([])
 
   function setF(key: string, value: string) {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -121,7 +124,6 @@ export default function EmployeeDetail() {
         datum_ulaska_egp: emp.datum_ulaska_egp || '',
         mjesto_ulaska_egp: emp.mjesto_ulaska_egp || '',
         datum_isteka_smjestaja: emp.datum_isteka_smjestaja || '',
-        poslodavac: emp.poslodavac || '', radno_mjesto: emp.radno_mjesto || '',
         photo_url: emp.photo_url || '',
       })
 
@@ -130,12 +132,14 @@ export default function EmployeeDetail() {
       const { data: addrs } = await supabase.from('addresses').select('*').eq('employee_id', id).order('datum_od', { ascending: false })
       const { data: vacs } = await supabase.from('vacations').select('*').eq('employee_id', id).order('datum_od', { ascending: false })
       const { data: sick } = await supabase.from('sick_leaves').select('*').eq('employee_id', id).order('datum_od', { ascending: false })
+      const { data: wh } = await supabase.from('work_history').select('*').eq('employee_id', id).order('datum_od', { ascending: false })
 
       setDocuments(docs?.length ? docs : [{ tip_dokumenta: '', broj_dokumenta: '', datum_izdavanja: '', datum_isteka: '', file_url: '', _new: true }])
       setAttachments(atts?.length ? atts : [{ tip_dokumenta: '', datum_izdavanja: '', datum_isteka: '', file_url: '', _new: true }])
       setAddresses(addrs?.length ? addrs : [{ adresa: '', datum_od: '', datum_do: '', is_current: true, _new: true }])
       setVacations(vacs || [])
       setSickLeaves(sick || [])
+      setWorkHistory(wh?.length ? wh : [{ poslodavac: emp.poslodavac || '', radno_mjesto: emp.radno_mjesto || '', datum_od: '', datum_do: '', is_current: true, _new: true }])
       setLoading(false)
     }
     load()
@@ -148,6 +152,7 @@ export default function EmployeeDetail() {
     setSuccess(false)
 
     try {
+      const currentJob = workHistory.find((w: any) => w.is_current)
       await supabase.from('employees').update({
         ime: form.ime, prezime: form.prezime,
         datum_rodjenja: form.datum_rodjenja || null,
@@ -160,8 +165,8 @@ export default function EmployeeDetail() {
         datum_ulaska_egp: form.datum_ulaska_egp || null,
         mjesto_ulaska_egp: form.mjesto_ulaska_egp || null,
         datum_isteka_smjestaja: form.datum_isteka_smjestaja || null,
-        poslodavac: form.poslodavac || null,
-        radno_mjesto: form.radno_mjesto || null,
+        poslodavac: currentJob?.poslodavac || null,
+        radno_mjesto: currentJob?.radno_mjesto || null,
       }).eq('id', id)
 
       // Documents
@@ -243,9 +248,23 @@ export default function EmployeeDetail() {
         }
       }
 
+      // Work history
+      for (const whId of deletedWorkHistoryIds) {
+        await supabase.from('work_history').delete().eq('id', whId)
+      }
+      for (const wh of workHistory) {
+        if (!wh.poslodavac) continue
+        if (wh._new || !wh.id) {
+          await supabase.from('work_history').insert({ employee_id: id, poslodavac: wh.poslodavac, radno_mjesto: wh.radno_mjesto || null, datum_od: wh.datum_od || null, datum_do: wh.datum_do || null, is_current: wh.is_current || false })
+        } else {
+          await supabase.from('work_history').update({ poslodavac: wh.poslodavac, radno_mjesto: wh.radno_mjesto || null, datum_od: wh.datum_od || null, datum_do: wh.datum_do || null, is_current: wh.is_current || false }).eq('id', wh.id)
+        }
+      }
+
       setDeletedAddressIds([])
       setDeletedVacationIds([])
       setDeletedSickIds([])
+      setDeletedWorkHistoryIds([])
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
@@ -267,7 +286,7 @@ export default function EmployeeDetail() {
         </div>
         <div>
           <h1 className="text-2xl font-semibold" style={{ color: '#1E293B' }}>{form.ime} {form.prezime}</h1>
-          <p className="text-sm" style={{ color: '#64748B' }}>{form.drzava_drzavljanstva || 'Nepoznata država'} · {form.poslodavac || 'Bez poslodavca'}</p>
+          <p className="text-sm" style={{ color: '#64748B' }}>{form.drzava_drzavljanstva || 'Nepoznata država'} · {workHistory.find((w: any) => w.is_current)?.poslodavac || 'Bez poslodavca'}</p>
         </div>
       </div>
 
@@ -504,10 +523,92 @@ export default function EmployeeDetail() {
 
         {/* Rad */}
         <Section icon="💼" title="Rad stranca" desc="Zanimanje, poslodavac i dozvola za rad.">
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Poslodavac / firma"><input className={inputCls} style={inputStyle} value={form.poslodavac} onChange={e => setF('poslodavac', e.target.value)} /></Field>
-            <Field label="Radno mjesto"><input className={inputCls} style={inputStyle} value={form.radno_mjesto} onChange={e => setF('radno_mjesto', e.target.value)} /></Field>
-          </div>
+          {(() => {
+            const currentIdx = workHistory.findIndex((w: any) => w.is_current)
+            const current = workHistory[currentIdx] || {}
+            return (
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <Field label="Poslodavac / firma">
+                  <input className={inputCls} style={inputStyle} value={current.poslodavac || ''}
+                    onChange={e => setWorkHistory(prev => prev.map((w, j) => j === currentIdx ? { ...w, poslodavac: e.target.value } : w))} />
+                </Field>
+                <Field label="Radno mjesto">
+                  <input className={inputCls} style={inputStyle} value={current.radno_mjesto || ''}
+                    onChange={e => setWorkHistory(prev => prev.map((w, j) => j === currentIdx ? { ...w, radno_mjesto: e.target.value } : w))} />
+                </Field>
+                <Field label="Datum početka">
+                  <input type="date" className={inputCls} style={inputStyle} value={current.datum_od || ''}
+                    onChange={e => setWorkHistory(prev => prev.map((w, j) => j === currentIdx ? { ...w, datum_od: e.target.value } : w))} />
+                </Field>
+              </div>
+            )
+          })()}
+
+          <button type="button"
+            onClick={() => {
+              const today = new Date().toISOString().split('T')[0]
+              setWorkHistory(prev => [
+                { poslodavac: '', radno_mjesto: '', datum_od: today, datum_do: '', is_current: true, _new: true },
+                ...prev.map((w: any) => w.is_current ? { ...w, is_current: false, datum_do: w.datum_do || today } : w),
+              ])
+            }}
+            className="text-xs font-medium mb-4 block"
+            style={{ color: '#2563EB' }}>
+            + Promijeni poslodavca
+          </button>
+
+          <button type="button"
+            onClick={() => setShowWorkHistory(prev => !prev)}
+            className="flex items-center gap-1.5 text-sm font-medium"
+            style={{ color: '#2563EB' }}>
+            <span style={{ fontSize: 12 }}>{showWorkHistory ? '▼' : '▶'}</span>
+            Radna povijest {workHistory.filter((w: any) => !w.is_current).length > 0 && `(${workHistory.filter((w: any) => !w.is_current).length})`}
+          </button>
+
+          {showWorkHistory && (
+            <div className="mt-3">
+              {workHistory.filter((w: any) => !w.is_current).length === 0 && (
+                <p className="text-xs mb-3" style={{ color: '#94A3B8' }}>Nema prethodnih poslodavaca.</p>
+              )}
+              {workHistory.map((work, i) => {
+                if (work.is_current) return null
+                return (
+                  <div key={work.id || i} className="mb-3 p-3 rounded-lg" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                    <div className="flex justify-end mb-2">
+                      <button type="button" onClick={() => {
+                        if (work.id) setDeletedWorkHistoryIds(prev => [...prev, work.id])
+                        setWorkHistory(prev => prev.filter((_, j) => j !== i))
+                      }} className="text-xs" style={{ color: '#EF4444' }}>Ukloni</button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <div>
+                        <p className="text-xs mb-1" style={{ color: '#64748B' }}>Poslodavac</p>
+                        <input className={inputCls} style={inputStyle} value={work.poslodavac || ''}
+                          onChange={e => setWorkHistory(prev => prev.map((w, j) => j === i ? { ...w, poslodavac: e.target.value } : w))} />
+                      </div>
+                      <div>
+                        <p className="text-xs mb-1" style={{ color: '#64748B' }}>Radno mjesto</p>
+                        <input className={inputCls} style={inputStyle} value={work.radno_mjesto || ''}
+                          onChange={e => setWorkHistory(prev => prev.map((w, j) => j === i ? { ...w, radno_mjesto: e.target.value } : w))} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <p className="text-xs mb-1" style={{ color: '#64748B' }}>Od</p>
+                        <input type="date" className={inputCls} style={inputStyle} value={work.datum_od || ''}
+                          onChange={e => setWorkHistory(prev => prev.map((w, j) => j === i ? { ...w, datum_od: e.target.value } : w))} />
+                      </div>
+                      <div>
+                        <p className="text-xs mb-1" style={{ color: '#64748B' }}>Do</p>
+                        <input type="date" className={inputCls} style={inputStyle} value={work.datum_do || ''}
+                          onChange={e => setWorkHistory(prev => prev.map((w, j) => j === i ? { ...w, datum_do: e.target.value } : w))} />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </Section>
 
         {/* Godišnji odmor & Bolovanje */}

@@ -84,6 +84,7 @@ export default function CandidatePregled() {
   const [addresses, setAddresses] = useState<any[]>([])
   const [vacations, setVacations] = useState<any[]>([])
   const [sickLeaves, setSickLeaves] = useState<any[]>([])
+  const [workHistory, setWorkHistory] = useState<any[]>([])
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -93,12 +94,13 @@ export default function CandidatePregled() {
       if (!employee) return
       setEmp(employee)
 
-      const [{ data: docs }, { data: atts }, { data: addrs }, { data: vacs }, { data: sick }] = await Promise.all([
+      const [{ data: docs }, { data: atts }, { data: addrs }, { data: vacs }, { data: sick }, { data: wh }] = await Promise.all([
         supabase.from('documents').select('*').eq('employee_id', id).order('datum_isteka', { ascending: true }),
         supabase.from('attachments').select('*').eq('employee_id', id),
         supabase.from('addresses').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
         supabase.from('vacations').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
         supabase.from('sick_leaves').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
+        supabase.from('work_history').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
       ])
 
       setDocuments(docs || [])
@@ -106,6 +108,7 @@ export default function CandidatePregled() {
       setAddresses(addrs || [])
       setVacations(vacs || [])
       setSickLeaves(sick || [])
+      setWorkHistory(wh || [])
       setLoading(false)
     }
     load()
@@ -212,10 +215,35 @@ export default function CandidatePregled() {
 
           {/* Rad */}
           <Card title="Rad stranca" icon="💼">
-            <div className="grid grid-cols-2 gap-x-6">
-              <Row label="Poslodavac / firma" value={emp.poslodavac} />
-              <Row label="Radno mjesto" value={emp.radno_mjesto} />
-            </div>
+            {(() => {
+              const currentJob = workHistory.find((w: any) => w.is_current)
+              const pastJobs = workHistory.filter((w: any) => !w.is_current)
+              return (
+                <>
+                  <div className="grid grid-cols-2 gap-x-6 mb-3">
+                    <Row label="Poslodavac / firma" value={currentJob?.poslodavac || emp.poslodavac} />
+                    <Row label="Radno mjesto" value={currentJob?.radno_mjesto || emp.radno_mjesto} />
+                    {currentJob?.datum_od && (
+                      <Row label="Zaposleni od" value={formatDate(currentJob.datum_od)} />
+                    )}
+                  </div>
+                  {pastJobs.length > 0 && (
+                    <div className="mt-3 pt-3" style={{ borderTop: '1px dashed #E2E8F0' }}>
+                      <p className="text-xs font-medium mb-2" style={{ color: '#64748B' }}>Radna povijest</p>
+                      {pastJobs.map((job: any, i: number) => (
+                        <div key={job.id || i} className="text-xs mb-1.5" style={{ color: '#475569' }}>
+                          <span className="font-medium">{job.poslodavac}</span>
+                          {job.radno_mjesto && <span style={{ color: '#94A3B8' }}> · {job.radno_mjesto}</span>}
+                          {(job.datum_od || job.datum_do) && (
+                            <span style={{ color: '#94A3B8' }}> · {formatDate(job.datum_od)} – {formatDate(job.datum_do)}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )
+            })()}
           </Card>
 
           {/* Boravak */}

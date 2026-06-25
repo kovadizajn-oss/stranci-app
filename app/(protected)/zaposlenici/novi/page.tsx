@@ -144,6 +144,17 @@ export default function NoviZaposlenik() {
         })
       }
 
+      // Save initial work history entry
+      if (form.poslodavac) {
+        await supabase.from('work_history').insert({
+          employee_id: empId,
+          poslodavac: form.poslodavac,
+          radno_mjesto: form.radno_mjesto || null,
+          datum_od: new Date().toISOString().split('T')[0],
+          is_current: true,
+        })
+      }
+
       // Upload photo
       if (photo) {
         const photoUrl = await uploadFile(photo, `${empId}/photo_${Date.now()}_${photo.name}`)
