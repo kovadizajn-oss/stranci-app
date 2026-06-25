@@ -156,10 +156,20 @@ export default function EmployeeDetail() {
       // Documents
       for (const doc of documents) {
         if (!doc.tip_dokumenta) continue
+        let fileUrl = doc.file_url || null
+        if (doc._newFile) {
+          const { data: uploaded, error: uploadErr } = await supabase.storage
+            .from('dokumenti')
+            .upload(`${id}/doc_${Date.now()}_${doc._newFile.name}`, doc._newFile, { upsert: true })
+          if (!uploadErr && uploaded) {
+            const { data: urlData } = supabase.storage.from('dokumenti').getPublicUrl(uploaded.path)
+            fileUrl = urlData.publicUrl
+          }
+        }
         if (doc._new || !doc.id) {
-          await supabase.from('documents').insert({ employee_id: id, tip_dokumenta: doc.tip_dokumenta, broj_dokumenta: doc.broj_dokumenta || null, datum_izdavanja: doc.datum_izdavanja || null, datum_isteka: doc.datum_isteka || null })
+          await supabase.from('documents').insert({ employee_id: id, tip_dokumenta: doc.tip_dokumenta, broj_dokumenta: doc.broj_dokumenta || null, datum_izdavanja: doc.datum_izdavanja || null, datum_isteka: doc.datum_isteka || null, file_url: fileUrl })
         } else {
-          await supabase.from('documents').update({ tip_dokumenta: doc.tip_dokumenta, broj_dokumenta: doc.broj_dokumenta || null, datum_izdavanja: doc.datum_izdavanja || null, datum_isteka: doc.datum_isteka || null }).eq('id', doc.id)
+          await supabase.from('documents').update({ tip_dokumenta: doc.tip_dokumenta, broj_dokumenta: doc.broj_dokumenta || null, datum_izdavanja: doc.datum_izdavanja || null, datum_isteka: doc.datum_isteka || null, file_url: fileUrl }).eq('id', doc.id)
         }
       }
 
@@ -298,6 +308,30 @@ export default function EmployeeDetail() {
                 <Field label="Broj dokumenta"><input className={inputCls} style={inputStyle} value={doc.broj_dokumenta || ''} onChange={e => setDocuments(prev => prev.map((d, j) => j === i ? { ...d, broj_dokumenta: e.target.value } : d))} /></Field>
                 <Field label="Datum izdavanja"><input type="date" className={inputCls} style={inputStyle} value={doc.datum_izdavanja || ''} onChange={e => setDocuments(prev => prev.map((d, j) => j === i ? { ...d, datum_izdavanja: e.target.value } : d))} /></Field>
                 <Field label="Datum isteka"><input type="date" className={inputCls} style={inputStyle} value={doc.datum_isteka || ''} onChange={e => setDocuments(prev => prev.map((d, j) => j === i ? { ...d, datum_isteka: e.target.value } : d))} /></Field>
+                <div className="col-span-2">
+                  <p className="text-sm font-medium mb-1.5" style={{ color: '#374151' }}>Preslika dokumenta <span style={{ color: '#94A3B8', fontWeight: 400 }}>(opcionalno)</span></p>
+                  {doc.file_url ? (
+                    <div className="flex items-center gap-2">
+                      <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
+                        className="text-xs px-3 py-2 rounded-lg" style={{ background: '#EFF6FF', color: '#2563EB' }}>
+                        Pogledaj datoteku ↗
+                      </a>
+                      <label className="cursor-pointer text-xs px-3 py-2 rounded-lg" style={{ background: '#F1F5F9', color: '#374151' }}>
+                        Zamijeni
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+                          onChange={e => setDocuments(prev => prev.map((d, j) => j === i ? { ...d, _newFile: e.target.files?.[0] || null } : d))} />
+                      </label>
+                      {doc._newFile && <span className="text-xs" style={{ color: '#64748B' }}>{doc._newFile.name}</span>}
+                    </div>
+                  ) : (
+                    <label className="flex items-center gap-2 cursor-pointer px-3 py-2.5 rounded-lg border text-sm"
+                      style={{ borderColor: '#D1D5DB', background: 'white', color: '#374151' }}>
+                      ↑ {doc._newFile ? doc._newFile.name : 'Učitaj (PDF, JPG, PNG do 10 MB)'}
+                      <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+                        onChange={e => setDocuments(prev => prev.map((d, j) => j === i ? { ...d, _newFile: e.target.files?.[0] || null } : d))} />
+                    </label>
+                  )}
+                </div>
               </div>
             </div>
           ))}
