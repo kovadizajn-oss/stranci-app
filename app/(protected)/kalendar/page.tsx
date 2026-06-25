@@ -274,10 +274,7 @@ export default function KalendarPage() {
       {/* Agenda list */}
       <div className="bg-white rounded-xl" style={{ border: '1px solid #E2E8F0' }}>
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #E2E8F0' }}>
-          <div>
-            <h2 className="font-semibold" style={{ color: '#1E293B' }}>Događaji — {MONTH_NAMES[month]} {year}</h2>
-            <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>{agendaEvents.length} događaja ovaj mjesec</p>
-          </div>
+          <h2 className="font-semibold" style={{ color: '#1E293B' }}>Pregled — {MONTH_NAMES[month]} {year}</h2>
         </div>
 
         {loading ? (
