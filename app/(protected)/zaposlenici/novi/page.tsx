@@ -204,7 +204,7 @@ export default function NoviZaposlenik() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Ime" required><input className={inputCls} style={inputStyle} value={form.ime} onChange={e => setF('ime', e.target.value)} required /></Field>
             <Field label="Prezime" required><input className={inputCls} style={inputStyle} value={form.prezime} onChange={e => setF('prezime', e.target.value)} required /></Field>
-            <div className="col-span-2">
+            <div className="col-span-1 md:col-span-2">
               <Field label="Država rođenja">
                 <select className={inputCls} style={inputStyle} value={form.drzava_rodjenja} onChange={e => setF('drzava_rodjenja', e.target.value)}>
                   <option value="">Odaberite državu...</option>
