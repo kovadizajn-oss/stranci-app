@@ -35,6 +35,14 @@ function fileNameFromUrl(url: string) {
   } catch { return 'Datoteka' }
 }
 
+const STATUS_ZAP_CONFIG: Record<string, { color: string; bg: string }> = {
+  'Aktivan':    { color: '#16A34A', bg: '#DCFCE7' },
+  'U postupku': { color: '#2563EB', bg: '#EFF6FF' },
+  'Na čekanju': { color: '#CA8A04', bg: '#FEF9C3' },
+  'Završen':    { color: '#475569', bg: '#F1F5F9' },
+  'Otkazan':    { color: '#DC2626', bg: '#FEE2E2' },
+}
+
 function Card({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
   return (
     <div className="bg-white rounded-xl p-5" style={{ border: '1px solid #E2E8F0' }}>
@@ -147,6 +155,14 @@ export default function CandidatePregled() {
           <div>
             <h1 className="text-3xl font-semibold mb-2" style={{ color: '#1E293B' }}>{emp.ime} {emp.prezime}</h1>
             <div className="flex flex-wrap items-center gap-2">
+              {emp.status_zaposlenika && (() => {
+                const cfg = STATUS_ZAP_CONFIG[emp.status_zaposlenika] || { color: '#475569', bg: '#F1F5F9' }
+                return (
+                  <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: cfg.bg, color: cfg.color }}>
+                    {emp.status_zaposlenika}
+                  </span>
+                )
+              })()}
               {emp.drzava_rodjenja && (
                 <span className="text-xs px-2.5 py-1 rounded-full" style={{ background: '#F1F5F9', color: '#475569' }}>
                   🌍 {emp.drzava_rodjenja}
@@ -188,10 +204,19 @@ export default function CandidatePregled() {
             <div className="grid grid-cols-2 gap-x-6">
               <Row label="Ime" value={emp.ime} />
               <Row label="Prezime" value={emp.prezime} />
-              <div className="col-span-2">
-                <Row label="Država rođenja" value={emp.drzava_rodjenja} />
-              </div>
+              {emp.datum_rodjenja && <Row label="Datum rođenja" value={formatDate(emp.datum_rodjenja)} />}
+              {emp.oib && <Row label="OIB" value={emp.oib} />}
+              <div className="col-span-2"><Row label="Država rođenja" value={emp.drzava_rodjenja} /></div>
+              {emp.ime_oca && <div className="col-span-2"><Row label="Ime oca" value={emp.ime_oca} /></div>}
             </div>
+            {(emp.email || emp.telefon || emp.adresa_smjestaja || emp.iban) && (
+              <div className="mt-3 pt-3 grid grid-cols-2 gap-x-6" style={{ borderTop: '1px solid #F1F5F9' }}>
+                {emp.email && <Row label="Email" value={emp.email} />}
+                {emp.telefon && <Row label="Telefon" value={emp.telefon} />}
+                {emp.adresa_smjestaja && <div className="col-span-2"><Row label="Adresa smještaja" value={emp.adresa_smjestaja} /></div>}
+                {emp.iban && <div className="col-span-2"><Row label="IBAN" value={emp.iban} /></div>}
+              </div>
+            )}
           </Card>
 
           <Card title="Rad stranca" icon="💼">

@@ -4,6 +4,14 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
+const STATUS_ZAP_CONFIG: Record<string, { color: string; bg: string }> = {
+  'Aktivan':    { color: '#16A34A', bg: '#DCFCE7' },
+  'U postupku': { color: '#2563EB', bg: '#EFF6FF' },
+  'Na čekanju': { color: '#CA8A04', bg: '#FEF9C3' },
+  'Završen':    { color: '#475569', bg: '#F1F5F9' },
+  'Otkazan':    { color: '#DC2626', bg: '#FEE2E2' },
+}
+
 type EmployeeRow = {
   id: string
   ime: string
@@ -11,6 +19,7 @@ type EmployeeRow = {
   photo_url: string | null
   drzava_rodjenja: string | null
   poslodavac: string | null
+  status_zaposlenika: string | null
   doc_tip: string | null
   doc_isteka: string | null
   on_vacation: boolean
@@ -55,7 +64,7 @@ export default function ZaposleniciPage() {
 
       const { data: emps } = await supabase
         .from('employees')
-        .select('id, ime, prezime, photo_url, drzava_rodjenja, poslodavac')
+        .select('id, ime, prezime, photo_url, drzava_rodjenja, poslodavac, status_zaposlenika')
         .order('prezime')
 
       if (!emps) { setLoading(false); return }
@@ -100,6 +109,7 @@ export default function ZaposleniciPage() {
             photo_url: emp.photo_url,
             drzava_rodjenja: emp.drzava_rodjenja,
             poslodavac: emp.poslodavac,
+            status_zaposlenika: emp.status_zaposlenika || null,
             doc_tip: doc?.tip_dokumenta || null,
             doc_isteka: doc?.datum_isteka || null,
             on_vacation: vacationIds.has(emp.id),
@@ -199,10 +209,10 @@ export default function ZaposleniciPage() {
       </div>
 
       <div className="bg-white rounded-xl overflow-hidden overflow-x-auto" style={{ border: '1px solid #E2E8F0' }}>
-        <table className="w-full" style={{ minWidth: 600 }}>
+        <table className="w-full" style={{ minWidth: 750 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-              {['Zaposlenik', 'Nadolazeći istek', 'Status', 'Akcije'].map(col => (
+              {['Zaposlenik', 'Status zaposlenika', 'Nadolazeći istek', 'Status dokumenata', 'Akcije'].map(col => (
                 <th key={col} className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>
                   {col}
                 </th>
@@ -211,14 +221,15 @@ export default function ZaposleniciPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={4} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</td></tr>
+              <tr><td colSpan={5} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={4} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>
+              <tr><td colSpan={5} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>
                 {employees.length === 0 ? 'Još nema zaposlenika. Dodajte prvog zaposlenika klikom na gumb gore.' : 'Nema rezultata za unesene filtere.'}
               </td></tr>
             ) : (
               filtered.map((emp, i) => {
-                const status = statusFromExpiry(emp.doc_isteka)
+                const docStatus = statusFromExpiry(emp.doc_isteka)
+                const zapCfg = STATUS_ZAP_CONFIG[emp.status_zaposlenika || ''] || { color: '#475569', bg: '#F1F5F9' }
                 return (
                   <tr key={emp.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
                     <td className="px-4 py-3">
@@ -234,25 +245,29 @@ export default function ZaposleniciPage() {
                           <div className="flex gap-1 mt-0.5">
                             {emp.on_vacation && (
                               <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-                                style={{ background: '#DCFCE7', color: '#16A34A' }}>
-                                Na godišnjem
-                              </span>
+                                style={{ background: '#DCFCE7', color: '#16A34A' }}>Na godišnjem</span>
                             )}
                             {emp.on_sick_leave && (
                               <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-                                style={{ background: '#FEF9C3', color: '#CA8A04' }}>
-                                Na bolovanju
-                              </span>
+                                style={{ background: '#FEF9C3', color: '#CA8A04' }}>Na bolovanju</span>
                             )}
                           </div>
                         </div>
                       </div>
                     </td>
+                    <td className="px-4 py-3">
+                      {emp.status_zaposlenika && (
+                        <span className="text-xs px-2.5 py-1 rounded-full font-medium"
+                          style={{ background: zapCfg.bg, color: zapCfg.color }}>
+                          {emp.status_zaposlenika}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{formatDateHR(emp.doc_isteka)}</td>
                     <td className="px-4 py-3">
                       <span className="text-xs px-2.5 py-1 rounded-full font-medium"
-                        style={{ background: status.bg, color: status.color }}>
-                        {status.label}
+                        style={{ background: docStatus.bg, color: docStatus.color }}>
+                        {docStatus.label}
                       </span>
                     </td>
                     <td className="px-4 py-3">

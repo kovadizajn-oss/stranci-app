@@ -26,6 +26,7 @@ const COUNTRIES = [
 
 const OSOBNI_TYPES = ['Osobna iskaznica', 'Putovnica', 'Vozačka dozvola', 'Boravišna dozvola']
 const PRATECI_TYPES = ['Radna dozvola', 'Liječnički pregled', 'Ugovor o radu', 'Potvrda o boravku']
+const STATUSI = ['Aktivan', 'U postupku', 'Na čekanju', 'Završen', 'Otkazan']
 
 const inputCls = "w-full px-3 py-2.5 rounded-lg border text-sm transition-all"
 const inputStyle = { borderColor: '#D1D5DB', color: '#1E293B', background: 'white' }
@@ -190,7 +191,8 @@ export default function EmployeeDetail() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  const [form, setForm] = useState({ ime: '', prezime: '', drzava_rodjenja: '', poslodavac: '', radno_mjesto: '' })
+  const [form, setForm] = useState({ ime: '', prezime: '', drzava_rodjenja: '', datum_rodjenja: '', oib: '', status_zaposlenika: 'Aktivan', poslodavac: '', radno_mjesto: '' })
+  const [extra, setExtra] = useState({ email: '', telefon: '', adresa_smjestaja: '', ime_oca: '', iban: '' })
   const [osobniDocs, setOsobniDocs] = useState<DocState[]>([])
   const [prateciDocs, setPrateciDocs] = useState<DocState[]>([])
   const [deletedDocIds, setDeletedDocIds] = useState<string[]>([])
@@ -201,13 +203,15 @@ export default function EmployeeDetail() {
   const [deletedSickIds, setDeletedSickIds] = useState<string[]>([])
 
   function setF(key: string, value: string) { setForm(prev => ({ ...prev, [key]: value })) }
+  function setE(key: string, value: string) { setExtra(prev => ({ ...prev, [key]: value })) }
 
   useEffect(() => {
     async function load() {
       const { data: emp } = await supabase.from('employees').select('*').eq('id', id).single()
       if (!emp) { router.push('/zaposlenici'); return }
 
-      setForm({ ime: emp.ime || '', prezime: emp.prezime || '', drzava_rodjenja: emp.drzava_rodjenja || '', poslodavac: emp.poslodavac || '', radno_mjesto: emp.radno_mjesto || '' })
+      setForm({ ime: emp.ime || '', prezime: emp.prezime || '', drzava_rodjenja: emp.drzava_rodjenja || '', datum_rodjenja: emp.datum_rodjenja || '', oib: emp.oib || '', status_zaposlenika: emp.status_zaposlenika || 'Aktivan', poslodavac: emp.poslodavac || '', radno_mjesto: emp.radno_mjesto || '' })
+      setExtra({ email: emp.email || '', telefon: emp.telefon || '', adresa_smjestaja: emp.adresa_smjestaja || '', ime_oca: emp.ime_oca || '', iban: emp.iban || '' })
 
       const [{ data: docs }, { data: vacs }, { data: sick }] = await Promise.all([
         supabase.from('documents').select('*').eq('employee_id', id),
@@ -235,6 +239,14 @@ export default function EmployeeDetail() {
       await supabase.from('employees').update({
         ime: form.ime, prezime: form.prezime,
         drzava_rodjenja: form.drzava_rodjenja || null,
+        datum_rodjenja: form.datum_rodjenja || null,
+        oib: form.oib || null,
+        status_zaposlenika: form.status_zaposlenika,
+        email: extra.email || null,
+        telefon: extra.telefon || null,
+        adresa_smjestaja: extra.adresa_smjestaja || null,
+        ime_oca: extra.ime_oca || null,
+        iban: extra.iban || null,
         poslodavac: form.poslodavac || null,
         radno_mjesto: form.radno_mjesto || null,
       }).eq('id', id)
@@ -338,6 +350,8 @@ export default function EmployeeDetail() {
           <div className="grid grid-cols-2 gap-4">
             <Field label="Ime"><input className={inputCls} style={inputStyle} value={form.ime} onChange={e => setF('ime', e.target.value)} required /></Field>
             <Field label="Prezime"><input className={inputCls} style={inputStyle} value={form.prezime} onChange={e => setF('prezime', e.target.value)} required /></Field>
+            <Field label="Datum rođenja"><input type="date" className={inputCls} style={inputStyle} value={form.datum_rodjenja} onChange={e => setF('datum_rodjenja', e.target.value)} /></Field>
+            <Field label="OIB"><input className={inputCls} style={inputStyle} value={form.oib} onChange={e => setF('oib', e.target.value)} maxLength={11} placeholder="11 znamenki" /></Field>
             <div className="col-span-1 md:col-span-2">
               <Field label="Država rođenja">
                 <select className={inputCls} style={inputStyle} value={form.drzava_rodjenja} onChange={e => setF('drzava_rodjenja', e.target.value)}>
@@ -345,6 +359,26 @@ export default function EmployeeDetail() {
                   {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </Field>
+            </div>
+            <div className="col-span-1 md:col-span-2">
+              <Field label="Status zaposlenika">
+                <select className={inputCls} style={inputStyle} value={form.status_zaposlenika} onChange={e => setF('status_zaposlenika', e.target.value)}>
+                  {STATUSI.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </Field>
+            </div>
+          </div>
+        </Section>
+
+        {/* Dodatne informacije */}
+        <Section icon="ℹ️" title="Dodatne informacije" desc="Kontakt, smještaj i ostali podaci (opcionalno).">
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Email"><input type="email" className={inputCls} style={inputStyle} value={extra.email} onChange={e => setE('email', e.target.value)} placeholder="email@primjer.com" /></Field>
+            <Field label="Telefon"><input className={inputCls} style={inputStyle} value={extra.telefon} onChange={e => setE('telefon', e.target.value)} placeholder="+385..." /></Field>
+            <Field label="Ime oca"><input className={inputCls} style={inputStyle} value={extra.ime_oca} onChange={e => setE('ime_oca', e.target.value)} /></Field>
+            <Field label="IBAN"><input className={inputCls} style={inputStyle} value={extra.iban} onChange={e => setE('iban', e.target.value)} placeholder="HR..." /></Field>
+            <div className="col-span-1 md:col-span-2">
+              <Field label="Adresa smještaja (HR)"><input className={inputCls} style={inputStyle} value={extra.adresa_smjestaja} onChange={e => setE('adresa_smjestaja', e.target.value)} placeholder="Ulica i broj, Grad" /></Field>
             </div>
           </div>
         </Section>
