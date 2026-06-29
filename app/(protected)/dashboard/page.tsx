@@ -36,10 +36,6 @@ function badgeColor(days: number) {
   return { bg: '#F1F5F9', text: '#475569' }
 }
 
-const DOCUMENT_TYPE_LABELS: Record<string, string> = {
-  radna_dozvola: 'Radna dozvola',
-  lijecnicki: 'Liječnički pregled',
-}
 
 export default function DashboardPage() {
   const [deadlines, setDeadlines] = useState<DeadlineItem[]>([])
@@ -58,12 +54,12 @@ export default function DashboardPage() {
 
       const [{ data: docs }, { data: expiredDocs }, { count: docCount }] = await Promise.all([
         supabase.from('documents')
-          .select('id, employee_id, tip_dokumenta, datum_isteka, employees(ime, prezime)')
+          .select('id, employee_id, naziv, datum_isteka, employees(ime, prezime)')
           .lte('datum_isteka', in60Str)
           .gte('datum_isteka', todayStr)
           .order('datum_isteka'),
         supabase.from('documents')
-          .select('id, employee_id, tip_dokumenta, datum_isteka, employees(ime, prezime)')
+          .select('id, employee_id, naziv, datum_isteka, employees(ime, prezime)')
           .lt('datum_isteka', todayStr)
           .order('datum_isteka'),
         supabase.from('documents')
@@ -76,7 +72,7 @@ export default function DashboardPage() {
           id: d.id,
           employeeId: d.employee_id,
           employeeName: emp ? `${emp.ime} ${emp.prezime}` : 'Nepoznat',
-          title: DOCUMENT_TYPE_LABELS[d.tip_dokumenta] || d.tip_dokumenta || 'Dokument',
+          title: d.naziv || 'Dokument',
           description: '',
           dueDate: d.datum_isteka,
           type: 'document',

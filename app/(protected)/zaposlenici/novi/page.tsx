@@ -24,6 +24,9 @@ const COUNTRIES = [
   'Zambija','Zimbabve',
 ]
 
+const OSOBNI_TYPES = ['Osobna iskaznica', 'Putovnica', 'Vozačka dozvola', 'Boravišna dozvola']
+const PRATECI_TYPES = ['Radna dozvola', 'Liječnički pregled', 'Ugovor o radu', 'Potvrda o boravku']
+
 const inputCls = "w-full px-3 py-2.5 rounded-lg border text-sm"
 const inputStyle = { borderColor: '#D1D5DB', color: '#1E293B', background: 'white' }
 
@@ -55,7 +58,83 @@ function Section({ icon, title, desc, children }: { icon: string; title: string;
   )
 }
 
-type DocState = { datum_isteka: string; file: File | null }
+type NewDoc = {
+  naziv: string
+  kategorija: 'osobni' | 'prateci'
+  datum_izdavanja: string
+  datum_isteka: string
+  file: File | null
+  _isCustom: boolean
+}
+
+function emptyDoc(kategorija: 'osobni' | 'prateci'): NewDoc {
+  return { naziv: '', kategorija, datum_izdavanja: '', datum_isteka: '', file: null, _isCustom: false }
+}
+
+function NewDocCard({ doc, index, types, onChange, onRemove }: {
+  doc: NewDoc; index: number; types: string[]
+  onChange: (index: number, updated: NewDoc) => void
+  onRemove: (index: number) => void
+}) {
+  function update(patch: Partial<NewDoc>) { onChange(index, { ...doc, ...patch }) }
+
+  return (
+    <div className="mb-4 p-4 rounded-lg" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+      <div className="flex items-start gap-2 mb-3">
+        <div className="flex-1 flex flex-col gap-2">
+          <select
+            className={inputCls} style={inputStyle}
+            value={doc._isCustom ? '__ostalo__' : doc.naziv}
+            onChange={e => {
+              if (e.target.value === '__ostalo__') update({ _isCustom: true, naziv: '' })
+              else update({ _isCustom: false, naziv: e.target.value })
+            }}
+          >
+            <option value="">Odaberi vrstu dokumenta...</option>
+            {types.map(t => <option key={t} value={t}>{t}</option>)}
+            <option value="__ostalo__">Ostalo (upiši naziv)...</option>
+          </select>
+          {doc._isCustom && (
+            <input className={inputCls} style={inputStyle}
+              placeholder="Naziv dokumenta"
+              value={doc.naziv}
+              onChange={e => update({ naziv: e.target.value })} />
+          )}
+        </div>
+        <button type="button" onClick={() => onRemove(index)}
+          className="text-xs px-2.5 py-1.5 rounded-lg flex-shrink-0 mt-0.5"
+          style={{ background: '#FEF2F2', color: '#EF4444' }}>
+          Ukloni
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <Field label="Datum izdavanja">
+          <input type="date" className={inputCls} style={inputStyle}
+            value={doc.datum_izdavanja}
+            onChange={e => update({ datum_izdavanja: e.target.value })} />
+        </Field>
+        <Field label="Datum isteka">
+          <input type="date" className={inputCls} style={inputStyle}
+            value={doc.datum_isteka}
+            onChange={e => update({ datum_isteka: e.target.value })} />
+        </Field>
+      </div>
+
+      <div>
+        <p className="text-sm font-medium mb-1.5" style={{ color: '#374151' }}>
+          Preslika dokumenta <span style={{ color: '#94A3B8', fontWeight: 400 }}>(opcionalno)</span>
+        </p>
+        <label className="flex items-center gap-2 cursor-pointer px-3 py-2.5 rounded-lg border text-sm"
+          style={{ borderColor: doc.file ? '#BBF7D0' : '#D1D5DB', background: doc.file ? '#F0FDF4' : 'white', color: doc.file ? '#16A34A' : '#374151' }}>
+          {doc.file ? `✓ ${doc.file.name}` : '↑ Učitaj (PDF, JPG, PNG do 10 MB)'}
+          <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+            onChange={e => update({ file: e.target.files?.[0] || null })} />
+        </label>
+      </div>
+    </div>
+  )
+}
 
 export default function NoviZaposlenik() {
   const router = useRouter()
@@ -63,10 +142,10 @@ export default function NoviZaposlenik() {
   const [error, setError] = useState('')
 
   const [form, setForm] = useState({ ime: '', prezime: '', drzava_rodjenja: '' })
-  const [radnaDozvola, setRD] = useState<DocState>({ datum_isteka: '', file: null })
-  const [lijecnicki, setLJ] = useState<DocState>({ datum_isteka: '', file: null })
   const [poslodavac, setPoslodavac] = useState('')
   const [radnoMjesto, setRadnoMjesto] = useState('')
+  const [osobniDocs, setOsobniDocs] = useState<NewDoc[]>([])
+  const [prateciDocs, setPrateciDocs] = useState<NewDoc[]>([])
 
   function setF(key: string, value: string) { setForm(prev => ({ ...prev, [key]: value })) }
 
@@ -91,16 +170,18 @@ export default function NoviZaposlenik() {
       if (empErr) throw empErr
       const empId = emp.id
 
-      if (radnaDozvola.datum_isteka || radnaDozvola.file) {
+      for (const doc of [...osobniDocs, ...prateciDocs]) {
+        if (!doc.naziv && !doc.file && !doc.datum_isteka && !doc.datum_izdavanja) continue
         let fileUrl = null
-        if (radnaDozvola.file) fileUrl = await uploadFile(radnaDozvola.file, `${empId}/doc_${Date.now()}_${radnaDozvola.file.name}`)
-        await supabase.from('documents').insert({ employee_id: empId, tip_dokumenta: 'radna_dozvola', datum_isteka: radnaDozvola.datum_isteka || null, file_url: fileUrl })
-      }
-
-      if (lijecnicki.datum_isteka || lijecnicki.file) {
-        let fileUrl = null
-        if (lijecnicki.file) fileUrl = await uploadFile(lijecnicki.file, `${empId}/doc_${Date.now()}_${lijecnicki.file.name}`)
-        await supabase.from('documents').insert({ employee_id: empId, tip_dokumenta: 'lijecnicki', datum_isteka: lijecnicki.datum_isteka || null, file_url: fileUrl })
+        if (doc.file) fileUrl = await uploadFile(doc.file, `${empId}/doc_${Date.now()}_${doc.file.name}`)
+        await supabase.from('documents').insert({
+          employee_id: empId,
+          naziv: doc.naziv || null,
+          kategorija: doc.kategorija,
+          datum_izdavanja: doc.datum_izdavanja || null,
+          datum_isteka: doc.datum_isteka || null,
+          file_url: fileUrl,
+        })
       }
 
       router.push('/zaposlenici')
@@ -134,32 +215,42 @@ export default function NoviZaposlenik() {
           </div>
         </Section>
 
-        <Section icon="📋" title="Radna dozvola" desc="Datum isteka radne dozvole radnika.">
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Datum isteka"><input type="date" className={inputCls} style={inputStyle} value={radnaDozvola.datum_isteka} onChange={e => setRD(p => ({ ...p, datum_isteka: e.target.value }))} /></Field>
-            <div />
-            <div className="col-span-2">
-              <label className="block text-sm font-medium mb-1.5" style={{ color: '#374151' }}>Preslika <span style={{ color: '#94A3B8', fontWeight: 400 }}>(opcionalno)</span></label>
-              <label className="flex items-center gap-2 cursor-pointer px-3 py-2.5 rounded-lg border text-sm" style={{ borderColor: '#D1D5DB', background: 'white', color: '#374151' }}>
-                ↑ {radnaDozvola.file ? radnaDozvola.file.name : 'Učitaj (PDF, JPG, PNG)'}
-                <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => setRD(p => ({ ...p, file: e.target.files?.[0] || null }))} />
-              </label>
-            </div>
-          </div>
+        <Section icon="🪪" title="Osobni dokumenti" desc="Identifikacijski i osobni dokumenti radnika.">
+          {osobniDocs.map((doc, i) => (
+            <NewDocCard
+              key={`osobni-${i}`}
+              doc={doc} index={i} types={OSOBNI_TYPES}
+              onChange={(idx, updated) => setOsobniDocs(prev => prev.map((d, j) => j === idx ? updated : d))}
+              onRemove={idx => setOsobniDocs(prev => prev.filter((_, j) => j !== idx))}
+            />
+          ))}
+          {osobniDocs.length === 0 && (
+            <p className="text-xs mb-3" style={{ color: '#94A3B8' }}>Nema dodanih osobnih dokumenata.</p>
+          )}
+          <button type="button"
+            onClick={() => setOsobniDocs(prev => [...prev, emptyDoc('osobni')])}
+            className="text-sm font-medium" style={{ color: '#2563EB' }}>
+            + Dodaj osobni dokument
+          </button>
         </Section>
 
-        <Section icon="🏥" title="Liječnički pregled" desc="Datum isteka liječničkog pregleda radnika.">
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Datum isteka"><input type="date" className={inputCls} style={inputStyle} value={lijecnicki.datum_isteka} onChange={e => setLJ(p => ({ ...p, datum_isteka: e.target.value }))} /></Field>
-            <div />
-            <div className="col-span-2">
-              <label className="block text-sm font-medium mb-1.5" style={{ color: '#374151' }}>Preslika <span style={{ color: '#94A3B8', fontWeight: 400 }}>(opcionalno)</span></label>
-              <label className="flex items-center gap-2 cursor-pointer px-3 py-2.5 rounded-lg border text-sm" style={{ borderColor: '#D1D5DB', background: 'white', color: '#374151' }}>
-                ↑ {lijecnicki.file ? lijecnicki.file.name : 'Učitaj (PDF, JPG, PNG)'}
-                <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => setLJ(p => ({ ...p, file: e.target.files?.[0] || null }))} />
-              </label>
-            </div>
-          </div>
+        <Section icon="📋" title="Prateći dokumenti" desc="Radna dozvola, liječnički pregled i ostali prateći dokumenti.">
+          {prateciDocs.map((doc, i) => (
+            <NewDocCard
+              key={`prateci-${i}`}
+              doc={doc} index={i} types={PRATECI_TYPES}
+              onChange={(idx, updated) => setPrateciDocs(prev => prev.map((d, j) => j === idx ? updated : d))}
+              onRemove={idx => setPrateciDocs(prev => prev.filter((_, j) => j !== idx))}
+            />
+          ))}
+          {prateciDocs.length === 0 && (
+            <p className="text-xs mb-3" style={{ color: '#94A3B8' }}>Nema dodanih prateći dokumenata.</p>
+          )}
+          <button type="button"
+            onClick={() => setPrateciDocs(prev => [...prev, emptyDoc('prateci')])}
+            className="text-sm font-medium" style={{ color: '#2563EB' }}>
+            + Dodaj prateći dokument
+          </button>
         </Section>
 
         <Section icon="💼" title="Rad stranca" desc="Poslodavac i radno mjesto.">

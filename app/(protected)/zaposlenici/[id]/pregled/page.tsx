@@ -56,12 +56,50 @@ function Row({ label, value }: { label: string; value: string | null | undefined
   )
 }
 
+function DocGroup({ docs, emptyText }: { docs: any[]; emptyText: string }) {
+  if (docs.length === 0) {
+    return <p className="text-sm" style={{ color: '#CBD5E1' }}>{emptyText}</p>
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      {docs.map((doc: any, i: number) => {
+        const badge = expiryBadge(doc.datum_isteka)
+        return (
+          <div key={doc.id || i} className="p-3 rounded-lg" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+            <p className="text-sm font-semibold mb-2" style={{ color: '#1E293B' }}>{doc.naziv || 'Dokument'}</p>
+            {doc.datum_izdavanja && (
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="text-xs" style={{ color: '#94A3B8' }}>Izdano:</span>
+                <span className="text-xs" style={{ color: '#475569' }}>{formatDate(doc.datum_izdavanja)}</span>
+              </div>
+            )}
+            {badge && (
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium inline-block mb-2"
+                style={{ background: badge.bg, color: badge.color }}>{badge.label}</span>
+            )}
+            {!badge && doc.datum_isteka === null && (
+              <span className="text-xs" style={{ color: '#94A3B8' }}>Bez datuma isteka</span>
+            )}
+            {doc.file_url && (
+              <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 mt-1 text-xs font-medium px-2.5 py-1.5 rounded-lg w-fit"
+                style={{ background: '#EFF6FF', color: '#2563EB' }}>
+                📄 {fileNameFromUrl(doc.file_url)}
+              </a>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function CandidatePregled() {
   const { id } = useParams<{ id: string }>()
   const [loading, setLoading] = useState(true)
   const [emp, setEmp] = useState<any>(null)
-  const [radnaDozvola, setRadnaDozvola] = useState<any>(null)
-  const [lijecnicki, setLijecnicki] = useState<any>(null)
+  const [osobniDocs, setOsobniDocs] = useState<any[]>([])
+  const [prateciDocs, setPrateciDocs] = useState<any[]>([])
   const [vacations, setVacations] = useState<any[]>([])
   const [sickLeaves, setSickLeaves] = useState<any[]>([])
 
@@ -74,13 +112,14 @@ export default function CandidatePregled() {
       setEmp(employee)
 
       const [{ data: docs }, { data: vacs }, { data: sick }] = await Promise.all([
-        supabase.from('documents').select('*').eq('employee_id', id),
+        supabase.from('documents').select('*').eq('employee_id', id).order('naziv'),
         supabase.from('vacations').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
         supabase.from('sick_leaves').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
       ])
 
-      setRadnaDozvola(docs?.find((d: any) => d.tip_dokumenta === 'radna_dozvola') || null)
-      setLijecnicki(docs?.find((d: any) => d.tip_dokumenta === 'lijecnicki') || null)
+      const allDocs = docs || []
+      setOsobniDocs(allDocs.filter((d: any) => d.kategorija === 'osobni'))
+      setPrateciDocs(allDocs.filter((d: any) => d.kategorija !== 'osobni'))
       setVacations(vacs || [])
       setSickLeaves(sick || [])
       setLoading(false)
@@ -93,8 +132,6 @@ export default function CandidatePregled() {
 
   const onVacation = vacations.some((v: any) => v.datum_od <= today && v.datum_do >= today)
   const onSickLeave = sickLeaves.some((s: any) => s.datum_od <= today && s.datum_do >= today)
-  const rdBadge = expiryBadge(radnaDozvola?.datum_isteka)
-  const ljBadge = expiryBadge(lijecnicki?.datum_isteka)
 
   return (
     <div className="p-4 md:p-8" style={{ maxWidth: 1000 }}>
@@ -147,7 +184,6 @@ export default function CandidatePregled() {
         {/* LEFT */}
         <div className="flex flex-col gap-4">
 
-          {/* Osobni podaci */}
           <Card title="Osobni podaci" icon="👤">
             <div className="grid grid-cols-2 gap-x-6">
               <Row label="Ime" value={emp.ime} />
@@ -158,7 +194,6 @@ export default function CandidatePregled() {
             </div>
           </Card>
 
-          {/* Rad stranca */}
           <Card title="Rad stranca" icon="💼">
             {!emp.poslodavac && !emp.radno_mjesto ? (
               <p className="text-sm" style={{ color: '#CBD5E1' }}>Nema podataka o zaposlenju.</p>
@@ -170,7 +205,6 @@ export default function CandidatePregled() {
             )}
           </Card>
 
-          {/* Godišnji & Bolovanje */}
           <Card title="Godišnji odmor & Bolovanje" icon="📅">
             {vacations.length === 0 && sickLeaves.length === 0 ? (
               <p className="text-sm" style={{ color: '#CBD5E1' }}>Nema unesenih odsutnosti.</p>
@@ -184,7 +218,6 @@ export default function CandidatePregled() {
                       <span>🌴</span>
                       <div className="flex-1">
                         <span className="text-sm font-medium" style={{ color: '#1E293B' }}>Godišnji odmor</span>
-                        {v.napomena && <span className="text-xs ml-2" style={{ color: '#64748B' }}>{v.napomena}</span>}
                       </div>
                       <span className="text-xs" style={{ color: '#64748B' }}>{formatDate(v.datum_od)} – {formatDate(v.datum_do)}</span>
                       {active && <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#DCFCE7', color: '#16A34A' }}>Aktivno</span>}
@@ -199,7 +232,6 @@ export default function CandidatePregled() {
                       <span>🏥</span>
                       <div className="flex-1">
                         <span className="text-sm font-medium" style={{ color: '#1E293B' }}>Bolovanje</span>
-                        {s.napomena && <span className="text-xs ml-2" style={{ color: '#64748B' }}>{s.napomena}</span>}
                       </div>
                       <span className="text-xs" style={{ color: '#64748B' }}>{formatDate(s.datum_od)} – {formatDate(s.datum_do)}</span>
                       {active && <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#FEF9C3', color: '#CA8A04' }}>Aktivno</span>}
@@ -214,50 +246,12 @@ export default function CandidatePregled() {
         {/* RIGHT */}
         <div className="flex flex-col gap-4">
 
-          {/* Radna dozvola */}
-          <Card title="Radna dozvola" icon="📋">
-            {!radnaDozvola ? (
-              <p className="text-sm" style={{ color: '#CBD5E1' }}>Nije unesena.</p>
-            ) : (
-              <>
-                <div className="flex flex-col mb-3">
-                  <span className="text-xs mb-1" style={{ color: '#94A3B8' }}>Datum isteka</span>
-                  {rdBadge ? (
-                    <span className="text-xs px-2.5 py-1 rounded-full font-medium w-fit" style={{ background: rdBadge.bg, color: rdBadge.color }}>{rdBadge.label}</span>
-                  ) : <span className="text-sm" style={{ color: '#CBD5E1' }}>—</span>}
-                </div>
-                {radnaDozvola.file_url && (
-                  <a href={radnaDozvola.file_url} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium mt-1"
-                    style={{ background: '#EFF6FF', color: '#2563EB' }}>
-                    📄 {fileNameFromUrl(radnaDozvola.file_url)}
-                  </a>
-                )}
-              </>
-            )}
+          <Card title="Osobni dokumenti" icon="🪪">
+            <DocGroup docs={osobniDocs} emptyText="Nema osobnih dokumenata." />
           </Card>
 
-          {/* Liječnički pregled */}
-          <Card title="Liječnički pregled" icon="🏥">
-            {!lijecnicki ? (
-              <p className="text-sm" style={{ color: '#CBD5E1' }}>Nije unesen.</p>
-            ) : (
-              <>
-                <div className="flex flex-col mb-3">
-                  <span className="text-xs mb-1" style={{ color: '#94A3B8' }}>Datum isteka</span>
-                  {ljBadge ? (
-                    <span className="text-xs px-2.5 py-1 rounded-full font-medium w-fit" style={{ background: ljBadge.bg, color: ljBadge.color }}>{ljBadge.label}</span>
-                  ) : <span className="text-sm" style={{ color: '#CBD5E1' }}>—</span>}
-                </div>
-                {lijecnicki.file_url && (
-                  <a href={lijecnicki.file_url} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium mt-1"
-                    style={{ background: '#EFF6FF', color: '#2563EB' }}>
-                    📄 {fileNameFromUrl(lijecnicki.file_url)}
-                  </a>
-                )}
-              </>
-            )}
+          <Card title="Prateći dokumenti" icon="📋">
+            <DocGroup docs={prateciDocs} emptyText="Nema prateći dokumenata." />
           </Card>
 
         </div>

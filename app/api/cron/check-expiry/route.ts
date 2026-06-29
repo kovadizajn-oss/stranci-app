@@ -6,10 +6,6 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-const DOC_LABELS: Record<string, string> = {
-  radna_dozvola: 'Radna dozvola',
-  lijecnicki: 'Liječnički pregled',
-}
 
 function formatDate(dateStr: string) {
   const [y, m, d] = dateStr.split('-')
@@ -40,7 +36,7 @@ export async function GET(request: Request) {
 
   const { data: docs, error } = await supabase
     .from('documents')
-    .select('id, tip_dokumenta, datum_isteka, employees(ime, prezime)')
+    .select('id, naziv, datum_isteka, employees(ime, prezime)')
     .lte('datum_isteka', in30Str)
     .gte('datum_isteka', todayStr)
     .order('datum_isteka', { ascending: true })
@@ -58,7 +54,7 @@ export async function GET(request: Request) {
           ${emp ? `${emp.ime} ${emp.prezime}` : '—'}
         </td>
         <td style="padding:10px 14px;border-bottom:1px solid #F1F5F9;font-size:14px;color:#475569;">
-          ${DOC_LABELS[d.tip_dokumenta] || d.tip_dokumenta}
+          ${d.naziv || 'Dokument'}
         </td>
         <td style="padding:10px 14px;border-bottom:1px solid #F1F5F9;font-size:14px;">
           <span style="color:${urgency};font-weight:600;">${formatDate(d.datum_isteka)}</span>
