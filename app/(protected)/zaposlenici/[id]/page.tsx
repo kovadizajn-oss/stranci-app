@@ -127,7 +127,7 @@ function DocCard({ doc, index, types, onChange, onRemove }: {
           )}
         </div>
         <button type="button" onClick={() => onRemove(index)}
-          className="text-xs px-2.5 py-1.5 rounded-lg flex-shrink-0 mt-0.5"
+          className="btn-danger text-xs px-2.5 py-1.5 rounded-lg flex-shrink-0 mt-0.5"
           style={{ background: '#FEF2F2', color: '#EF4444' }}>
           Ukloni
         </button>
@@ -402,7 +402,7 @@ export default function EmployeeDetail() {
           )}
           <button type="button"
             onClick={() => setOsobniDocs(prev => [...prev, emptyDoc('osobni')])}
-            className="text-sm font-medium" style={{ color: '#2563EB' }}>
+            className="btn-link text-sm font-medium" style={{ color: '#2563EB' }}>
             + Dodaj osobni dokument
           </button>
         </Section>
@@ -426,7 +426,7 @@ export default function EmployeeDetail() {
           )}
           <button type="button"
             onClick={() => setPrateciDocs(prev => [...prev, emptyDoc('prateci')])}
-            className="text-sm font-medium" style={{ color: '#2563EB' }}>
+            className="btn-link text-sm font-medium" style={{ color: '#2563EB' }}>
             + Dodaj prateći dokument
           </button>
         </Section>
@@ -445,7 +445,7 @@ export default function EmployeeDetail() {
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-semibold" style={{ color: '#374151' }}>Godišnji odmor</p>
               <button type="button" onClick={() => setVacations(prev => [...prev, { datum_od: '', datum_do: '', napomena: '', _new: true }])}
-                className="text-xs font-medium" style={{ color: '#2563EB' }}>+ Dodaj</button>
+                className="btn-link text-xs font-medium" style={{ color: '#2563EB' }}>+ Dodaj</button>
             </div>
             {vacations.length === 0 && <p className="text-xs" style={{ color: '#94A3B8' }}>Nema unesenih godišnjih odmora.</p>}
             {vacations.map((vac, i) => (
@@ -458,7 +458,7 @@ export default function EmployeeDetail() {
                     <input type="date" className={inputCls} style={inputStyle} value={vac.datum_do || ''} onChange={e => setVacations(prev => prev.map((v, j) => j === i ? { ...v, datum_do: e.target.value } : v))} /></div>
                 </div>
                 <button type="button" onClick={() => { if (vac.id) setDeletedVacationIds(prev => [...prev, vac.id]); setVacations(prev => prev.filter((_, j) => j !== i)) }}
-                  className="text-xs flex-shrink-0" style={{ color: '#EF4444' }}>Ukloni</button>
+                  className="btn-text-danger text-xs flex-shrink-0" style={{ color: '#EF4444' }}>Ukloni</button>
               </div>
             ))}
           </div>
@@ -467,7 +467,7 @@ export default function EmployeeDetail() {
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-semibold" style={{ color: '#374151' }}>Bolovanje</p>
               <button type="button" onClick={() => setSickLeaves(prev => [...prev, { datum_od: '', datum_do: '', napomena: '', _new: true }])}
-                className="text-xs font-medium" style={{ color: '#2563EB' }}>+ Dodaj</button>
+                className="btn-link text-xs font-medium" style={{ color: '#2563EB' }}>+ Dodaj</button>
             </div>
             {sickLeaves.length === 0 && <p className="text-xs" style={{ color: '#94A3B8' }}>Nema unesenih bolovanja.</p>}
             {sickLeaves.map((sick, i) => (
@@ -480,7 +480,7 @@ export default function EmployeeDetail() {
                     <input type="date" className={inputCls} style={inputStyle} value={sick.datum_do || ''} onChange={e => setSickLeaves(prev => prev.map((s, j) => j === i ? { ...s, datum_do: e.target.value } : s))} /></div>
                 </div>
                 <button type="button" onClick={() => { if (sick.id) setDeletedSickIds(prev => [...prev, sick.id]); setSickLeaves(prev => prev.filter((_, j) => j !== i)) }}
-                  className="text-xs flex-shrink-0" style={{ color: '#EF4444' }}>Ukloni</button>
+                  className="btn-text-danger text-xs flex-shrink-0" style={{ color: '#EF4444' }}>Ukloni</button>
               </div>
             ))}
           </div>

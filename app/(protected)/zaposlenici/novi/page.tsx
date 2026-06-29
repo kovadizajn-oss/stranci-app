@@ -99,7 +99,7 @@ function NewDocCard({ doc, index, types, onChange, onRemove }: {
           )}
         </div>
         <button type="button" onClick={() => onRemove(index)}
-          className="text-xs px-2.5 py-1.5 rounded-lg flex-shrink-0 mt-0.5"
+          className="btn-danger text-xs px-2.5 py-1.5 rounded-lg flex-shrink-0 mt-0.5"
           style={{ background: '#FEF2F2', color: '#EF4444' }}>Ukloni</button>
       </div>
       <div className="grid grid-cols-2 gap-3 mb-3">
@@ -255,7 +255,7 @@ export default function NoviZaposlenik() {
           ))}
           {osobniDocs.length === 0 && <p className="text-xs mb-3" style={{ color: '#94A3B8' }}>Nema dodanih osobnih dokumenata.</p>}
           <button type="button" onClick={() => setOsobniDocs(prev => [...prev, emptyDoc('osobni')])}
-            className="text-sm font-medium" style={{ color: '#2563EB' }}>+ Dodaj osobni dokument</button>
+            className="btn-link text-sm font-medium" style={{ color: '#2563EB' }}>+ Dodaj osobni dokument</button>
         </Section>
 
         <Section icon="📋" title="Prateći dokumenti" desc="Radna dozvola, liječnički pregled i ostali prateći dokumenti.">
@@ -266,7 +266,7 @@ export default function NoviZaposlenik() {
           ))}
           {prateciDocs.length === 0 && <p className="text-xs mb-3" style={{ color: '#94A3B8' }}>Nema dodanih prateći dokumenata.</p>}
           <button type="button" onClick={() => setPrateciDocs(prev => [...prev, emptyDoc('prateci')])}
-            className="text-sm font-medium" style={{ color: '#2563EB' }}>+ Dodaj prateći dokument</button>
+            className="btn-link text-sm font-medium" style={{ color: '#2563EB' }}>+ Dodaj prateći dokument</button>
         </Section>
 
         <Section icon="💼" title="Rad stranca" desc="Poslodavac i radno mjesto.">

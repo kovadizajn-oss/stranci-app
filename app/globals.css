@@ -115,6 +115,30 @@ input:focus, select:focus, textarea:focus {
   transform: translateX(1px) scale(0.98);
 }
 
+/* Text link buttons (+ Dodaj...) */
+.btn-link {
+  transition: color 0.15s ease, transform 0.12s ease, letter-spacing 0.15s ease;
+}
+.btn-link:hover {
+  transform: translateX(2px);
+  filter: brightness(1.15);
+}
+.btn-link:active {
+  transform: scale(0.96) translateX(1px);
+}
+
+/* Inline text danger (Ukloni without bg) */
+.btn-text-danger {
+  transition: color 0.15s ease, transform 0.12s ease;
+}
+.btn-text-danger:hover {
+  color: #DC2626 !important;
+  transform: scale(1.08);
+}
+.btn-text-danger:active {
+  transform: scale(0.92);
+}
+
 /* Agenda & popup clickable cards */
 .card-link {
   transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
