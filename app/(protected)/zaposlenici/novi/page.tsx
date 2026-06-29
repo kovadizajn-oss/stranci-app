@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import StatusPicker from '@/components/StatusPicker'
 
 const COUNTRIES = [
   'Afganistan','Albanija','Alžir','Angola','Argentina','Armenija','Australija','Austrija',
@@ -227,9 +228,7 @@ export default function NoviZaposlenik() {
             </div>
             <div className="col-span-1 md:col-span-2">
               <Field label="Status zaposlenika">
-                <select className={inputCls} style={inputStyle} value={form.status_zaposlenika} onChange={e => setF('status_zaposlenika', e.target.value)}>
-                  {STATUSI.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <StatusPicker value={form.status_zaposlenika} onChange={v => setF('status_zaposlenika', v)} />
               </Field>
             </div>
           </div>
