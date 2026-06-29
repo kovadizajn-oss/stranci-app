@@ -6,18 +6,20 @@ import Link from 'next/link'
 
 type CalEvent = {
   id: string
-  type: 'vacation' | 'sick' | 'doc_expiry'
+  type: 'vacation' | 'sick' | 'doc_expiry' | 'obaveza'
   employeeName: string
   employeeId: string
   dateFrom: string
   dateTo: string
   label: string
+  linkHref?: string
 }
 
 const EVENT_CONFIG = {
-  vacation:        { color: '#16A34A', bg: '#DCFCE7', border: '#BBF7D0', icon: '🌴', label: 'Godišnji odmor' },
-  sick:            { color: '#CA8A04', bg: '#FEF9C3', border: '#FDE047', icon: '🏥', label: 'Bolovanje' },
-  doc_expiry:      { color: '#DC2626', bg: '#FEE2E2', border: '#FECACA', icon: '📄', label: 'Istek dokumenta' },
+  vacation:   { color: '#16A34A', bg: '#DCFCE7', border: '#BBF7D0', icon: '🌴', label: 'Godišnji odmor' },
+  sick:       { color: '#CA8A04', bg: '#FEF9C3', border: '#FDE047', icon: '🏥', label: 'Bolovanje' },
+  doc_expiry: { color: '#DC2626', bg: '#FEE2E2', border: '#FECACA', icon: '📄', label: 'Istek dokumenta' },
+  obaveza:    { color: '#7C3AED', bg: '#F5F3FF', border: '#DDD6FE', icon: '✅', label: 'Obaveza' },
 }
 
 const MONTH_NAMES = ['Siječanj','Veljača','Ožujak','Travanj','Svibanj','Lipanj',
@@ -49,10 +51,12 @@ export default function KalendarPage() {
         { data: vacs },
         { data: sick },
         { data: docs },
+        { data: obs },
       ] = await Promise.all([
         supabase.from('vacations').select('id, employee_id, datum_od, datum_do, employees(ime, prezime)'),
         supabase.from('sick_leaves').select('id, employee_id, datum_od, datum_do, employees(ime, prezime)'),
         supabase.from('documents').select('id, employee_id, naziv, datum_isteka, employees(ime, prezime)').not('datum_isteka', 'is', null),
+        supabase.from('obaveze').select('id, naziv, employee_id, rok, employees(ime, prezime)').not('rok', 'is', null).eq('zavrseno', false),
       ])
 
       const all: CalEvent[] = []
@@ -74,6 +78,21 @@ export default function KalendarPage() {
         const emp = d.employees
         if (!emp) return
         all.push({ id: `doc-${d.id}`, type: 'doc_expiry', employeeName: `${emp.ime} ${emp.prezime}`, employeeId: d.employee_id, dateFrom: d.datum_isteka, dateTo: d.datum_isteka, label: d.naziv || 'Dokument' })
+      })
+
+      obs?.forEach((o: any) => {
+        if (!o.rok) return
+        const emp = o.employees
+        all.push({
+          id: `ob-${o.id}`,
+          type: 'obaveza',
+          employeeName: emp ? `${emp.ime} ${emp.prezime}` : '',
+          employeeId: o.employee_id || '',
+          dateFrom: o.rok,
+          dateTo: o.rok,
+          label: o.naziv,
+          linkHref: o.employee_id ? `/zaposlenici/${o.employee_id}/pregled` : '/obaveze',
+        })
       })
 
 
@@ -252,12 +271,12 @@ export default function KalendarPage() {
                 {selectedEvents.map((ev, i) => {
                   const cfg = EVENT_CONFIG[ev.type]
                   return (
-                    <Link key={i} href={`/zaposlenici/${ev.employeeId}/pregled`}
+                    <Link key={i} href={(ev as any).linkHref || `/zaposlenici/${ev.employeeId}/pregled`}
                       className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium"
                       style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
                       <span>{cfg.icon}</span>
-                      <span>{ev.employeeName}</span>
-                      <span style={{ opacity: 0.7 }}>– {ev.label}</span>
+                      <span>{ev.type === 'obaveza' ? ev.label : ev.employeeName}</span>
+                      {ev.type !== 'obaveza' && <span style={{ opacity: 0.7 }}>– {ev.label}</span>}
                     </Link>
                   )
                 })}
@@ -287,11 +306,13 @@ export default function KalendarPage() {
                   style={{ borderBottom: i < agendaEvents.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cfg.color }} />
                   <div className="flex-1 min-w-0">
-                    <Link href={`/zaposlenici/${ev.employeeId}/pregled`} className="text-sm font-medium hover:underline truncate block" style={{ color: '#1E293B' }}>{ev.employeeName}</Link>
+                    <p className="text-sm font-medium truncate" style={{ color: '#1E293B' }}>
+                    {ev.type === 'obaveza' ? ev.label : ev.employeeName}
+                  </p>
                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                       <span className="text-xs px-2 py-0.5 rounded-full"
                         style={{ background: cfg.bg, color: cfg.color }}>
-                        {cfg.icon} {ev.label}
+                        {cfg.icon} {ev.type === 'obaveza' ? (ev.employeeName || 'Obaveza') : ev.label}
                       </span>
                       <span className="text-xs" style={{ color: '#64748B' }}>
                         {isRange
@@ -300,7 +321,7 @@ export default function KalendarPage() {
                       </span>
                     </div>
                   </div>
-                  <Link href={`/zaposlenici/${ev.employeeId}/pregled`}
+                  <Link href={(ev as any).linkHref || `/zaposlenici/${ev.employeeId}/pregled`}
                     className="text-xs px-2.5 py-1 rounded-lg flex-shrink-0"
                     style={{ background: '#EFF6FF', color: '#2563EB' }}>
                     Pregled

@@ -10,6 +10,7 @@ const navItems = [
       { href: '/dashboard', label: 'Pregled', icon: '🔎' },
       { href: '/zaposlenici', label: 'Zaposlenici', icon: '👥' },
       { href: '/kalendar', label: 'Kalendar', icon: '📅' },
+      { href: '/obaveze', label: 'Obaveze', icon: '✅' },
     ],
   },
 ]
