@@ -43,7 +43,7 @@ export default function Sidebar() {
               <p className="text-xs font-semibold px-2 mb-2 tracking-wider" style={{ color: '#94A3B8' }}>{group.label}</p>
               {group.items.map((item) => (
                 <Link key={item.href} href={item.href}
-                  className="flex items-center gap-2.5 px-2 py-2 rounded-lg mb-0.5 text-sm transition-all"
+                  className="nav-item flex items-center gap-2.5 px-2 py-2 rounded-lg mb-0.5 text-sm"
                   style={{
                     color: isActive(item.href) ? '#2563EB' : '#475569',
                     background: isActive(item.href) ? '#EFF6FF' : 'transparent',

@@ -174,7 +174,7 @@ export default function ZaposleniciPage() {
         </div>
         <Link
           href="/zaposlenici/novi"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white"
+          className="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white"
           style={{ background: '#2563EB' }}
         >
           + Dodaj zaposlenika
@@ -273,12 +273,12 @@ export default function ZaposleniciPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Link href={`/zaposlenici/${emp.id}`}
-                          className="text-xs px-2.5 py-1 rounded-lg font-medium"
+                          className="btn-primary text-xs px-2.5 py-1 rounded-lg font-medium"
                           style={{ background: '#EFF6FF', color: '#2563EB' }}>
                           Uredi
                         </Link>
                         <button onClick={() => deleteEmployee(emp.id)}
-                          className="text-xs px-2.5 py-1 rounded-lg font-medium"
+                          className="btn-danger text-xs px-2.5 py-1 rounded-lg font-medium"
                           style={{ background: '#FEF2F2', color: '#DC2626' }}>
                           Obriši
                         </button>

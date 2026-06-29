@@ -272,7 +272,7 @@ export default function KalendarPage() {
                   const cfg = EVENT_CONFIG[ev.type]
                   return (
                     <Link key={i} href={(ev as any).linkHref || `/zaposlenici/${ev.employeeId}/pregled`}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium"
+                      className="card-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium"
                       style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
                       <span>{cfg.icon}</span>
                       <span>{ev.type === 'obaveza' ? ev.label : ev.employeeName}</span>
@@ -322,7 +322,7 @@ export default function KalendarPage() {
                     </div>
                   </div>
                   <Link href={(ev as any).linkHref || `/zaposlenici/${ev.employeeId}/pregled`}
-                    className="text-xs px-2.5 py-1 rounded-lg flex-shrink-0"
+                    className="btn-primary text-xs px-2.5 py-1 rounded-lg flex-shrink-0"
                     style={{ background: '#EFF6FF', color: '#2563EB' }}>
                     Pregled
                   </Link>

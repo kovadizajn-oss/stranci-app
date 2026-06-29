@@ -188,7 +188,7 @@ export default function CandidatePregled() {
           </div>
         </div>
         <Link href={`/zaposlenici/${id}`}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white flex-shrink-0"
+          className="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white flex-shrink-0"
           style={{ background: '#2563EB' }}>
           ✏️ Uredi
         </Link>

@@ -20,3 +20,110 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
   border-color: #2563EB !important;
 }
+
+/* ── Button & interactive animations ── */
+
+/* Primary blue buttons */
+.btn-primary {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.btn-primary:hover {
+  transform: translateY(-1px) scale(1.025);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.32);
+  filter: brightness(1.07);
+}
+.btn-primary:active {
+  transform: scale(0.97);
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.2);
+  filter: brightness(0.97);
+}
+
+/* Secondary / ghost buttons */
+.btn-secondary {
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-secondary:hover {
+  transform: translateY(-1px);
+  background: #E2E8F0 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.btn-secondary:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+/* Danger / delete buttons */
+.btn-danger {
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+.btn-danger:hover {
+  transform: translateY(-1px);
+  background: #FEE2E2 !important;
+  color: #B91C1C !important;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.18);
+}
+.btn-danger:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+/* Small ghost delete (✕) */
+.btn-ghost-delete {
+  transition: color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+  border-radius: 6px;
+}
+.btn-ghost-delete:hover {
+  color: #EF4444 !important;
+  transform: scale(1.2);
+  background: #FEF2F2 !important;
+}
+.btn-ghost-delete:active {
+  transform: scale(0.9);
+}
+
+/* Checkbox toggle */
+.btn-check {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-check:hover {
+  transform: scale(1.18);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+.btn-check:active {
+  transform: scale(0.88);
+}
+
+/* Filter tab buttons */
+.btn-tab {
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+}
+.btn-tab:hover {
+  transform: translateY(-1px);
+}
+.btn-tab:active {
+  transform: scale(0.96);
+}
+
+/* Sidebar nav links */
+.nav-item {
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease, padding-left 0.15s ease;
+}
+.nav-item:hover {
+  transform: translateX(3px);
+}
+.nav-item:active {
+  transform: translateX(1px) scale(0.98);
+}
+
+/* Agenda & popup clickable cards */
+.card-link {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.card-link:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+  filter: brightness(0.97);
+}
+.card-link:active {
+  transform: scale(0.98);
+}

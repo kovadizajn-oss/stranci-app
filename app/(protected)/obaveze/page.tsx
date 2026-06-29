@@ -103,7 +103,6 @@ export default function ObavezePage() {
 
   async function toggleDone(id: string, current: boolean) {
     if (!current && filter === 'otvoreno') {
-      // Animate out before updating state
       setCompleting(id)
       await supabase.from('obaveze').update({ zavrseno: true }).eq('id', id)
       setTimeout(() => {
@@ -144,7 +143,7 @@ export default function ObavezePage() {
         </div>
         {!adding && (
           <button onClick={() => setAdding(true)}
-            className="px-4 py-2.5 rounded-lg text-sm font-medium text-white"
+            className="btn-primary px-4 py-2.5 rounded-lg text-sm font-medium text-white"
             style={{ background: '#2563EB' }}>
             + Nova obaveza
           </button>
@@ -179,13 +178,14 @@ export default function ObavezePage() {
                 onChange={e => setForm(p => ({ ...p, rok: e.target.value }))} />
             </div>
             <div className="flex gap-2 justify-end">
-              <button type="button" onClick={() => { setAdding(false); setForm({ naziv: '', employee_id: '', rok: '' }) }}
-                className="px-4 py-2 rounded-lg text-sm font-medium"
+              <button type="button"
+                onClick={() => { setAdding(false); setForm({ naziv: '', employee_id: '', rok: '' }) }}
+                className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium"
                 style={{ background: '#F1F5F9', color: '#374151' }}>
                 Odustani
               </button>
               <button type="submit" disabled={saving}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                className="btn-primary px-4 py-2 rounded-lg text-sm font-medium text-white"
                 style={{ background: saving ? '#93C5FD' : '#2563EB' }}>
                 {saving ? 'Sprema...' : '✓ Spremi'}
               </button>
@@ -198,7 +198,7 @@ export default function ObavezePage() {
       <div className="flex gap-1 mb-4 p-1 rounded-lg w-fit" style={{ background: '#F1F5F9' }}>
         {([['otvoreno', 'Otvoreno'], ['zavrseno', 'Završeno'], ['sve', 'Sve']] as const).map(([val, label]) => (
           <button key={val} onClick={() => setFilter(val)}
-            className="px-3 py-1.5 rounded-md text-sm font-medium transition-all"
+            className="btn-tab px-3 py-1.5 rounded-md text-sm font-medium"
             style={{
               background: filter === val ? 'white' : 'transparent',
               color: filter === val ? '#1E293B' : '#64748B',
@@ -224,17 +224,16 @@ export default function ObavezePage() {
         ) : (
           filtered.map((ob, i) => (
             <div key={ob.id}
-              className="flex items-center gap-3 px-4 py-3.5"
+              className="group flex items-center gap-3 px-4 py-3.5"
               style={{
                 borderBottom: i < filtered.length - 1 ? '1px solid #F1F5F9' : 'none',
                 opacity: completing === ob.id ? 0 : ob.zavrseno ? 0.6 : 1,
                 transform: completing === ob.id ? 'translateY(-6px)' : 'none',
                 transition: completing === ob.id ? 'opacity 0.35s ease, transform 0.35s ease' : 'opacity 0.2s ease',
-                maxHeight: completing === ob.id ? 0 : undefined,
               }}>
               {/* Checkbox */}
               <button onClick={() => toggleDone(ob.id, ob.zavrseno)}
-                className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-all"
+                className="btn-check w-5 h-5 rounded flex items-center justify-center flex-shrink-0"
                 style={{
                   border: ob.zavrseno ? 'none' : '2px solid #D1D5DB',
                   background: ob.zavrseno ? '#16A34A' : 'white',
@@ -262,10 +261,8 @@ export default function ObavezePage() {
 
               {/* Delete */}
               <button onClick={() => deleteObaveza(ob.id)}
-                className="text-xs px-2 py-1 rounded-lg flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all"
-                style={{ color: '#94A3B8' }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#EF4444')}
-                onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')}>
+                className="btn-ghost-delete text-xs px-2 py-1 flex-shrink-0 opacity-0 group-hover:opacity-100"
+                style={{ color: '#94A3B8' }}>
                 ✕
               </button>
             </div>
