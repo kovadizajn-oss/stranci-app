@@ -7,7 +7,7 @@ const navItems = [
   {
     label: 'GLAVNO',
     items: [
-      { href: '/dashboard', label: 'Pregled', icon: '⊞' },
+      { href: '/dashboard', label: 'Pregled', icon: '🔎' },
       { href: '/zaposlenici', label: 'Zaposlenici', icon: '👥' },
       { href: '/kalendar', label: 'Kalendar', icon: '📅' },
     ],
