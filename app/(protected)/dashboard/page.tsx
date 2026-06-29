@@ -181,7 +181,7 @@ export default function DashboardPage() {
                     <p className="text-xs mt-0.5" style={{ color: '#DC2626' }}>Isteklo prije {days} {days === 1 ? 'dana' : 'dana'}</p>
                   </div>
                   <Link href={`/zaposlenici/${item.employeeId}`}
-                    className="text-xs px-2.5 py-1.5 rounded-lg font-medium flex-shrink-0"
+                    className="btn-danger text-xs px-2.5 py-1.5 rounded-lg font-medium flex-shrink-0"
                     style={{ background: '#FEE2E2', color: '#DC2626' }}>
                     Uredi
                   </Link>
@@ -199,7 +199,7 @@ export default function DashboardPage() {
             <h2 className="font-semibold" style={{ color: '#1E293B' }}>Nadolazeći rokovi</h2>
             <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>Sortirano po datumu</p>
           </div>
-          <Link href="/zaposlenici" className="text-sm font-medium" style={{ color: '#2563EB' }}>
+          <Link href="/zaposlenici" className="btn-primary text-sm font-medium px-3 py-1.5 rounded-lg" style={{ background: '#EFF6FF', color: '#2563EB' }}>
             Pogledaj sve →
           </Link>
         </div>
@@ -243,7 +243,7 @@ export default function DashboardPage() {
                   {/* Action */}
                   <Link
                     href={`/zaposlenici/${item.employeeId}/pregled`}
-                    className="text-xs px-2.5 py-1.5 rounded-lg font-medium flex-shrink-0"
+                    className="btn-primary text-xs px-2.5 py-1.5 rounded-lg font-medium flex-shrink-0"
                     style={{ background: '#EFF6FF', color: '#2563EB' }}
                   >
                     Pogledaj

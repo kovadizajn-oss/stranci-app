@@ -279,8 +279,8 @@ export default function NoviZaposlenik() {
         <div className="flex items-center justify-between pt-2 pb-8">
           <p className="text-xs" style={{ color: '#94A3B8' }}>* obavezna polja</p>
           <div className="flex gap-3">
-            <Link href="/zaposlenici" className="px-4 py-2.5 rounded-lg text-sm font-medium" style={{ background: '#F1F5F9', color: '#374151' }}>Odustani</Link>
-            <button type="submit" disabled={saving} className="px-5 py-2.5 rounded-lg text-sm font-medium text-white"
+            <Link href="/zaposlenici" className="btn-secondary px-4 py-2.5 rounded-lg text-sm font-medium" style={{ background: '#F1F5F9', color: '#374151' }}>Odustani</Link>
+            <button type="submit" disabled={saving} className="btn-primary px-5 py-2.5 rounded-lg text-sm font-medium text-white"
               style={{ background: saving ? '#93C5FD' : '#2563EB', cursor: saving ? 'not-allowed' : 'pointer' }}>
               {saving ? 'Spremanje...' : '✓ Spremi zaposlenika'}
             </button>
