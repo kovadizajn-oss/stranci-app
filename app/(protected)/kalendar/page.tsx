@@ -24,11 +24,6 @@ const MONTH_NAMES = ['Siječanj','Veljača','Ožujak','Travanj','Svibanj','Lipan
                      'Srpanj','Kolovoz','Rujan','Listopad','Studeni','Prosinac']
 const DAY_LABELS = ['Pon','Uto','Sri','Čet','Pet','Sub','Ned']
 
-const DOC_TYPE_LABELS: Record<string, string> = {
-  radna_dozvola: 'Radna dozvola',
-  lijecnicki: 'Liječnički pregled',
-}
-
 function toDateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
@@ -57,7 +52,7 @@ export default function KalendarPage() {
       ] = await Promise.all([
         supabase.from('vacations').select('id, employee_id, datum_od, datum_do, employees(ime, prezime)'),
         supabase.from('sick_leaves').select('id, employee_id, datum_od, datum_do, employees(ime, prezime)'),
-        supabase.from('documents').select('id, employee_id, tip_dokumenta, datum_isteka, employees(ime, prezime)').not('datum_isteka', 'is', null),
+        supabase.from('documents').select('id, employee_id, naziv, datum_isteka, employees(ime, prezime)').not('datum_isteka', 'is', null),
       ])
 
       const all: CalEvent[] = []
@@ -78,7 +73,7 @@ export default function KalendarPage() {
         if (!d.datum_isteka) return
         const emp = d.employees
         if (!emp) return
-        all.push({ id: `doc-${d.id}`, type: 'doc_expiry', employeeName: `${emp.ime} ${emp.prezime}`, employeeId: d.employee_id, dateFrom: d.datum_isteka, dateTo: d.datum_isteka, label: DOC_TYPE_LABELS[d.tip_dokumenta] || 'Dokument' })
+        all.push({ id: `doc-${d.id}`, type: 'doc_expiry', employeeName: `${emp.ime} ${emp.prezime}`, employeeId: d.employee_id, dateFrom: d.datum_isteka, dateTo: d.datum_isteka, label: d.naziv || 'Dokument' })
       })
 
 
