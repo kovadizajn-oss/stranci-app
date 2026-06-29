@@ -44,6 +44,7 @@ export default function ObavezePage() {
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState({ naziv: '', employee_id: '', rok: '' })
   const [saving, setSaving] = useState(false)
+  const [completing, setCompleting] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -101,8 +102,18 @@ export default function ObavezePage() {
   }
 
   async function toggleDone(id: string, current: boolean) {
-    await supabase.from('obaveze').update({ zavrseno: !current }).eq('id', id)
-    setObaveze(prev => prev.map(o => o.id === id ? { ...o, zavrseno: !current } : o))
+    if (!current && filter === 'otvoreno') {
+      // Animate out before updating state
+      setCompleting(id)
+      await supabase.from('obaveze').update({ zavrseno: true }).eq('id', id)
+      setTimeout(() => {
+        setObaveze(prev => prev.map(o => o.id === id ? { ...o, zavrseno: true } : o))
+        setCompleting(null)
+      }, 400)
+    } else {
+      await supabase.from('obaveze').update({ zavrseno: !current }).eq('id', id)
+      setObaveze(prev => prev.map(o => o.id === id ? { ...o, zavrseno: !current } : o))
+    }
   }
 
   async function deleteObaveza(id: string) {
@@ -216,7 +227,10 @@ export default function ObavezePage() {
               className="flex items-center gap-3 px-4 py-3.5"
               style={{
                 borderBottom: i < filtered.length - 1 ? '1px solid #F1F5F9' : 'none',
-                opacity: ob.zavrseno ? 0.6 : 1,
+                opacity: completing === ob.id ? 0 : ob.zavrseno ? 0.6 : 1,
+                transform: completing === ob.id ? 'translateY(-6px)' : 'none',
+                transition: completing === ob.id ? 'opacity 0.35s ease, transform 0.35s ease' : 'opacity 0.2s ease',
+                maxHeight: completing === ob.id ? 0 : undefined,
               }}>
               {/* Checkbox */}
               <button onClick={() => toggleDone(ob.id, ob.zavrseno)}
