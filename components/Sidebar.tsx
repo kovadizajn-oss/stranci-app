@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 
 const navItems = [
   {
@@ -10,19 +10,13 @@ const navItems = [
       { href: '/dashboard', label: 'Pregled', icon: '🔎' },
       { href: '/zaposlenici', label: 'Zaposlenici', icon: '👥' },
       { href: '/kalendar', label: 'Kalendar', icon: '📅' },
-      { href: '/obaveze', label: 'Obaveze', icon: '✅' },
+      { href: '/obaveze', label: 'Obaveze', icon: '📋' },
     ],
   },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const router = useRouter()
-
-  async function handleLogout() {
-    await fetch('/api/logout', { method: 'POST' })
-    router.push('/login')
-  }
 
   function isActive(href: string) {
     if (href === '/dashboard') return pathname === '/dashboard'
@@ -63,14 +57,6 @@ export default function Sidebar() {
           ))}
         </nav>
 
-        <div className="px-3 pb-5" style={{ borderTop: '1px solid #E2E8F0', paddingTop: 12 }}>
-          <button onClick={handleLogout}
-            className="flex items-center gap-2.5 w-full px-2 py-2 rounded-lg text-sm transition-all"
-            style={{ color: '#EF4444' }}>
-            <span>⎋</span>
-            Odjava
-          </button>
-        </div>
       </aside>
 
       {/* Mobile bottom nav */}
@@ -88,12 +74,6 @@ export default function Sidebar() {
             {item.label}
           </Link>
         ))}
-        <button onClick={handleLogout}
-          className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-lg text-xs"
-          style={{ color: '#94A3B8' }}>
-          <span style={{ fontSize: 18 }}>⎋</span>
-          Odjava
-        </button>
       </nav>
     </>
   )
