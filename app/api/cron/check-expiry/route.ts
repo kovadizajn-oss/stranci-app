@@ -112,7 +112,7 @@ export async function GET(request: Request) {
     },
     body: JSON.stringify({
       from: 'Kvantus <onboarding@resend.dev>',
-      to: ['kovadizajn@gmail.com', 'info@kvantus.com'],
+      to: ['kovadizajn@gmail.com'],
       subject: `Kvantus — ${docs.length} ${docs.length === 1 ? 'dokument istječe' : 'dokumenata istječe'} uskoro`,
       html,
     }),
