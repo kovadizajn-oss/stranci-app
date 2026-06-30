@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 
 const navItems = [
   {
@@ -17,6 +18,12 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
 
   function isActive(href: string) {
     if (href === '/dashboard') return pathname === '/dashboard'
@@ -56,6 +63,16 @@ export default function Sidebar() {
             </div>
           ))}
         </nav>
+
+        {/* Logout */}
+        <div className="px-3 py-3" style={{ borderTop: '1px solid #E2E8F0' }}>
+          <button onClick={handleLogout}
+            className="nav-item w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm"
+            style={{ color: '#94A3B8' }}>
+            <span style={{ fontSize: 15 }}>🚪</span>
+            Odjava
+          </button>
+        </div>
 
       </aside>
 
