@@ -40,7 +40,7 @@ function badgeColor(days: number) {
 export default function DashboardPage() {
   const [deadlines, setDeadlines] = useState<DeadlineItem[]>([])
   const [expired, setExpired] = useState<DeadlineItem[]>([])
-  const [stats, setStats] = useState({ openObligations: 0, nearestDays: null as number | null, doneThisMonth: 0, totalDocs: 0 })
+  const [stats, setStats] = useState({ openObligations: 0, nearestDays: null as number | null, doneThisMonth: 0, totalWorkers: 0 })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -52,7 +52,7 @@ export default function DashboardPage() {
       const in60Str = in60.toISOString().split('T')[0]
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
 
-      const [{ data: docs }, { data: expiredDocs }, { count: docCount }] = await Promise.all([
+      const [{ data: docs }, { data: expiredDocs }, { count: workerCount }] = await Promise.all([
         supabase.from('documents')
           .select('id, employee_id, naziv, datum_isteka, employees(ime, prezime)')
           .lte('datum_isteka', in60Str)
@@ -62,7 +62,7 @@ export default function DashboardPage() {
           .select('id, employee_id, naziv, datum_isteka, employees(ime, prezime)')
           .lt('datum_isteka', todayStr)
           .order('datum_isteka'),
-        supabase.from('documents')
+        supabase.from('employees')
           .select('id', { count: 'exact', head: true }),
       ])
 
@@ -92,7 +92,7 @@ export default function DashboardPage() {
         openObligations: 0,
         nearestDays,
         doneThisMonth: 0,
-        totalDocs: docCount || 0,
+        totalWorkers: workerCount || 0,
       })
       setLoading(false)
     }
@@ -130,8 +130,8 @@ export default function DashboardPage() {
             dot: '#EF4444',
           },
           {
-            label: 'Dokumenata',
-            value: loading ? '...' : stats.totalDocs,
+            label: 'Radnika',
+            value: loading ? '...' : stats.totalWorkers,
             sub: '',
             dot: '#94A3B8',
           },
