@@ -48,7 +48,14 @@ const DOC_TYPES: Record<string, string> = {
 }
 
 const ZAP_STATUSES = Object.keys(STATUS_ZAP_CONFIG)
-const DOC_STATUSES = ['Vrijedi', 'Uskoro istječe', 'Kritično', 'Isteklo', 'Bez dokumenta']
+const DOC_STATUS_CONFIG: Record<string, { color: string; bg: string }> = {
+  'Vrijedi':        { color: '#16A34A', bg: '#DCFCE7' },
+  'Uskoro istječe': { color: '#CA8A04', bg: '#FEF9C3' },
+  'Kritično':       { color: '#DC2626', bg: '#FEE2E2' },
+  'Isteklo':        { color: '#DC2626', bg: '#FEE2E2' },
+  'Bez dokumenta':  { color: '#94A3B8', bg: '#F1F5F9' },
+}
+const DOC_STATUSES = Object.keys(DOC_STATUS_CONFIG)
 
 export default function ZaposleniciPage() {
   const [employees, setEmployees] = useState<EmployeeRow[]>([])
@@ -362,13 +369,17 @@ export default function ZaposleniciPage() {
       )}
       {openFilter === 'doc' && (
         <div ref={docDropRef} style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 1000, background: 'white', border: '1px solid #E2E8F0', borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160, padding: '4px 0' }}>
-          {DOC_STATUSES.map(s => (
-            <button key={s} onClick={() => { setFilterDoc(s); setOpenFilter(null) }}
-              className="w-full text-left px-3 py-2 text-xs"
-              style={{ color: filterDoc === s ? '#2563EB' : '#475569', fontWeight: filterDoc === s ? 600 : 400 }}>
-              {s}
-            </button>
-          ))}
+          {DOC_STATUSES.map(s => {
+            const cfg = DOC_STATUS_CONFIG[s]
+            return (
+              <button key={s} onClick={() => { setFilterDoc(s); setOpenFilter(null) }}
+                className="w-full text-left px-3 py-2 text-xs flex items-center gap-2"
+                style={{ fontWeight: filterDoc === s ? 600 : 400 }}>
+                <span className="px-2 py-0.5 rounded-full font-medium"
+                  style={{ background: cfg.bg, color: cfg.color }}>{s}</span>
+              </button>
+            )
+          })}
         </div>
       )}
     </div>
