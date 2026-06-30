@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
@@ -34,6 +34,9 @@ function docStatusFromDocs(docs: any[]) {
   return { label: 'Vrijedi', color: '#16A34A', bg: '#DCFCE7' }
 }
 
+const DOC_STATUSES = ['Vrijedi', 'Uskoro istječe', 'Kritično', 'Isteklo', 'Bez dokumenta']
+const ZAP_STATUSES = Object.keys(STATUS_ZAP_CONFIG)
+
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
@@ -44,6 +47,20 @@ export default function CompanyDetail() {
   const [editForm, setEditForm] = useState({ naziv: '', kontakt_ime: '', kontakt_telefon: '', kontakt_email: '' })
   const [editSaving, setEditSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [filterZap, setFilterZap] = useState<string>('')
+  const [filterDoc, setFilterDoc] = useState<string>('')
+  const [openFilter, setOpenFilter] = useState<'zap' | 'doc' | null>(null)
+  const filterRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setOpenFilter(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   useEffect(() => { load() }, [id])
 
@@ -176,32 +193,130 @@ export default function CompanyDetail() {
       <div className="grid gap-4 md:grid-cols-[1fr_280px]">
         {/* Workers list */}
         <div className="bg-white rounded-xl" style={{ border: '1px solid #E2E8F0' }}>
-          <div className="px-5 py-4" style={{ borderBottom: '1px solid #E2E8F0', borderRadius: '12px 12px 0 0' }}>
-            <p className="font-semibold text-sm" style={{ color: '#1E293B' }}>Radnici</p>
+          {/* Header row with column labels + filters */}
+          <div ref={filterRef} className="relative px-5 py-3" style={{ borderBottom: '1px solid #E2E8F0', borderRadius: '12px 12px 0 0' }}>
+            <div className="flex items-center gap-3">
+              <p className="font-semibold text-sm flex-1" style={{ color: '#1E293B' }}>Radnici</p>
+
+              {/* Status zaposlenika filter */}
+              <div className="relative">
+                <button onClick={() => setOpenFilter(openFilter === 'zap' ? null : 'zap')}
+                  className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg"
+                  style={{
+                    color: filterZap ? '#2563EB' : '#94A3B8',
+                    background: filterZap ? '#EFF6FF' : 'transparent',
+                    border: filterZap ? '1px solid #BFDBFE' : '1px solid transparent',
+                  }}>
+                  Status zaposlenika
+                  {filterZap && <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#2563EB' }} />}
+                  <span style={{ fontSize: 9, marginLeft: 1 }}>▾</span>
+                </button>
+                {openFilter === 'zap' && (
+                  <div className="absolute right-0 top-full mt-1 bg-white rounded-xl py-1 z-20"
+                    style={{ border: '1px solid #E2E8F0', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160 }}>
+                    <button onClick={() => { setFilterZap(''); setOpenFilter(null) }}
+                      className="w-full text-left px-3 py-2 text-xs"
+                      style={{ color: !filterZap ? '#2563EB' : '#475569', fontWeight: !filterZap ? 600 : 400 }}>
+                      Svi statusi
+                    </button>
+                    {ZAP_STATUSES.map(s => {
+                      const cfg = STATUS_ZAP_CONFIG[s]
+                      return (
+                        <button key={s} onClick={() => { setFilterZap(s); setOpenFilter(null) }}
+                          className="w-full text-left px-3 py-2 text-xs flex items-center gap-2"
+                          style={{ color: filterZap === s ? '#2563EB' : '#475569', fontWeight: filterZap === s ? 600 : 400 }}>
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium"
+                            style={{ background: cfg.bg, color: cfg.color }}>{s}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Doc status filter */}
+              <div className="relative">
+                <button onClick={() => setOpenFilter(openFilter === 'doc' ? null : 'doc')}
+                  className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg"
+                  style={{
+                    color: filterDoc ? '#2563EB' : '#94A3B8',
+                    background: filterDoc ? '#EFF6FF' : 'transparent',
+                    border: filterDoc ? '1px solid #BFDBFE' : '1px solid transparent',
+                  }}>
+                  Status dokumenta
+                  {filterDoc && <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#2563EB' }} />}
+                  <span style={{ fontSize: 9, marginLeft: 1 }}>▾</span>
+                </button>
+                {openFilter === 'doc' && (
+                  <div className="absolute right-0 top-full mt-1 bg-white rounded-xl py-1 z-20"
+                    style={{ border: '1px solid #E2E8F0', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160 }}>
+                    <button onClick={() => { setFilterDoc(''); setOpenFilter(null) }}
+                      className="w-full text-left px-3 py-2 text-xs"
+                      style={{ color: !filterDoc ? '#2563EB' : '#475569', fontWeight: !filterDoc ? 600 : 400 }}>
+                      Svi statusi
+                    </button>
+                    {DOC_STATUSES.map(s => (
+                      <button key={s} onClick={() => { setFilterDoc(s); setOpenFilter(null) }}
+                        className="w-full text-left px-3 py-2 text-xs"
+                        style={{ color: filterDoc === s ? '#2563EB' : '#475569', fontWeight: filterDoc === s ? 600 : 400 }}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Active filters row */}
+            {(filterZap || filterDoc) && (
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-xs" style={{ color: '#94A3B8' }}>Filtrirano:</span>
+                {filterZap && (
+                  <button onClick={() => setFilterZap('')}
+                    className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
+                    style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE' }}>
+                    {filterZap} ✕
+                  </button>
+                )}
+                {filterDoc && (
+                  <button onClick={() => setFilterDoc('')}
+                    className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
+                    style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE' }}>
+                    {filterDoc} ✕
+                  </button>
+                )}
+              </div>
+            )}
           </div>
+
           {workers.length === 0 ? (
             <div className="p-8 text-center text-sm" style={{ color: '#94A3B8' }}>
               Nema radnika u ovoj tvrtki.<br />
               <span className="text-xs">Dodijelite radnike kroz stranicu za uređivanje radnika.</span>
             </div>
-          ) : (
-            workers.map((w: any, i: number) => {
+          ) : (() => {
+            const filtered = workers.filter(w => {
+              const docStatus = docStatusFromDocs(w.documents || [])
+              if (filterZap && w.status_zaposlenika !== filterZap) return false
+              if (filterDoc && docStatus.label !== filterDoc) return false
+              return true
+            })
+            if (filtered.length === 0) return (
+              <div className="p-8 text-center text-sm" style={{ color: '#94A3B8' }}>Nema radnika koji odgovaraju filteru.</div>
+            )
+            return filtered.map((w: any, i: number) => {
               const zapCfg = STATUS_ZAP_CONFIG[w.status_zaposlenika || ''] || { color: '#475569', bg: '#F1F5F9' }
               const docStatus = docStatusFromDocs(w.documents || [])
               return (
                 <Link key={w.id} href={`/zaposlenici/${w.id}/pregled`}
                   className="row-link flex items-center gap-3 px-5 py-3.5"
-                  style={{
-                    borderBottom: i < workers.length - 1 ? '1px solid #F1F5F9' : 'none',
-                  }}>
+                  style={{ borderBottom: i < filtered.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
                   <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0"
                     style={{ background: '#EFF6FF', color: '#2563EB' }}>
                     {w.ime[0]}{w.prezime[0]}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium" style={{ color: '#1E293B' }}>
-                      {w.ime} {w.prezime}
-                    </p>
+                    <p className="text-sm font-medium" style={{ color: '#1E293B' }}>{w.ime} {w.prezime}</p>
                   </div>
                   {w.status_zaposlenika && (
                     <span className="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0"
@@ -216,7 +331,7 @@ export default function CompanyDetail() {
                 </Link>
               )
             })
-          )}
+          })()}
         </div>
 
         {/* Contact card */}
