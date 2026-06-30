@@ -194,6 +194,9 @@ export default function EmployeeDetail() {
 
   const [form, setForm] = useState({ ime: '', prezime: '', drzava_rodjenja: '', datum_rodjenja: '', oib: '', status_zaposlenika: 'Aktivan', poslodavac: '', radno_mjesto: '' })
   const [extra, setExtra] = useState({ email: '', telefon: '', adresa_smjestaja: '', ime_oca: '', iban: '' })
+  const [companies, setCompanies] = useState<{ id: string; naziv: string }[]>([])
+  const [companyId, setCompanyId] = useState<string>('')
+  const [poslodavacManual, setPoslodavacManual] = useState('')
   const [osobniDocs, setOsobniDocs] = useState<DocState[]>([])
   const [prateciDocs, setPrateciDocs] = useState<DocState[]>([])
   const [deletedDocIds, setDeletedDocIds] = useState<string[]>([])
@@ -207,12 +210,18 @@ export default function EmployeeDetail() {
   function setE(key: string, value: string) { setExtra(prev => ({ ...prev, [key]: value })) }
 
   useEffect(() => {
+    supabase.from('companies').select('id, naziv').order('naziv').then(({ data }) => setCompanies(data || []))
+  }, [])
+
+  useEffect(() => {
     async function load() {
       const { data: emp } = await supabase.from('employees').select('*').eq('id', id).single()
       if (!emp) { router.push('/zaposlenici'); return }
 
       setForm({ ime: emp.ime || '', prezime: emp.prezime || '', drzava_rodjenja: emp.drzava_rodjenja || '', datum_rodjenja: emp.datum_rodjenja || '', oib: emp.oib || '', status_zaposlenika: emp.status_zaposlenika || 'Aktivan', poslodavac: emp.poslodavac || '', radno_mjesto: emp.radno_mjesto || '' })
       setExtra({ email: emp.email || '', telefon: emp.telefon || '', adresa_smjestaja: emp.adresa_smjestaja || '', ime_oca: emp.ime_oca || '', iban: emp.iban || '' })
+      setCompanyId(emp.company_id || '')
+      setPoslodavacManual(emp.company_id ? '' : (emp.poslodavac || ''))
 
       const [{ data: docs }, { data: vacs }, { data: sick }] = await Promise.all([
         supabase.from('documents').select('*').eq('employee_id', id),
@@ -248,7 +257,10 @@ export default function EmployeeDetail() {
         adresa_smjestaja: extra.adresa_smjestaja || null,
         ime_oca: extra.ime_oca || null,
         iban: extra.iban || null,
-        poslodavac: form.poslodavac || null,
+        company_id: companyId || null,
+        poslodavac: companyId
+          ? (companies.find(c => c.id === companyId)?.naziv || null)
+          : (poslodavacManual || null),
         radno_mjesto: form.radno_mjesto || null,
       }).eq('id', id)
 
@@ -433,7 +445,22 @@ export default function EmployeeDetail() {
         {/* Rad stranca */}
         <Section icon="💼" title="Rad stranca" desc="Poslodavac i radno mjesto.">
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Poslodavac / firma"><input className={inputCls} style={inputStyle} value={form.poslodavac} onChange={e => setF('poslodavac', e.target.value)} /></Field>
+            <div className="col-span-2 md:col-span-1">
+              <Field label="Poslodavac / firma">
+                <select className={inputCls} style={inputStyle}
+                  value={companyId}
+                  onChange={e => setCompanyId(e.target.value)}>
+                  <option value="">— Ručni unos —</option>
+                  {companies.map(c => <option key={c.id} value={c.id}>{c.naziv}</option>)}
+                </select>
+                {!companyId && (
+                  <input className={inputCls + ' mt-2'} style={inputStyle}
+                    placeholder="Upiši naziv poslodavca..."
+                    value={poslodavacManual}
+                    onChange={e => setPoslodavacManual(e.target.value)} />
+                )}
+              </Field>
+            </div>
             <Field label="Radno mjesto"><input className={inputCls} style={inputStyle} value={form.radno_mjesto} onChange={e => setF('radno_mjesto', e.target.value)} /></Field>
           </div>
         </Section>

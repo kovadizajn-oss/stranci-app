@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
@@ -132,6 +132,13 @@ export default function NoviZaposlenik() {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [companies, setCompanies] = useState<{ id: string; naziv: string }[]>([])
+  const [companyId, setCompanyId] = useState<string>('') // '' = manual, uuid = linked
+  const [poslodavacManual, setPoslodavacManual] = useState('')
+
+  useEffect(() => {
+    supabase.from('companies').select('id, naziv').order('naziv').then(({ data }) => setCompanies(data || []))
+  }, [])
 
   const [form, setForm] = useState({
     ime: '', prezime: '', drzava_rodjenja: '',
@@ -140,7 +147,6 @@ export default function NoviZaposlenik() {
   const [extra, setExtra] = useState({
     email: '', telefon: '', adresa_smjestaja: '', ime_oca: '', iban: '',
   })
-  const [poslodavac, setPoslodavac] = useState('')
   const [radnoMjesto, setRadnoMjesto] = useState('')
   const [osobniDocs, setOsobniDocs] = useState<NewDoc[]>([])
   const [prateciDocs, setPrateciDocs] = useState<NewDoc[]>([])
@@ -175,7 +181,10 @@ export default function NoviZaposlenik() {
           adresa_smjestaja: extra.adresa_smjestaja || null,
           ime_oca: extra.ime_oca || null,
           iban: extra.iban || null,
-          poslodavac: poslodavac || null,
+          company_id: companyId || null,
+          poslodavac: companyId
+            ? (companies.find(c => c.id === companyId)?.naziv || null)
+            : (poslodavacManual || null),
           radno_mjesto: radnoMjesto || null,
         })
         .select('id').single()
@@ -270,7 +279,22 @@ export default function NoviZaposlenik() {
 
         <Section icon="💼" title="Rad stranca" desc="Poslodavac i radno mjesto.">
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Poslodavac / firma"><input className={inputCls} style={inputStyle} value={poslodavac} onChange={e => setPoslodavac(e.target.value)} /></Field>
+            <div className="col-span-2 md:col-span-1">
+              <Field label="Poslodavac / firma">
+                <select className={inputCls} style={inputStyle}
+                  value={companyId}
+                  onChange={e => setCompanyId(e.target.value)}>
+                  <option value="">— Ručni unos —</option>
+                  {companies.map(c => <option key={c.id} value={c.id}>{c.naziv}</option>)}
+                </select>
+                {!companyId && (
+                  <input className={inputCls + ' mt-2'} style={inputStyle}
+                    placeholder="Upiši naziv poslodavca..."
+                    value={poslodavacManual}
+                    onChange={e => setPoslodavacManual(e.target.value)} />
+                )}
+              </Field>
+            </div>
             <Field label="Radno mjesto"><input className={inputCls} style={inputStyle} value={radnoMjesto} onChange={e => setRadnoMjesto(e.target.value)} /></Field>
           </div>
         </Section>
