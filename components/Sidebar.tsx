@@ -24,7 +24,7 @@ export default function Sidebar() {
   async function handleLogout() {
     setLoggingOut(true)
     await fetch('/api/logout', { method: 'POST' })
-    router.push('/login')
+    window.location.href = '/login'
   }
 
   function isActive(href: string) {
