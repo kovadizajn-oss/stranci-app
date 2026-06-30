@@ -214,11 +214,6 @@ export default function CompanyDetail() {
                 {openFilter === 'zap' && (
                   <div className="absolute right-0 top-full mt-1 bg-white rounded-xl py-1 z-20"
                     style={{ border: '1px solid #E2E8F0', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160 }}>
-                    <button onClick={() => { setFilterZap(''); setOpenFilter(null) }}
-                      className="w-full text-left px-3 py-2 text-xs"
-                      style={{ color: !filterZap ? '#2563EB' : '#475569', fontWeight: !filterZap ? 600 : 400 }}>
-                      Svi statusi
-                    </button>
                     {ZAP_STATUSES.map(s => {
                       const cfg = STATUS_ZAP_CONFIG[s]
                       return (
@@ -250,11 +245,6 @@ export default function CompanyDetail() {
                 {openFilter === 'doc' && (
                   <div className="absolute right-0 top-full mt-1 bg-white rounded-xl py-1 z-20"
                     style={{ border: '1px solid #E2E8F0', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160 }}>
-                    <button onClick={() => { setFilterDoc(''); setOpenFilter(null) }}
-                      className="w-full text-left px-3 py-2 text-xs"
-                      style={{ color: !filterDoc ? '#2563EB' : '#475569', fontWeight: !filterDoc ? 600 : 400 }}>
-                      Svi statusi
-                    </button>
                     {DOC_STATUSES.map(s => (
                       <button key={s} onClick={() => { setFilterDoc(s); setOpenFilter(null) }}
                         className="w-full text-left px-3 py-2 text-xs"
