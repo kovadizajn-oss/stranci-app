@@ -90,15 +90,17 @@ export default function Sidebar() {
       </aside>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 flex items-center justify-around px-2 py-2 z-50"
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 flex items-center justify-around px-1 py-2 z-50"
         style={{ background: '#FFFFFF', borderTop: '1px solid #E2E8F0' }}>
         {navItems[0].items.map((item) => (
           <Link key={item.href} href={item.href}
-            className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-lg text-xs"
+            className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg"
             style={{
               color: isActive(item.href) ? '#2563EB' : '#94A3B8',
               background: isActive(item.href) ? '#EFF6FF' : 'transparent',
               fontWeight: isActive(item.href) ? 600 : 400,
+              fontSize: 10,
+              minWidth: 0,
             }}>
             <span style={{ fontSize: 18 }}>{item.icon}</span>
             {item.label}
