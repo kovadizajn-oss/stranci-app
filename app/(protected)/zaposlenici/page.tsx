@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
@@ -47,12 +47,28 @@ const DOC_TYPES: Record<string, string> = {
   lijecnicki: 'Liječnički pregled',
 }
 
+const ZAP_STATUSES = Object.keys(STATUS_ZAP_CONFIG)
+const DOC_STATUSES = ['Vrijedi', 'Uskoro istječe', 'Kritično', 'Isteklo', 'Bez dokumenta']
+
 export default function ZaposleniciPage() {
   const [employees, setEmployees] = useState<EmployeeRow[]>([])
   const [filtered, setFiltered] = useState<EmployeeRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('svi')
+  const [filterZap, setFilterZap] = useState('')
+  const [filterDoc, setFilterDoc] = useState('')
+  const [openFilter, setOpenFilter] = useState<'zap' | 'doc' | null>(null)
+  const filterRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setOpenFilter(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   useEffect(() => {
     async function fetchEmployees() {
@@ -142,20 +158,10 @@ export default function ZaposleniciPage() {
         (e.poslodavac || '').toLowerCase().includes(q)
       )
     }
-    if (statusFilter !== 'svi') {
-      result = result.filter(e => {
-        const s = statusFromExpiry(e.doc_isteka).label
-        if (statusFilter === 'vrijedi') return s === 'Vrijedi'
-        if (statusFilter === 'uskoro') return s === 'Uskoro istječe' || s === 'Kritično'
-        if (statusFilter === 'isteklo') return s === 'Isteklo'
-        if (statusFilter === 'godisnjem') return e.on_vacation
-        if (statusFilter === 'bolovanju') return e.on_sick_leave
-        if (statusFilter === 'nagradi') return e.no_sick_6mo
-        return true
-      })
-    }
+    if (filterZap) result = result.filter(e => e.status_zaposlenika === filterZap)
+    if (filterDoc) result = result.filter(e => statusFromExpiry(e.doc_isteka).label === filterDoc)
     setFiltered(result)
-  }, [search, statusFilter, employees])
+  }, [search, filterZap, filterDoc, employees])
 
   async function deleteEmployee(id: string) {
     if (!confirm('Jeste li sigurni da želite obrisati ovog zaposlenika?')) return
@@ -190,20 +196,25 @@ export default function ZaposleniciPage() {
           className="w-full md:w-auto px-3 py-2 rounded-lg border text-sm"
           style={{ borderColor: '#D1D5DB', minWidth: 220, background: 'white' }}
         />
-        <select
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-          className="w-full md:w-auto px-3 py-2 rounded-lg border text-sm"
-          style={{ borderColor: '#D1D5DB', background: 'white', color: '#374151' }}
-        >
-          <option value="svi">Svi statusi</option>
-          <option value="vrijedi">Vrijedi</option>
-          <option value="uskoro">Uskoro istječe</option>
-          <option value="isteklo">Isteklo</option>
-          <option value="godisnjem">Na godišnjem</option>
-          <option value="bolovanju">Na bolovanju</option>
-        </select>
-        <span className="text-sm" style={{ color: '#94A3B8' }}>
+        {(filterZap || filterDoc) && (
+          <div className="flex items-center gap-2">
+            {filterZap && (
+              <button onClick={() => setFilterZap('')}
+                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
+                style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE' }}>
+                {filterZap} ✕
+              </button>
+            )}
+            {filterDoc && (
+              <button onClick={() => setFilterDoc('')}
+                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
+                style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE' }}>
+                {filterDoc} ✕
+              </button>
+            )}
+          </div>
+        )}
+        <span className="text-sm md:ml-auto" style={{ color: '#94A3B8' }}>
           {filtered.length} {filtered.length === 1 ? 'zaposlenik' : 'zaposlenika'}
         </span>
       </div>
@@ -211,12 +222,66 @@ export default function ZaposleniciPage() {
       <div className="bg-white rounded-xl overflow-hidden overflow-x-auto" style={{ border: '1px solid #E2E8F0' }}>
         <table className="w-full" style={{ minWidth: 750 }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-              {['Zaposlenik', 'Status zaposlenika', 'Nadolazeći istek', 'Status dokumenata', 'Akcije'].map(col => (
-                <th key={col} className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>
-                  {col}
-                </th>
-              ))}
+            <tr ref={filterRef} style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
+              <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Zaposlenik</th>
+
+              {/* Status zaposlenika filter header */}
+              <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>
+                <div className="relative inline-block">
+                  <button onClick={() => setOpenFilter(openFilter === 'zap' ? null : 'zap')}
+                    className="flex items-center gap-1 whitespace-nowrap"
+                    style={{ color: filterZap ? '#2563EB' : '#64748B' }}>
+                    Status zaposlenika
+                    {filterZap && <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#2563EB' }} />}
+                    <span style={{ fontSize: 9 }}>▾</span>
+                  </button>
+                  {openFilter === 'zap' && (
+                    <div className="absolute left-0 top-full mt-1 bg-white rounded-xl py-1 z-20"
+                      style={{ border: '1px solid #E2E8F0', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160 }}>
+                      {ZAP_STATUSES.map(s => {
+                        const cfg = STATUS_ZAP_CONFIG[s]
+                        return (
+                          <button key={s} onClick={() => { setFilterZap(s); setOpenFilter(null) }}
+                            className="w-full text-left px-3 py-2 text-xs flex items-center gap-2"
+                            style={{ fontWeight: filterZap === s ? 600 : 400 }}>
+                            <span className="px-2 py-0.5 rounded-full font-medium"
+                              style={{ background: cfg.bg, color: cfg.color }}>{s}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </th>
+
+              <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Nadolazeći istek</th>
+
+              {/* Status dokumenata filter header */}
+              <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>
+                <div className="relative inline-block">
+                  <button onClick={() => setOpenFilter(openFilter === 'doc' ? null : 'doc')}
+                    className="flex items-center gap-1 whitespace-nowrap"
+                    style={{ color: filterDoc ? '#2563EB' : '#64748B' }}>
+                    Status dokumenata
+                    {filterDoc && <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#2563EB' }} />}
+                    <span style={{ fontSize: 9 }}>▾</span>
+                  </button>
+                  {openFilter === 'doc' && (
+                    <div className="absolute left-0 top-full mt-1 bg-white rounded-xl py-1 z-20"
+                      style={{ border: '1px solid #E2E8F0', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160 }}>
+                      {DOC_STATUSES.map(s => (
+                        <button key={s} onClick={() => { setFilterDoc(s); setOpenFilter(null) }}
+                          className="w-full text-left px-3 py-2 text-xs"
+                          style={{ color: filterDoc === s ? '#2563EB' : '#475569', fontWeight: filterDoc === s ? 600 : 400 }}>
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </th>
+
+              <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Akcije</th>
             </tr>
           </thead>
           <tbody>
