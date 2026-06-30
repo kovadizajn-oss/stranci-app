@@ -151,3 +151,19 @@ input:focus, select:focus, textarea:focus {
 .card-link:active {
   transform: scale(0.98);
 }
+
+/* Clickable list rows (e.g. worker rows on company detail) */
+.row-link {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  position: relative;
+}
+.row-link:hover {
+  transform: scale(1.01);
+  background: #F0F6FF !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2), 0 2px 10px rgba(37, 99, 235, 0.08);
+  z-index: 1;
+  border-radius: 8px;
+}
+.row-link:active {
+  transform: scale(0.99);
+}

@@ -190,13 +190,10 @@ export default function CompanyDetail() {
               const docStatus = docStatusFromDocs(w.documents || [])
               return (
                 <Link key={w.id} href={`/zaposlenici/${w.id}/pregled`}
-                  className="flex items-center gap-3 px-5 py-3.5"
+                  className="row-link flex items-center gap-3 px-5 py-3.5"
                   style={{
                     borderBottom: i < workers.length - 1 ? '1px solid #F1F5F9' : 'none',
-                    transition: 'background 0.12s ease',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#F8FAFC')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                  }}>
                   <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0"
                     style={{ background: '#EFF6FF', color: '#2563EB' }}>
                     {w.ime[0]}{w.prezime[0]}
