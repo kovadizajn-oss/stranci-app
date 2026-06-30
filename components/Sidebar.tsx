@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 const navItems = [
   {
@@ -18,8 +19,10 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const [loggingOut, setLoggingOut] = useState(false)
 
   async function handleLogout() {
+    setLoggingOut(true)
     await fetch('/api/logout', { method: 'POST' })
     router.push('/login')
   }
@@ -31,6 +34,16 @@ export default function Sidebar() {
 
   return (
     <>
+      {/* Logout overlay */}
+      {loggingOut && (
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center"
+          style={{ background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(4px)' }}>
+          <div className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin mb-4"
+            style={{ borderColor: '#E2E8F0', borderTopColor: '#2563EB' }} />
+          <p className="text-sm font-medium" style={{ color: '#64748B' }}>Odjava u tijeku...</p>
+        </div>
+      )}
+
       {/* Desktop sidebar */}
       <aside
         className="fixed left-0 top-0 h-full flex-col hidden md:flex"
@@ -65,11 +78,11 @@ export default function Sidebar() {
 
         {/* Logout */}
         <div className="px-3 py-3" style={{ borderTop: '1px solid #E2E8F0' }}>
-          <button onClick={handleLogout}
+          <button onClick={handleLogout} disabled={loggingOut}
             className="nav-item w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm"
             style={{ color: '#94A3B8' }}>
             <span style={{ fontSize: 15 }}>🚪</span>
-            Odjava
+            {loggingOut ? 'Odjava...' : 'Odjava'}
           </button>
         </div>
 
