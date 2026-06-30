@@ -58,17 +58,37 @@ export default function ZaposleniciPage() {
   const [filterZap, setFilterZap] = useState('')
   const [filterDoc, setFilterDoc] = useState('')
   const [openFilter, setOpenFilter] = useState<'zap' | 'doc' | null>(null)
-  const filterRef = useRef<HTMLTableRowElement>(null)
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 })
+  const zapBtnRef = useRef<HTMLButtonElement>(null)
+  const docBtnRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (
+        zapBtnRef.current && !zapBtnRef.current.contains(target) &&
+        docBtnRef.current && !docBtnRef.current.contains(target)
+      ) {
         setOpenFilter(null)
       }
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
+
+  function openZap() {
+    if (openFilter === 'zap') { setOpenFilter(null); return }
+    const rect = zapBtnRef.current?.getBoundingClientRect()
+    if (rect) setDropdownPos({ top: rect.bottom + 4, left: rect.left })
+    setOpenFilter('zap')
+  }
+
+  function openDoc() {
+    if (openFilter === 'doc') { setOpenFilter(null); return }
+    const rect = docBtnRef.current?.getBoundingClientRect()
+    if (rect) setDropdownPos({ top: rect.bottom + 4, left: rect.left })
+    setOpenFilter('doc')
+  }
 
   useEffect(() => {
     async function fetchEmployees() {
@@ -223,65 +243,27 @@ export default function ZaposleniciPage() {
       <div className="overflow-x-auto">
         <table className="w-full" style={{ minWidth: 750 }}>
           <thead>
-            <tr ref={filterRef} style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
+            <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
               <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Zaposlenik</th>
-
-              {/* Status zaposlenika filter header */}
-              <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>
-                <div className="relative inline-block">
-                  <button onClick={() => setOpenFilter(openFilter === 'zap' ? null : 'zap')}
-                    className="flex items-center gap-1 whitespace-nowrap"
-                    style={{ color: filterZap ? '#2563EB' : '#64748B' }}>
-                    Status zaposlenika
-                    {filterZap && <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#2563EB' }} />}
-                    <span style={{ fontSize: 9 }}>▾</span>
-                  </button>
-                  {openFilter === 'zap' && (
-                    <div className="absolute left-0 top-full mt-1 bg-white rounded-xl py-1 z-20"
-                      style={{ border: '1px solid #E2E8F0', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160 }}>
-                      {ZAP_STATUSES.map(s => {
-                        const cfg = STATUS_ZAP_CONFIG[s]
-                        return (
-                          <button key={s} onClick={() => { setFilterZap(s); setOpenFilter(null) }}
-                            className="w-full text-left px-3 py-2 text-xs flex items-center gap-2"
-                            style={{ fontWeight: filterZap === s ? 600 : 400 }}>
-                            <span className="px-2 py-0.5 rounded-full font-medium"
-                              style={{ background: cfg.bg, color: cfg.color }}>{s}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
+              <th className="text-left px-4 py-3 text-xs font-semibold">
+                <button ref={zapBtnRef} onClick={openZap}
+                  className="flex items-center gap-1 whitespace-nowrap"
+                  style={{ color: filterZap ? '#2563EB' : '#64748B', fontWeight: 600 }}>
+                  Status zaposlenika
+                  {filterZap && <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#2563EB' }} />}
+                  <span style={{ fontSize: 9 }}>▾</span>
+                </button>
               </th>
-
               <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Nadolazeći istek</th>
-
-              {/* Status dokumenata filter header */}
-              <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>
-                <div className="relative inline-block">
-                  <button onClick={() => setOpenFilter(openFilter === 'doc' ? null : 'doc')}
-                    className="flex items-center gap-1 whitespace-nowrap"
-                    style={{ color: filterDoc ? '#2563EB' : '#64748B' }}>
-                    Status dokumenata
-                    {filterDoc && <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#2563EB' }} />}
-                    <span style={{ fontSize: 9 }}>▾</span>
-                  </button>
-                  {openFilter === 'doc' && (
-                    <div className="absolute left-0 top-full mt-1 bg-white rounded-xl py-1 z-20"
-                      style={{ border: '1px solid #E2E8F0', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160 }}>
-                      {DOC_STATUSES.map(s => (
-                        <button key={s} onClick={() => { setFilterDoc(s); setOpenFilter(null) }}
-                          className="w-full text-left px-3 py-2 text-xs"
-                          style={{ color: filterDoc === s ? '#2563EB' : '#475569', fontWeight: filterDoc === s ? 600 : 400 }}>
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              <th className="text-left px-4 py-3 text-xs font-semibold">
+                <button ref={docBtnRef} onClick={openDoc}
+                  className="flex items-center gap-1 whitespace-nowrap"
+                  style={{ color: filterDoc ? '#2563EB' : '#64748B', fontWeight: 600 }}>
+                  Status dokumenata
+                  {filterDoc && <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#2563EB' }} />}
+                  <span style={{ fontSize: 9 }}>▾</span>
+                </button>
               </th>
-
               <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Akcije</th>
             </tr>
           </thead>
@@ -358,6 +340,34 @@ export default function ZaposleniciPage() {
         </table>
       </div>
       </div>
+
+      {/* Fixed-position dropdowns — escape all overflow contexts */}
+      {openFilter === 'zap' && (
+        <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 1000, background: 'white', border: '1px solid #E2E8F0', borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160, padding: '4px 0' }}>
+          {ZAP_STATUSES.map(s => {
+            const cfg = STATUS_ZAP_CONFIG[s]
+            return (
+              <button key={s} onClick={() => { setFilterZap(s); setOpenFilter(null) }}
+                className="w-full text-left px-3 py-2 text-xs flex items-center gap-2"
+                style={{ fontWeight: filterZap === s ? 600 : 400 }}>
+                <span className="px-2 py-0.5 rounded-full font-medium"
+                  style={{ background: cfg.bg, color: cfg.color }}>{s}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+      {openFilter === 'doc' && (
+        <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 1000, background: 'white', border: '1px solid #E2E8F0', borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160, padding: '4px 0' }}>
+          {DOC_STATUSES.map(s => (
+            <button key={s} onClick={() => { setFilterDoc(s); setOpenFilter(null) }}
+              className="w-full text-left px-3 py-2 text-xs"
+              style={{ color: filterDoc === s ? '#2563EB' : '#475569', fontWeight: filterDoc === s ? 600 : 400 }}>
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
