@@ -196,10 +196,12 @@ export default function CompanyDetail() {
           {/* Header row with column labels + filters */}
           <div ref={filterRef} className="relative px-5 py-3" style={{ borderBottom: '1px solid #E2E8F0', borderRadius: '12px 12px 0 0' }}>
             <div className="flex items-center gap-3">
-              <p className="font-semibold text-sm flex-1" style={{ color: '#1E293B' }}>Radnici</p>
+              {/* Spacer matching avatar w-8 */}
+              <div className="w-8 flex-shrink-0" />
+              <p className="font-semibold text-sm flex-1" style={{ color: '#1E293B' }}>Zaposlenik</p>
 
               {/* Status zaposlenika filter */}
-              <div className="relative">
+              <div className="relative flex-shrink-0">
                 <button onClick={() => setOpenFilter(openFilter === 'zap' ? null : 'zap')}
                   className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg"
                   style={{
@@ -230,7 +232,7 @@ export default function CompanyDetail() {
               </div>
 
               {/* Doc status filter */}
-              <div className="relative">
+              <div className="relative flex-shrink-0">
                 <button onClick={() => setOpenFilter(openFilter === 'doc' ? null : 'doc')}
                   className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg"
                   style={{
