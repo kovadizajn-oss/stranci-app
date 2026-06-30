@@ -58,7 +58,7 @@ export default function ZaposleniciPage() {
   const [filterZap, setFilterZap] = useState('')
   const [filterDoc, setFilterDoc] = useState('')
   const [openFilter, setOpenFilter] = useState<'zap' | 'doc' | null>(null)
-  const filterRef = useRef<HTMLDivElement>(null)
+  const filterRef = useRef<HTMLTableRowElement>(null)
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
