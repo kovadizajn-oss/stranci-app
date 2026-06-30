@@ -189,18 +189,22 @@ export default function CompanyDetail() {
               const zapCfg = STATUS_ZAP_CONFIG[w.status_zaposlenika || ''] || { color: '#475569', bg: '#F1F5F9' }
               const docStatus = docStatusFromDocs(w.documents || [])
               return (
-                <div key={w.id} className="flex items-center gap-3 px-5 py-3.5"
-                  style={{ borderBottom: i < workers.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
+                <Link key={w.id} href={`/zaposlenici/${w.id}/pregled`}
+                  className="flex items-center gap-3 px-5 py-3.5"
+                  style={{
+                    borderBottom: i < workers.length - 1 ? '1px solid #F1F5F9' : 'none',
+                    transition: 'background 0.12s ease',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#F8FAFC')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                   <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0"
                     style={{ background: '#EFF6FF', color: '#2563EB' }}>
                     {w.ime[0]}{w.prezime[0]}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <Link href={`/zaposlenici/${w.id}/pregled`}
-                      className="text-sm font-medium hover:underline"
-                      style={{ color: '#1E293B' }}>
+                    <p className="text-sm font-medium" style={{ color: '#1E293B' }}>
                       {w.ime} {w.prezime}
-                    </Link>
+                    </p>
                   </div>
                   {w.status_zaposlenika && (
                     <span className="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0"
@@ -212,12 +216,7 @@ export default function CompanyDetail() {
                     style={{ background: docStatus.bg, color: docStatus.color }}>
                     {docStatus.label}
                   </span>
-                  <Link href={`/zaposlenici/${w.id}/pregled`}
-                    className="btn-primary text-xs px-2.5 py-1 rounded-lg flex-shrink-0"
-                    style={{ background: '#EFF6FF', color: '#2563EB' }}>
-                    Pregled
-                  </Link>
-                </div>
+                </Link>
               )
             })
           )}
