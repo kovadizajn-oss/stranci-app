@@ -201,17 +201,17 @@ export default function CompanyDetail() {
               <p className="font-semibold text-sm flex-1" style={{ color: '#1E293B' }}>Zaposlenik</p>
 
               {/* Status zaposlenika filter */}
-              <div className="relative flex-shrink-0">
+              <div className="relative flex-shrink-0" style={{ width: 110 }}>
                 <button onClick={() => setOpenFilter(openFilter === 'zap' ? null : 'zap')}
-                  className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg"
+                  className="flex items-center justify-center gap-1 text-xs font-medium px-2 py-1 rounded-lg w-full"
                   style={{
                     color: filterZap ? '#2563EB' : '#94A3B8',
                     background: filterZap ? '#EFF6FF' : 'transparent',
                     border: filterZap ? '1px solid #BFDBFE' : '1px solid transparent',
                   }}>
                   Status zaposlenika
-                  {filterZap && <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#2563EB' }} />}
-                  <span style={{ fontSize: 9, marginLeft: 1 }}>▾</span>
+                  {filterZap && <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#2563EB' }} />}
+                  <span style={{ fontSize: 9 }}>▾</span>
                 </button>
                 {openFilter === 'zap' && (
                   <div className="absolute right-0 top-full mt-1 bg-white rounded-xl py-1 z-20"
@@ -232,17 +232,17 @@ export default function CompanyDetail() {
               </div>
 
               {/* Doc status filter */}
-              <div className="relative flex-shrink-0">
+              <div className="relative flex-shrink-0" style={{ width: 115 }}>
                 <button onClick={() => setOpenFilter(openFilter === 'doc' ? null : 'doc')}
-                  className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg"
+                  className="flex items-center justify-center gap-1 text-xs font-medium px-2 py-1 rounded-lg w-full"
                   style={{
                     color: filterDoc ? '#2563EB' : '#94A3B8',
                     background: filterDoc ? '#EFF6FF' : 'transparent',
                     border: filterDoc ? '1px solid #BFDBFE' : '1px solid transparent',
                   }}>
                   Status dokumenta
-                  {filterDoc && <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#2563EB' }} />}
-                  <span style={{ fontSize: 9, marginLeft: 1 }}>▾</span>
+                  {filterDoc && <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#2563EB' }} />}
+                  <span style={{ fontSize: 9 }}>▾</span>
                 </button>
                 {openFilter === 'doc' && (
                   <div className="absolute right-0 top-full mt-1 bg-white rounded-xl py-1 z-20"
@@ -310,16 +310,20 @@ export default function CompanyDetail() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium" style={{ color: '#1E293B' }}>{w.ime} {w.prezime}</p>
                   </div>
-                  {w.status_zaposlenika && (
-                    <span className="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0"
-                      style={{ background: zapCfg.bg, color: zapCfg.color }}>
-                      {w.status_zaposlenika}
+                  <div className="flex-shrink-0 flex justify-center" style={{ width: 110 }}>
+                    {w.status_zaposlenika && (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        style={{ background: zapCfg.bg, color: zapCfg.color }}>
+                        {w.status_zaposlenika}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-shrink-0 flex justify-center" style={{ width: 115 }}>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                      style={{ background: docStatus.bg, color: docStatus.color }}>
+                      {docStatus.label}
                     </span>
-                  )}
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0"
-                    style={{ background: docStatus.bg, color: docStatus.color }}>
-                    {docStatus.label}
-                  </span>
+                  </div>
                 </Link>
               )
             })
