@@ -61,14 +61,17 @@ export default function ZaposleniciPage() {
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 })
   const zapBtnRef = useRef<HTMLButtonElement>(null)
   const docBtnRef = useRef<HTMLButtonElement>(null)
+  const zapDropRef = useRef<HTMLDivElement>(null)
+  const docDropRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       const target = e.target as Node
-      if (
-        zapBtnRef.current && !zapBtnRef.current.contains(target) &&
-        docBtnRef.current && !docBtnRef.current.contains(target)
-      ) {
+      const inZapBtn = zapBtnRef.current?.contains(target)
+      const inDocBtn = docBtnRef.current?.contains(target)
+      const inZapDrop = zapDropRef.current?.contains(target)
+      const inDocDrop = docDropRef.current?.contains(target)
+      if (!inZapBtn && !inDocBtn && !inZapDrop && !inDocDrop) {
         setOpenFilter(null)
       }
     }
@@ -343,7 +346,7 @@ export default function ZaposleniciPage() {
 
       {/* Fixed-position dropdowns — escape all overflow contexts */}
       {openFilter === 'zap' && (
-        <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 1000, background: 'white', border: '1px solid #E2E8F0', borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160, padding: '4px 0' }}>
+        <div ref={zapDropRef} style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 1000, background: 'white', border: '1px solid #E2E8F0', borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160, padding: '4px 0' }}>
           {ZAP_STATUSES.map(s => {
             const cfg = STATUS_ZAP_CONFIG[s]
             return (
@@ -358,7 +361,7 @@ export default function ZaposleniciPage() {
         </div>
       )}
       {openFilter === 'doc' && (
-        <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 1000, background: 'white', border: '1px solid #E2E8F0', borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160, padding: '4px 0' }}>
+        <div ref={docDropRef} style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 1000, background: 'white', border: '1px solid #E2E8F0', borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160, padding: '4px 0' }}>
           {DOC_STATUSES.map(s => (
             <button key={s} onClick={() => { setFilterDoc(s); setOpenFilter(null) }}
               className="w-full text-left px-3 py-2 text-xs"
