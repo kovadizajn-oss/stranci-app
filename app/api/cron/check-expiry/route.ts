@@ -69,7 +69,7 @@ export async function GET(request: Request) {
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#F8FAFC;padding:24px;">
       <div style="background:white;border-radius:12px;overflow:hidden;border:1px solid #E2E8F0;">
         <div style="background:#2563EB;padding:20px 24px;">
-          <h1 style="margin:0;color:white;font-size:18px;font-weight:600;">Kvantus — Nadolazeći rokovi</h1>
+          <h1 style="margin:0;color:white;font-size:18px;font-weight:600;">Kvantus Admin — Nadolazeći rokovi</h1>
           <p style="margin:4px 0 0;color:#BFDBFE;font-size:13px;">
             ${new Date().toLocaleDateString('hr-HR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
@@ -93,11 +93,11 @@ export async function GET(request: Request) {
         <div style="padding:16px 24px 20px;">
           <a href="https://kvantus.vercel.app/dashboard"
             style="display:inline-block;background:#2563EB;color:white;text-decoration:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;">
-            Otvori Kvantus →
+            Otvori Kvantus Admin →
           </a>
         </div>
       </div>
-      <p style="text-align:center;font-size:11px;color:#94A3B8;margin-top:16px;">Kvantus automatska obavijest</p>
+      <p style="text-align:center;font-size:11px;color:#94A3B8;margin-top:16px;">Kvantus Admin automatska obavijest</p>
     </div>`
 
   await fetch('https://api.resend.com/emails', {
@@ -107,9 +107,9 @@ export async function GET(request: Request) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'Kvantus <onboarding@resend.dev>',
+      from: 'Kvantus Admin <onboarding@resend.dev>',
       to: ['info@kvantus.com'],
-      subject: `Kvantus — ${docs.length} ${docs.length === 1 ? 'dokument istječe' : 'dokumenata istječe'} uskoro`,
+      subject: `Kvantus Admin — ${docs.length} ${docs.length === 1 ? 'dokument istječe' : 'dokumenata istječe'} uskoro`,
       html,
     }),
   })

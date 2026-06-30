@@ -53,7 +53,7 @@ export default function Sidebar() {
           <div className="flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0" style={{ background: '#2563EB' }}>
             <span className="text-white font-bold text-sm">K</span>
           </div>
-          <span className="font-semibold text-sm" style={{ color: '#1E293B' }}>Kvantus</span>
+          <span className="font-semibold text-sm" style={{ color: '#1E293B' }}>Kvantus Admin</span>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-4 px-3">
