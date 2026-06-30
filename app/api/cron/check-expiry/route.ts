@@ -69,7 +69,7 @@ export async function GET(request: Request) {
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#F8FAFC;padding:24px;">
       <div style="background:white;border-radius:12px;overflow:hidden;border:1px solid #E2E8F0;">
         <div style="background:#2563EB;padding:20px 24px;">
-          <h1 style="margin:0;color:white;font-size:18px;font-weight:600;">Kvantus Admin — Nadolazeći rokovi</h1>
+          <h1 style="margin:0;color:white;font-size:18px;font-weight:600;">Kvantus Admin: Nadolazeći rokovi</h1>
           <p style="margin:4px 0 0;color:#BFDBFE;font-size:13px;">
             ${new Date().toLocaleDateString('hr-HR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
           </a>
         </div>
       </div>
-      <p style="text-align:center;font-size:11px;color:#94A3B8;margin-top:16px;">Kvantus Admin automatska obavijest</p>
+      <p style="text-align:center;font-size:11px;color:#94A3B8;margin-top:16px;">Automatska obavijest</p>
     </div>`
 
   await fetch('https://api.resend.com/emails', {
