@@ -20,6 +20,7 @@ export default function TvrtkePage() {
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState({ naziv: '', kontakt_ime: '', kontakt_telefon: '', kontakt_email: '' })
   const [saving, setSaving] = useState(false)
+  const [search, setSearch] = useState('')
 
   useEffect(() => { load() }, [])
 
@@ -130,6 +131,25 @@ export default function TvrtkePage() {
         </form>
       )}
 
+      {/* Search */}
+      {!adding && companies.length > 0 && (
+        <div className="relative mb-4">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: '#94A3B8' }}>🔍</span>
+          <input
+            className="w-full pl-9 pr-4 py-2.5 rounded-lg border text-sm"
+            style={{ borderColor: '#E2E8F0', color: '#1E293B', background: 'white' }}
+            placeholder="Pretraži tvrtke..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && (
+            <button onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-sm"
+              style={{ color: '#94A3B8' }}>✕</button>
+          )}
+        </div>
+      )}
+
       {/* List */}
       <div className="bg-white rounded-xl overflow-hidden" style={{ border: '1px solid #E2E8F0' }}>
         {loading ? (
@@ -138,12 +158,21 @@ export default function TvrtkePage() {
           <div className="p-8 text-center text-sm" style={{ color: '#94A3B8' }}>
             Nema dodanih tvrtki. Dodajte prvu tvrtku klikom na gumb gore.
           </div>
-        ) : (
-          companies.map((co, i) => (
+        ) : (() => {
+          const filtered = companies.filter(co =>
+            co.naziv.toLowerCase().includes(search.toLowerCase()) ||
+            (co.kontakt_ime || '').toLowerCase().includes(search.toLowerCase())
+          )
+          if (filtered.length === 0) return (
+            <div className="p-8 text-center text-sm" style={{ color: '#94A3B8' }}>
+              Nema tvrtki koje odgovaraju pretrazi.
+            </div>
+          )
+          return filtered.map((co, i) => (
             <Link key={co.id} href={`/tvrtke/${co.id}`}
               className="flex items-center gap-4 px-5 py-4 group"
               style={{
-                borderBottom: i < companies.length - 1 ? '1px solid #F1F5F9' : 'none',
+                borderBottom: i < filtered.length - 1 ? '1px solid #F1F5F9' : 'none',
                 display: 'flex',
                 transition: 'background 0.12s ease',
               }}
@@ -175,7 +204,7 @@ export default function TvrtkePage() {
               <span className="text-sm ml-2 flex-shrink-0" style={{ color: '#CBD5E1' }}>→</span>
             </Link>
           ))
-        )}
+        })()}
       </div>
     </div>
   )
