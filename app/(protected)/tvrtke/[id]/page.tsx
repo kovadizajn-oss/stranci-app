@@ -175,8 +175,8 @@ export default function CompanyDetail() {
 
       <div className="grid gap-4 md:grid-cols-[1fr_280px]">
         {/* Workers list */}
-        <div className="bg-white rounded-xl overflow-hidden" style={{ border: '1px solid #E2E8F0' }}>
-          <div className="px-5 py-4" style={{ borderBottom: '1px solid #E2E8F0' }}>
+        <div className="bg-white rounded-xl" style={{ border: '1px solid #E2E8F0' }}>
+          <div className="px-5 py-4" style={{ borderBottom: '1px solid #E2E8F0', borderRadius: '12px 12px 0 0' }}>
             <p className="font-semibold text-sm" style={{ color: '#1E293B' }}>Radnici</p>
           </div>
           {workers.length === 0 ? (
