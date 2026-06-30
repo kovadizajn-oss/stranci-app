@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 
 const navItems = [
   {
@@ -21,7 +20,7 @@ export default function Sidebar() {
   const router = useRouter()
 
   async function handleLogout() {
-    await supabase.auth.signOut()
+    await fetch('/api/logout', { method: 'POST' })
     router.push('/login')
   }
 
