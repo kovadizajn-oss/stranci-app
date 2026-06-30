@@ -198,12 +198,12 @@ export default function CompanyDetail() {
             <div className="flex items-center gap-3">
               {/* Spacer matching avatar w-8 */}
               <div className="w-8 flex-shrink-0" />
-              <p className="font-semibold text-sm flex-1" style={{ color: '#1E293B' }}>Zaposlenik</p>
+              <p className="text-xs font-medium flex-1" style={{ color: '#94A3B8' }}>Zaposlenik</p>
 
               {/* Status zaposlenika filter */}
-              <div className="relative flex-shrink-0" style={{ width: 110 }}>
+              <div className="relative flex-shrink-0" style={{ width: 130 }}>
                 <button onClick={() => setOpenFilter(openFilter === 'zap' ? null : 'zap')}
-                  className="flex items-center justify-center gap-1 text-xs font-medium px-2 py-1 rounded-lg w-full"
+                  className="flex items-center justify-center gap-1 text-xs font-medium px-2 py-1 rounded-lg w-full whitespace-nowrap"
                   style={{
                     color: filterZap ? '#2563EB' : '#94A3B8',
                     background: filterZap ? '#EFF6FF' : 'transparent',
@@ -232,9 +232,9 @@ export default function CompanyDetail() {
               </div>
 
               {/* Doc status filter */}
-              <div className="relative flex-shrink-0" style={{ width: 115 }}>
+              <div className="relative flex-shrink-0" style={{ width: 125 }}>
                 <button onClick={() => setOpenFilter(openFilter === 'doc' ? null : 'doc')}
-                  className="flex items-center justify-center gap-1 text-xs font-medium px-2 py-1 rounded-lg w-full"
+                  className="flex items-center justify-center gap-1 text-xs font-medium px-2 py-1 rounded-lg w-full whitespace-nowrap"
                   style={{
                     color: filterDoc ? '#2563EB' : '#94A3B8',
                     background: filterDoc ? '#EFF6FF' : 'transparent',
@@ -310,7 +310,7 @@ export default function CompanyDetail() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium" style={{ color: '#1E293B' }}>{w.ime} {w.prezime}</p>
                   </div>
-                  <div className="flex-shrink-0 flex justify-center" style={{ width: 110 }}>
+                  <div className="flex-shrink-0 flex justify-center" style={{ width: 130 }}>
                     {w.status_zaposlenika && (
                       <span className="text-xs px-2 py-0.5 rounded-full font-medium"
                         style={{ background: zapCfg.bg, color: zapCfg.color }}>
@@ -318,7 +318,7 @@ export default function CompanyDetail() {
                       </span>
                     )}
                   </div>
-                  <div className="flex-shrink-0 flex justify-center" style={{ width: 115 }}>
+                  <div className="flex-shrink-0 flex justify-center" style={{ width: 125 }}>
                     <span className="text-xs px-2 py-0.5 rounded-full font-medium"
                       style={{ background: docStatus.bg, color: docStatus.color }}>
                       {docStatus.label}
