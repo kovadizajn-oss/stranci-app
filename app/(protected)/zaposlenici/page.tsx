@@ -219,7 +219,8 @@ export default function ZaposleniciPage() {
         </span>
       </div>
 
-      <div className="bg-white rounded-xl overflow-hidden overflow-x-auto" style={{ border: '1px solid #E2E8F0' }}>
+      <div className="bg-white rounded-xl" style={{ border: '1px solid #E2E8F0' }}>
+      <div className="overflow-x-auto">
         <table className="w-full" style={{ minWidth: 750 }}>
           <thead>
             <tr ref={filterRef} style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
@@ -355,6 +356,7 @@ export default function ZaposleniciPage() {
             )}
           </tbody>
         </table>
+      </div>
       </div>
     </div>
   )
