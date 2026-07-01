@@ -27,7 +27,7 @@ const COUNTRIES = [
 
 const OSOBNI_TYPES = ['Osobna iskaznica', 'Putovnica', 'Vozačka dozvola', 'Boravišna dozvola']
 const PRATECI_TYPES = ['Radna dozvola', 'Liječnički pregled', 'Ugovor o radu', 'Potvrda o boravku']
-const STATUSI = ['Aktivan', 'U postupku', 'Na čekanju', 'Završen', 'Otkazan']
+const STATUSI = ['Aktivan', 'U postupku', 'Na čekanju', 'Otkazan']
 
 const inputCls = "w-full px-3 py-2.5 rounded-lg border text-sm transition-all"
 const inputStyle = { borderColor: '#D1D5DB', color: '#1E293B', background: 'white' }

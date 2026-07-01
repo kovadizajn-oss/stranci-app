@@ -6,11 +6,10 @@ export const STATUS_CONFIG: Record<string, { color: string; bg: string; border: 
   'Aktivan':    { color: '#16A34A', bg: '#DCFCE7', border: '#BBF7D0' },
   'U postupku': { color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
   'Na čekanju': { color: '#CA8A04', bg: '#FEF9C3', border: '#FDE047' },
-  'Završen':    { color: '#475569', bg: '#F1F5F9', border: '#CBD5E1' },
   'Otkazan':    { color: '#DC2626', bg: '#FEE2E2', border: '#FECACA' },
 }
 
-const STATUSI = ['Aktivan', 'U postupku', 'Na čekanju', 'Završen', 'Otkazan']
+const STATUSI = ['Aktivan', 'U postupku', 'Na čekanju', 'Otkazan']
 
 type Props = {
   value: string

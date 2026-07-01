@@ -8,7 +8,6 @@ const STATUS_ZAP_CONFIG: Record<string, { color: string; bg: string }> = {
   'Aktivan':    { color: '#16A34A', bg: '#DCFCE7' },
   'U postupku': { color: '#2563EB', bg: '#EFF6FF' },
   'Na čekanju': { color: '#CA8A04', bg: '#FEF9C3' },
-  'Završen':    { color: '#475569', bg: '#F1F5F9' },
   'Otkazan':    { color: '#DC2626', bg: '#FEE2E2' },
 }
 
