@@ -249,8 +249,8 @@ export default function DashboardPage() {
               <h2 className="font-semibold" style={{ color: '#1E293B' }}>Nadolazeći rokovi</h2>
               <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>Sortirano po datumu</p>
             </div>
-            <Link href="/zaposlenici" className="btn-primary text-sm font-medium px-3 py-1.5 rounded-lg" style={{ background: '#EFF6FF', color: '#2563EB' }}>
-              Pogledaj sve →
+            <Link href="/zaposlenici" className="text-xs font-medium" style={{ color: '#2563EB' }}>
+              Sve →
             </Link>
           </div>
 
