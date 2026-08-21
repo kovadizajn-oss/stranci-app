@@ -29,8 +29,8 @@ const OSOBNI_TYPES = ['Osobna iskaznica', 'Putovnica', 'Vozačka dozvola', 'Bora
 const PRATECI_TYPES = ['Radna dozvola', 'Liječnički pregled', 'Ugovor o radu', 'Potvrda o boravku']
 const STATUSI = ['Aktivan', 'U postupku', 'Na čekanju', 'Otkazan']
 
-const inputCls = "w-full px-3 py-2.5 rounded-lg border text-sm"
-const inputStyle = { borderColor: '#D1D5DB', color: '#1E293B', background: 'white' }
+const inputCls = "w-full px-4 py-3 rounded-xl border text-sm"
+const inputStyle = { borderColor: '#E5E7EB', color: '#0F172A', background: 'white', transition: 'border-color 0.15s ease' }
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (

@@ -24,8 +24,8 @@ const COUNTRIES = [
   'Zambija','Zimbabve',
 ]
 
-const inputCls = "w-full px-3 py-2.5 rounded-lg border text-sm"
-const inputStyle = { borderColor: '#D1D5DB', color: '#1E293B', background: 'white' }
+const inputCls = "w-full px-4 py-3 rounded-xl border text-sm"
+const inputStyle = { borderColor: '#E5E7EB', color: '#0F172A', background: 'white' }
 
 type Extracted = {
   ime: string | null
