@@ -27,6 +27,13 @@ const COUNTRIES = [
 const inputCls = "w-full px-4 py-3 rounded-xl border text-sm"
 const inputStyle = { borderColor: '#E5E7EB', color: '#0F172A', background: 'white' }
 
+type DokumentInfo = {
+  dokument_naziv: string | null
+  kategorija: 'osobni' | 'prateci' | null
+  dokument_vrijedi_do: string | null
+  datum_izdavanja: string | null
+}
+
 type Extracted = {
   ime: string | null
   prezime: string | null
@@ -36,11 +43,7 @@ type Extracted = {
   ime_oca: string | null
   poslodavac: string | null
   radno_mjesto: string | null
-  dokument_broj: string | null
-  dokument_vrijedi_do: string | null
-  datum_izdavanja: string | null
-  dokument_naziv: string | null
-  kategorija: 'osobni' | 'prateci' | null
+  dokumenti: DokumentInfo[] | null
 }
 
 function Field({ label, aiField, children }: { label: string; aiField?: boolean; children: React.ReactNode }) {
@@ -181,14 +184,15 @@ export default function UvozZaposlenika() {
 
     if (empErr || !emp) { setSaving(false); setError('Greška pri spremanju'); return }
 
-    // Auto-create document record if AI detected the document type
-    if (extracted?.dokument_naziv && extracted?.kategorija) {
+    // Auto-create document records for each detected document
+    const detectedDocs = extracted?.dokumenti?.filter(d => d.dokument_naziv && d.kategorija) || []
+    for (const doc of detectedDocs) {
       await supabase.from('documents').insert({
         employee_id: emp.id,
-        naziv: extracted.dokument_naziv,
-        kategorija: extracted.kategorija,
-        datum_izdavanja: extracted.datum_izdavanja || null,
-        datum_isteka: extracted.dokument_vrijedi_do || null,
+        naziv: doc.dokument_naziv,
+        kategorija: doc.kategorija,
+        datum_izdavanja: doc.datum_izdavanja || null,
+        datum_isteka: doc.dokument_vrijedi_do || null,
         file_url: null,
       })
     }
@@ -332,28 +336,31 @@ export default function UvozZaposlenika() {
             </Field>
           </div>
 
-          {/* Detected document info */}
-          {extracted?.dokument_naziv && (
-            <div className="rounded-xl px-4 py-3 mb-6 flex items-center gap-3" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
-              <span className="text-lg">📄</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold" style={{ color: '#15803D' }}>{extracted.dokument_naziv}</span>
-                  <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: '#DCFCE7', color: '#16A34A' }}>AI</span>
-                  {extracted.kategorija && (
-                    <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: extracted.kategorija === 'osobni' ? '#EFF6FF' : '#FAF5FF', color: extracted.kategorija === 'osobni' ? '#1D4ED8' : '#7C3AED' }}>
-                      {extracted.kategorija === 'osobni' ? 'Osobni dokumenti' : 'Prateći dokumenti'}
-                    </span>
-                  )}
+          {/* Detected documents */}
+          {extracted?.dokumenti && extracted.dokumenti.filter(d => d.dokument_naziv).length > 0 && (
+            <div className="mb-6 flex flex-col gap-2">
+              {extracted.dokumenti.filter(d => d.dokument_naziv).map((doc, i) => (
+                <div key={i} className="rounded-xl px-4 py-3 flex items-center gap-3" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+                  <span className="text-lg">📄</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold" style={{ color: '#15803D' }}>{doc.dokument_naziv}</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: '#DCFCE7', color: '#16A34A' }}>AI</span>
+                      {doc.kategorija && (
+                        <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: doc.kategorija === 'osobni' ? '#EFF6FF' : '#FAF5FF', color: doc.kategorija === 'osobni' ? '#1D4ED8' : '#7C3AED' }}>
+                          {doc.kategorija === 'osobni' ? 'Osobni dokumenti' : 'Prateći dokumenti'}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs mt-0.5" style={{ color: '#166534' }}>
+                      {doc.dokument_vrijedi_do ? `Vrijedi do: ${doc.dokument_vrijedi_do}` : 'Datum isteka nije pronađen'}
+                    </p>
+                  </div>
+                  <div className="text-xs text-right flex-shrink-0" style={{ color: '#6B7280' }}>
+                    Bit će automatski<br />dodan u dokumente
+                  </div>
                 </div>
-                <p className="text-xs mt-0.5" style={{ color: '#166534' }}>
-                  {extracted.dokument_vrijedi_do ? `Vrijedi do: ${extracted.dokument_vrijedi_do}` : 'Datum isteka nije pronađen'}
-                  {extracted.dokument_broj ? ` · Broj: ${extracted.dokument_broj}` : ''}
-                </p>
-              </div>
-              <div className="text-xs text-right flex-shrink-0" style={{ color: '#6B7280' }}>
-                Bit će automatski<br />dodan u dokumente
-              </div>
+              ))}
             </div>
           )}
 
