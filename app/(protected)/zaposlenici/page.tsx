@@ -208,7 +208,7 @@ export default function ZaposleniciPage() {
           </p>
         </div>
         <Link
-          href="/zaposlenici/novi"
+          href="/zaposlenici/dodaj"
           className="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white"
           style={{ background: '#2563EB' }}
         >
