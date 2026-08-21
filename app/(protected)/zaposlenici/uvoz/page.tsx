@@ -38,6 +38,9 @@ type Extracted = {
   radno_mjesto: string | null
   dokument_broj: string | null
   dokument_vrijedi_do: string | null
+  datum_izdavanja: string | null
+  dokument_naziv: string | null
+  kategorija: 'osobni' | 'prateci' | null
 }
 
 function Field({ label, aiField, children }: { label: string; aiField?: boolean; children: React.ReactNode }) {
@@ -177,6 +180,19 @@ export default function UvozZaposlenika() {
     }).select().single()
 
     if (empErr || !emp) { setSaving(false); setError('Greška pri spremanju'); return }
+
+    // Auto-create document record if AI detected the document type
+    if (extracted?.dokument_naziv && extracted?.kategorija) {
+      await supabase.from('documents').insert({
+        employee_id: emp.id,
+        naziv: extracted.dokument_naziv,
+        kategorija: extracted.kategorija,
+        datum_izdavanja: extracted.datum_izdavanja || null,
+        datum_isteka: extracted.dokument_vrijedi_do || null,
+        file_url: null,
+      })
+    }
+
     router.push(`/zaposlenici/${emp.id}`)
   }
 
@@ -315,6 +331,31 @@ export default function UvozZaposlenika() {
               <input className={inputCls} style={inputStyle} value={radnoMjesto} onChange={e => setRadnoMjesto(e.target.value)} placeholder="Npr. Zidar, Konobar..." />
             </Field>
           </div>
+
+          {/* Detected document info */}
+          {extracted?.dokument_naziv && (
+            <div className="rounded-xl px-4 py-3 mb-6 flex items-center gap-3" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+              <span className="text-lg">📄</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold" style={{ color: '#15803D' }}>{extracted.dokument_naziv}</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: '#DCFCE7', color: '#16A34A' }}>AI</span>
+                  {extracted.kategorija && (
+                    <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: extracted.kategorija === 'osobni' ? '#EFF6FF' : '#FAF5FF', color: extracted.kategorija === 'osobni' ? '#1D4ED8' : '#7C3AED' }}>
+                      {extracted.kategorija === 'osobni' ? 'Osobni dokumenti' : 'Prateći dokumenti'}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs mt-0.5" style={{ color: '#166534' }}>
+                  {extracted.dokument_vrijedi_do ? `Vrijedi do: ${extracted.dokument_vrijedi_do}` : 'Datum isteka nije pronađen'}
+                  {extracted.dokument_broj ? ` · Broj: ${extracted.dokument_broj}` : ''}
+                </p>
+              </div>
+              <div className="text-xs text-right flex-shrink-0" style={{ color: '#6B7280' }}>
+                Bit će automatski<br />dodan u dokumente
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center gap-3">
             <button onClick={save} disabled={!ime || !prezime || saving}

@@ -41,7 +41,10 @@ Return ONLY a valid JSON object with these exact fields (use null for any field 
   "poslodavac": "employer name if this is a work permit, otherwise null",
   "radno_mjesto": "job position/title if present, otherwise null",
   "dokument_broj": "document number (passport number, ID number, permit number)",
-  "dokument_vrijedi_do": "document expiry date in YYYY-MM-DD format, or null"
+  "dokument_vrijedi_do": "document expiry date in YYYY-MM-DD format, or null",
+  "datum_izdavanja": "document issue/start date in YYYY-MM-DD format, or null",
+  "dokument_naziv": "the document type in Croatian, one of: Putovnica, Osobna iskaznica, Vozačka dozvola, Boravišna dozvola, Radna dozvola, Liječnički pregled, Ugovor o radu, Potvrda o boravku — pick the best match, or null if unknown",
+  "kategorija": "osobni if the document is an identity document (Putovnica, Osobna iskaznica, Vozačka dozvola, Boravišna dozvola), or prateci if it is a work/administrative document (Radna dozvola, Liječnički pregled, Ugovor o radu, Potvrda o boravku), or null if unknown"
 }
 
 Return ONLY the JSON object, no explanation, no markdown, no code blocks.`,
