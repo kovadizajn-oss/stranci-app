@@ -57,8 +57,12 @@ Return ONLY the JSON object, no explanation, no markdown, no code blocks.`,
     )
 
     if (!response.ok) {
-      const err = await response.text()
-      return NextResponse.json({ error: 'Gemini API error: ' + err }, { status: 500 })
+      const errData = await response.json().catch(() => ({}))
+      const status = errData?.error?.code
+      if (status === 503 || status === 429) {
+        return NextResponse.json({ error: 'AI servis je trenutno zauzet. Pokušajte ponovo za nekoliko sekundi.' }, { status: 503 })
+      }
+      return NextResponse.json({ error: 'Greška pri analizi dokumenta. Pokušajte ponovo.' }, { status: 500 })
     }
 
     const result = await response.json()
