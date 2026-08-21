@@ -322,11 +322,23 @@ export default function UvozZaposlenika() {
               style={{ background: (!ime || !prezime || saving) ? '#93C5FD' : '#2563EB' }}>
               {saving ? 'Spremanje...' : '💾 Spremi zaposlenika'}
             </button>
-            <Link href="/zaposlenici/novi"
+            <button
+              onClick={() => {
+                const params = new URLSearchParams()
+                if (ime) params.set('ime', ime)
+                if (prezime) params.set('prezime', prezime)
+                if (datumRodjenja) params.set('datum_rodjenja', datumRodjenja)
+                if (drzavaRodjenja) params.set('drzava_rodjenja', drzavaRodjenja)
+                if (oib) params.set('oib', oib)
+                if (imeOca) params.set('ime_oca', imeOca)
+                if (radnoMjesto) params.set('radno_mjesto', radnoMjesto)
+                if (companyId) params.set('company_id', companyId)
+                router.push(`/zaposlenici/novi?${params.toString()}`)
+              }}
               className="text-sm px-4 py-2.5 rounded-lg font-medium"
-              style={{ background: '#F1F5F9', color: '#475569', textDecoration: 'none' }}>
+              style={{ background: '#F1F5F9', color: '#475569' }}>
               Uredi više podataka
-            </Link>
+            </button>
           </div>
           <p className="text-xs mt-3" style={{ color: '#94A3B8' }}>
             Zelena oznaka <span className="px-1.5 py-0.5 rounded-full font-medium" style={{ background: '#DCFCE7', color: '#16A34A', fontSize: 11 }}>AI</span> označava polja automatski popunjena iz dokumenta.

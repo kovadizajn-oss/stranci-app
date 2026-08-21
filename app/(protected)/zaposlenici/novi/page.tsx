@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import StatusPicker from '@/components/StatusPicker'
@@ -128,25 +128,32 @@ function NewDocCard({ doc, index, types, onChange, onRemove }: {
   )
 }
 
-export default function NoviZaposlenik() {
+function NoviZaposlenik() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [companies, setCompanies] = useState<{ id: string; naziv: string }[]>([])
-  const [companyId, setCompanyId] = useState<string>('')
+  const [companyId, setCompanyId] = useState<string>(searchParams.get('company_id') || '')
 
   useEffect(() => {
     supabase.from('companies').select('id, naziv').order('naziv').then(({ data }) => setCompanies(data || []))
   }, [])
 
   const [form, setForm] = useState({
-    ime: '', prezime: '', drzava_rodjenja: '',
-    datum_rodjenja: '', oib: '', status_zaposlenika: 'Aktivan',
+    ime: searchParams.get('ime') || '',
+    prezime: searchParams.get('prezime') || '',
+    drzava_rodjenja: searchParams.get('drzava_rodjenja') || '',
+    datum_rodjenja: searchParams.get('datum_rodjenja') || '',
+    oib: searchParams.get('oib') || '',
+    status_zaposlenika: 'Aktivan',
   })
   const [extra, setExtra] = useState({
-    email: '', telefon: '', adresa_smjestaja: '', ime_oca: '', iban: '',
+    email: '', telefon: '', adresa_smjestaja: '',
+    ime_oca: searchParams.get('ime_oca') || '',
+    iban: '',
   })
-  const [radnoMjesto, setRadnoMjesto] = useState('')
+  const [radnoMjesto, setRadnoMjesto] = useState(searchParams.get('radno_mjesto') || '')
   const [osobniDocs, setOsobniDocs] = useState<NewDoc[]>([])
   const [prateciDocs, setPrateciDocs] = useState<NewDoc[]>([])
 
@@ -308,4 +315,11 @@ export default function NoviZaposlenik() {
       </form>
     </div>
   )
+}
+
+export { NoviZaposlenik }
+
+import { Suspense } from 'react'
+export default function NoviZaposlenikPage() {
+  return <Suspense><NoviZaposlenik /></Suspense>
 }
