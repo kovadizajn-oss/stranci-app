@@ -154,30 +154,34 @@ export default function DashboardPage() {
     <div className="p-4 md:p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold" style={{ color: '#1E293B' }}>
-          Dobar dan, <span style={{ color: '#2563EB', fontStyle: 'italic' }}>Kvantus!</span>
+        <h1 className="text-3xl font-bold" style={{ color: '#0F172A', letterSpacing: '-0.5px' }}>
+          Dobar dan, <span style={{ color: '#2563EB' }}>Kvantus!</span>
         </h1>
         <p className="text-sm mt-1" style={{ color: '#64748B' }}>Evo što slijedi za vas u idućim tjednima.</p>
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="bg-white rounded-xl p-5" style={{ border: '1px solid #E2E8F0' }}>
-          <div className="flex items-center gap-1.5 mb-2">
-            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#EF4444' }} />
-            <span className="text-xs" style={{ color: '#64748B' }}>Najbliži rok</span>
-          </div>
-          <p className="text-3xl font-semibold mb-1" style={{ color: '#1E293B' }}>{loading ? '...' : nearestLabel}</p>
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        {/* Nearest deadline — gradient hero card */}
+        <div className="rounded-2xl p-5 relative overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, #1E40AF 0%, #2563EB 60%, #3B82F6 100%)', boxShadow: '0 8px 32px rgba(37,99,235,0.3)' }}>
+          <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-10"
+            style={{ background: 'white' }} />
+          <div className="absolute -right-2 -bottom-6 w-20 h-20 rounded-full opacity-10"
+            style={{ background: 'white' }} />
+          <p className="text-xs font-medium mb-3" style={{ color: 'rgba(255,255,255,0.65)' }}>Najbliži rok</p>
+          <p className="text-4xl font-bold text-white mb-1" style={{ letterSpacing: '-1px' }}>{loading ? '...' : nearestLabel}</p>
           {stats.nearestDays !== null && stats.nearestDays >= 0 && (
-            <p className="text-xs" style={{ color: '#94A3B8' }}>za {stats.nearestDays} dana</p>
+            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>za {stats.nearestDays} dana</p>
           )}
         </div>
 
-        <div className="bg-white rounded-xl p-5" style={{ border: '1px solid #E2E8F0' }}>
-          <div className="flex items-center gap-1.5 mb-3">
-            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#94A3B8' }} />
-            <span className="text-xs" style={{ color: '#64748B' }}>Radnici</span>
-            <span className="text-xs font-semibold ml-auto" style={{ color: '#1E293B' }}>{loading ? '...' : stats.totalWorkers} ukupno</span>
+        {/* Workers breakdown */}
+        <div className="rounded-2xl p-5 bg-white" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.05)' }}>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-medium" style={{ color: '#64748B' }}>Radnici</p>
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+              style={{ background: '#EFF6FF', color: '#2563EB' }}>{loading ? '...' : stats.totalWorkers} ukupno</span>
           </div>
           {loading ? (
             <p className="text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</p>
@@ -202,10 +206,10 @@ export default function DashboardPage() {
 
       {/* Expired documents */}
       {!loading && expired.length > 0 && (
-        <div className="bg-white rounded-xl mb-4" style={{ border: '2px solid #FECACA' }}>
-          <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #FEE2E2', background: '#FEF2F2', borderRadius: '10px 10px 0 0' }}>
+        <div className="rounded-2xl mb-4 overflow-hidden" style={{ border: '1.5px solid #FECACA', boxShadow: '0 4px 16px rgba(220,38,38,0.08)' }}>
+          <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #FEE2E2', background: 'linear-gradient(135deg, #FEF2F2, #FFF1F1)' }}>
             <div>
-              <h2 className="font-semibold" style={{ color: '#DC2626' }}>⚠️ Isteklo</h2>
+              <h2 className="font-semibold" style={{ color: '#DC2626' }}>⚠️  Isteklo</h2>
               <p className="text-xs mt-0.5" style={{ color: '#EF4444' }}>Ažurirajte datume kada se dokumenti obnove</p>
             </div>
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: '#FEE2E2', color: '#DC2626' }}>
@@ -243,10 +247,10 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-[1fr_320px]">
         {/* Upcoming deadlines */}
-        <div className="bg-white rounded-xl" style={{ border: '1px solid #E2E8F0' }}>
-          <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #E2E8F0' }}>
+        <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.05)' }}>
+          <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #F1F5F9' }}>
             <div>
-              <h2 className="font-semibold" style={{ color: '#1E293B' }}>Nadolazeći rokovi</h2>
+              <h2 className="font-semibold" style={{ color: '#0F172A' }}>Nadolazeći rokovi</h2>
               <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>Sortirano po datumu</p>
             </div>
             <Link href="/zaposlenici" className="text-xs font-medium" style={{ color: '#2563EB' }}>
@@ -268,21 +272,21 @@ export default function DashboardPage() {
                 const { day, month } = formatDate(item.dueDate)
                 return (
                   <div key={item.id} className="flex items-center gap-4 px-6 py-4"
-                    style={{ borderBottom: i < deadlines.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
-                    <div className="w-12 h-12 rounded-lg flex flex-col items-center justify-center flex-shrink-0"
+                    style={{ borderBottom: i < deadlines.length - 1 ? '1px solid #F8FAFC' : 'none' }}>
+                    <div className="w-12 h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0"
                       style={{ background: bg }}>
                       <span className="text-lg font-bold leading-none" style={{ color: text }}>{day}</span>
                       <span className="text-xs font-medium mt-0.5" style={{ color: text }}>{month}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate" style={{ color: '#1E293B' }}>{item.title}</p>
+                      <p className="font-medium text-sm truncate" style={{ color: '#0F172A' }}>{item.title}</p>
                       <p className="text-xs truncate mt-0.5" style={{ color: '#64748B' }}>{item.employeeName}</p>
                       <p className="text-xs mt-0.5" style={{ color: days <= 7 ? '#DC2626' : '#94A3B8' }}>
                         {days === 0 ? 'Danas' : `Za ${days} dana`}
                       </p>
                     </div>
                     <Link href={`/zaposlenici/${item.employeeId}/pregled`}
-                      className="btn-primary text-xs px-2.5 py-1.5 rounded-lg font-medium flex-shrink-0"
+                      className="btn-primary text-xs px-3 py-1.5 rounded-lg font-medium flex-shrink-0"
                       style={{ background: '#EFF6FF', color: '#2563EB' }}>
                       Pogledaj
                     </Link>
@@ -294,10 +298,10 @@ export default function DashboardPage() {
         </div>
 
         {/* Obaveze widget */}
-        <div className="bg-white rounded-xl h-fit" style={{ border: '1px solid #E2E8F0' }}>
-          <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E2E8F0' }}>
+        <div className="bg-white rounded-2xl h-fit overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.05)' }}>
+          <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #F1F5F9' }}>
             <div>
-              <h2 className="font-semibold text-sm" style={{ color: '#1E293B' }}>Nadolazeće obaveze</h2>
+              <h2 className="font-semibold text-sm" style={{ color: '#0F172A' }}>Nadolazeće obaveze</h2>
               <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>Otvorene, sortirano po roku</p>
             </div>
             <Link href="/obaveze" className="text-xs font-medium" style={{ color: '#2563EB' }}>
