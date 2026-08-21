@@ -43,7 +43,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function Section({ icon, title, desc, children }: { icon: string; title: string; desc: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl p-6 mb-4" style={{ border: '1px solid #E2E8F0' }}>
+    <div className="bg-white rounded-2xl p-6 mb-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.05)' }}>
       <div className="flex items-start gap-3 mb-5" style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: 16 }}>
         <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#EFF6FF' }}>
           <span>{icon}</span>
@@ -349,7 +349,7 @@ export default function EmployeeDetail() {
           {form.ime[0]}{form.prezime[0]}
         </div>
         <div>
-          <h1 className="text-2xl font-semibold" style={{ color: '#1E293B' }}>{form.ime} {form.prezime}</h1>
+          <h1 className="text-2xl font-bold" style={{ color: '#0F172A', letterSpacing: '-0.3px' }}>{form.ime} {form.prezime}</h1>
           <p className="text-sm" style={{ color: '#64748B' }}>{form.drzava_rodjenja || 'Nepoznata država'} · {form.poslodavac || 'Bez poslodavca'}</p>
         </div>
       </div>
@@ -515,7 +515,7 @@ export default function EmployeeDetail() {
         <div className="flex justify-end gap-3 pb-8">
           <Link href="/zaposlenici" className="btn-secondary px-4 py-2.5 rounded-lg text-sm font-medium" style={{ background: '#F1F5F9', color: '#374151' }}>Odustani</Link>
           <button type="submit" disabled={saving} className="btn-primary px-5 py-2.5 rounded-lg text-sm font-medium text-white"
-            style={{ background: saving ? '#93C5FD' : '#2563EB', cursor: saving ? 'not-allowed' : 'pointer' }}>
+            style={{ background: saving ? '#93C5FD' : 'linear-gradient(135deg, #2563EB, #1D4ED8)', boxShadow: saving ? 'none' : '0 4px 14px rgba(37,99,235,0.3)', cursor: saving ? 'not-allowed' : 'pointer' }}>
             {saving ? 'Spremanje...' : '✓ Spremi promjene'}
           </button>
         </div>
