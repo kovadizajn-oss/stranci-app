@@ -62,17 +62,13 @@ export default function DodajZaposlenika() {
           <div>
             <p className="font-semibold text-sm mb-1" style={{ color: '#1E293B' }}>Učitaj dokument</p>
             <p className="text-xs leading-relaxed" style={{ color: '#64748B' }}>
-              Fotografirajte putovnicu, osobnu ili radnu dozvolu — AI automatski popuni podatke.
+              Učitajte putovnicu, osobnu iskaznicu ili radnu dozvolu — AI automatski popuni podatke.
             </p>
           </div>
-          <div className="mt-auto flex items-center gap-2">
+          <div className="mt-auto">
             <span className="text-xs font-medium px-3 py-1.5 rounded-lg inline-block"
               style={{ background: '#F5F3FF', color: '#7C3AED' }}>
               Učitaj dokumente →
-            </span>
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-              style={{ background: '#DCFCE7', color: '#16A34A' }}>
-              AI
             </span>
           </div>
         </Link>
