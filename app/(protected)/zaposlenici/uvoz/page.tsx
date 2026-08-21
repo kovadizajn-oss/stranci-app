@@ -116,8 +116,8 @@ export default function UvozZaposlenika() {
     let current = 0
     const interval = setInterval(() => {
       setProgress(prev => {
-        const increment = prev < 30 ? 4 : prev < 60 ? 2 : prev < 80 ? 0.8 : 0.2
-        const next = Math.min(prev + increment, 85)
+        const increment = prev < 30 ? 4 : prev < 60 ? 2 : prev < 80 ? 0.8 : prev < 90 ? 0.15 : prev < 95 ? 0.06 : 0.02
+        const next = Math.min(prev + increment, 99)
         current = next
         return next
       })
