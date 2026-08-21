@@ -60,6 +60,7 @@ export default function UvozZaposlenika() {
   const [files, setFiles] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [progress, setProgress] = useState(0)
   const [error, setError] = useState('')
   const [extracted, setExtracted] = useState<Extracted | null>(null)
   const [aiFields, setAiFields] = useState<Set<string>>(new Set())
@@ -107,8 +108,20 @@ export default function UvozZaposlenika() {
   const analyse = async () => {
     if (files.length === 0) return
     setLoading(true)
+    setProgress(0)
     setError('')
     setExtracted(null)
+
+    // Simulate progress: ramp quickly to 30%, then slow down toward 85%
+    let current = 0
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        const increment = prev < 30 ? 4 : prev < 60 ? 2 : prev < 80 ? 0.8 : 0.2
+        const next = Math.min(prev + increment, 85)
+        current = next
+        return next
+      })
+    }, 200)
 
     const fd = new FormData()
     files.forEach(f => fd.append('files', f))
@@ -116,7 +129,11 @@ export default function UvozZaposlenika() {
     try {
       const res = await fetch('/api/extract-document', { method: 'POST', body: fd })
       const json = await res.json()
+      clearInterval(interval)
       if (!res.ok || json.error) throw new Error(json.error || 'Greška')
+
+      setProgress(100)
+      await new Promise(r => setTimeout(r, 400))
 
       const d: Extracted = json.data
       setExtracted(d)
@@ -135,6 +152,8 @@ export default function UvozZaposlenika() {
       set(setRadnoMjesto, d.radno_mjesto, 'radno_mjesto')
       setAiFields(filled)
     } catch (e: any) {
+      clearInterval(interval)
+      setProgress(0)
       setError(e.message)
     } finally {
       setLoading(false)
@@ -225,11 +244,32 @@ export default function UvozZaposlenika() {
         )}
 
         {files.length > 0 && !extracted && (
-          <button onClick={analyse} disabled={loading}
-            className="mt-4 w-full py-2.5 rounded-lg text-sm font-medium text-white transition-all"
-            style={{ background: loading ? '#93C5FD' : '#2563EB' }}>
-            {loading ? '⏳ Analiziranje dokumenta...' : `✨ Analiziraj ${files.length > 1 ? `${files.length} dokumenta` : 'dokument'}`}
-          </button>
+          <div className="mt-4">
+            {loading ? (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium" style={{ color: '#2563EB' }}>
+                    {progress < 30 ? '📤 Učitavanje dokumenta...' : progress < 70 ? '🔍 Čitanje dokumenta...' : progress < 100 ? '✍️ Izvlačenje podataka...' : '✅ Gotovo!'}
+                  </span>
+                  <span className="text-xs font-medium" style={{ color: '#94A3B8' }}>{Math.round(progress)}%</span>
+                </div>
+                <div className="w-full rounded-full overflow-hidden" style={{ height: 8, background: '#E2E8F0' }}>
+                  <div className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${progress}%`,
+                      background: progress === 100 ? '#16A34A' : '#2563EB',
+                      transition: 'width 0.2s ease, background 0.3s ease',
+                    }} />
+                </div>
+              </div>
+            ) : (
+              <button onClick={analyse}
+                className="w-full py-2.5 rounded-lg text-sm font-medium text-white"
+                style={{ background: '#2563EB' }}>
+                ✨ Analiziraj {files.length > 1 ? `${files.length} dokumenta` : 'dokument'}
+              </button>
+            )}
+          </div>
         )}
 
         {error && <p className="mt-3 text-sm" style={{ color: '#DC2626' }}>Greška: {error}</p>}
