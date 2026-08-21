@@ -202,15 +202,15 @@ export default function ZaposleniciPage() {
     <div className="p-4 md:p-8">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold" style={{ color: '#1E293B' }}>Zaposlenici</h1>
+          <h1 className="text-2xl font-bold" style={{ color: '#0F172A', letterSpacing: '-0.3px' }}>Zaposlenici</h1>
           <p className="text-sm mt-1" style={{ color: '#64748B' }}>
             Pratite dokumente i rokove svih stranih radnika na jednom mjestu.
           </p>
         </div>
         <Link
           href="/zaposlenici/dodaj"
-          className="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white"
-          style={{ background: '#2563EB' }}
+          className="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white"
+          style={{ background: 'linear-gradient(135deg, #2563EB, #1D4ED8)', boxShadow: '0 4px 14px rgba(37,99,235,0.3)' }}
         >
           + Dodaj zaposlenika
         </Link>
@@ -248,11 +248,11 @@ export default function ZaposleniciPage() {
         </span>
       </div>
 
-      <div className="bg-white rounded-xl" style={{ border: '1px solid #E2E8F0' }}>
+      <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.05)' }}>
       <div className="overflow-x-auto">
         <table className="w-full" style={{ minWidth: 750 }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
+            <tr style={{ borderBottom: '1px solid #F1F5F9', background: '#F8FAFC' }}>
               <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Zaposlenik</th>
               <th className="text-left px-4 py-3 text-xs font-semibold">
                 <button ref={zapBtnRef} onClick={openZap}

@@ -45,7 +45,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
 
 function Section({ icon, title, desc, children }: { icon: string; title: string; desc: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl p-6 mb-4" style={{ border: '1px solid #E2E8F0' }}>
+    <div className="bg-white rounded-2xl p-6 mb-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.05)' }}>
       <div className="flex items-start gap-3 mb-5" style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: 16 }}>
         <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#EFF6FF' }}>
           <span>{icon}</span>
@@ -212,7 +212,7 @@ export default function NoviZaposlenik() {
   return (
     <div className="p-4 md:p-8 max-w-3xl">
       <Link href="/zaposlenici" className="text-sm" style={{ color: '#64748B' }}>← Zaposlenici</Link>
-      <h1 className="text-2xl font-semibold mt-2 mb-1" style={{ color: '#1E293B' }}>Novi zaposlenik</h1>
+      <h1 className="text-2xl font-bold mt-2 mb-1" style={{ color: '#0F172A', letterSpacing: '-0.3px' }}>Novi zaposlenik</h1>
       <p className="text-sm mb-6" style={{ color: '#64748B' }}>Polja označena * su obavezna.</p>
 
       {error && <div className="mb-4 p-3 rounded-lg text-sm" style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' }}>{error}</div>}
@@ -300,7 +300,7 @@ export default function NoviZaposlenik() {
           <div className="flex gap-3">
             <Link href="/zaposlenici" className="btn-secondary px-4 py-2.5 rounded-lg text-sm font-medium" style={{ background: '#F1F5F9', color: '#374151' }}>Odustani</Link>
             <button type="submit" disabled={saving} className="btn-primary px-5 py-2.5 rounded-lg text-sm font-medium text-white"
-              style={{ background: saving ? '#93C5FD' : '#2563EB', cursor: saving ? 'not-allowed' : 'pointer' }}>
+              style={{ background: saving ? '#93C5FD' : 'linear-gradient(135deg, #2563EB, #1D4ED8)', boxShadow: saving ? 'none' : '0 4px 14px rgba(37,99,235,0.3)', cursor: saving ? 'not-allowed' : 'pointer' }}>
               {saving ? 'Spremanje...' : '✓ Spremi zaposlenika'}
             </button>
           </div>

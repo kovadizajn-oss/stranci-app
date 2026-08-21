@@ -44,7 +44,7 @@ const STATUS_ZAP_CONFIG: Record<string, { color: string; bg: string }> = {
 
 function Card({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl p-5" style={{ border: '1px solid #E2E8F0' }}>
+    <div className="bg-white rounded-2xl p-5" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.05)' }}>
       <div className="flex items-center gap-2 mb-4" style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: 12 }}>
         <span>{icon}</span>
         <p className="font-semibold text-sm" style={{ color: '#1E293B' }}>{title}</p>

@@ -192,7 +192,7 @@ export default function UvozZaposlenika() {
       </div>
 
       {/* Upload zone */}
-      <div className="bg-white rounded-xl p-6 mb-4" style={{ border: '1px solid #E2E8F0' }}>
+      <div className="bg-white rounded-2xl p-6 mb-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.05)' }}>
         <p className="text-sm font-medium mb-3" style={{ color: '#1E293B' }}>Dokumenti</p>
         <p className="text-xs mb-4" style={{ color: '#64748B' }}>Dodajte fotografije putovnice, osobne iskaznice ili radne dozvole. Možete dodati više dokumenata odjednom.</p>
 
@@ -274,7 +274,7 @@ export default function UvozZaposlenika() {
 
       {/* Pre-filled form */}
       {extracted && (
-        <div className="bg-white rounded-xl p-6" style={{ border: '1px solid #E2E8F0' }}>
+        <div className="bg-white rounded-2xl p-6" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.05)' }}>
           <div className="flex items-center gap-2 mb-1" style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: 16, marginBottom: 20 }}>
             <span className="text-green-600">✅</span>
             <p className="font-semibold text-sm" style={{ color: '#1E293B' }}>Podaci su izvučeni — provjerite i ispravite po potrebi</p>

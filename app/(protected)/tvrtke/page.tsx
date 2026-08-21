@@ -66,7 +66,7 @@ export default function TvrtkePage() {
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold" style={{ color: '#1E293B' }}>Tvrtke</h1>
+          <h1 className="text-2xl font-bold" style={{ color: '#0F172A', letterSpacing: '-0.3px' }}>Tvrtke</h1>
           <p className="text-sm mt-1" style={{ color: '#64748B' }}>
             Klijenti i poslodavci s kojima Kvantus surađuje.
           </p>
@@ -151,7 +151,7 @@ export default function TvrtkePage() {
       )}
 
       {/* List */}
-      <div className="bg-white rounded-xl overflow-hidden" style={{ border: '1px solid #E2E8F0' }}>
+      <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.05)' }}>
         {loading ? (
           <div className="p-8 text-center text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</div>
         ) : companies.length === 0 ? (
