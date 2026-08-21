@@ -85,10 +85,10 @@ export default function UvozZaposlenika() {
   }, [])
 
   const addFiles = useCallback((newFiles: File[]) => {
-    const imageFiles = newFiles.filter(f => f.type.startsWith('image/'))
+    const imageFiles = newFiles.filter(f => f.type.startsWith('image/') || f.type === 'application/pdf')
     setFiles(prev => [...prev, ...imageFiles])
     imageFiles.forEach(f => {
-      const url = URL.createObjectURL(f)
+      const url = f.type === 'application/pdf' ? '__pdf__' : URL.createObjectURL(f)
       setPreviews(prev => [...prev, url])
     })
   }, [])
@@ -194,8 +194,8 @@ export default function UvozZaposlenika() {
         >
           <span className="text-3xl">📄</span>
           <p className="text-sm font-medium" style={{ color: '#475569' }}>Povucite ovdje ili kliknite za odabir</p>
-          <p className="text-xs" style={{ color: '#94A3B8' }}>JPG, PNG, WEBP</p>
-          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
+          <p className="text-xs" style={{ color: '#94A3B8' }}>JPG, PNG, WEBP, PDF</p>
+          <input ref={fileInputRef} type="file" accept="image/*,application/pdf" multiple className="hidden"
             onChange={e => addFiles(Array.from(e.target.files || []))} />
         </div>
 
@@ -203,8 +203,19 @@ export default function UvozZaposlenika() {
           <div className="mt-4 flex flex-wrap gap-3">
             {previews.map((src, i) => (
               <div key={i} className="relative">
-                <img src={src} alt={`Dokument ${i + 1}`} className="rounded-lg object-cover"
-                  style={{ width: 100, height: 100, border: '1px solid #E2E8F0' }} />
+                {src === '__pdf__' ? (
+                  <div className="rounded-lg flex flex-col items-center justify-center gap-1"
+                    style={{ width: 100, height: 100, border: '1px solid #E2E8F0', background: '#FEF2F2' }}>
+                    <span style={{ fontSize: 28 }}>📄</span>
+                    <span className="text-xs font-medium" style={{ color: '#DC2626' }}>PDF</span>
+                    <span className="text-xs truncate px-1 text-center" style={{ color: '#94A3B8', maxWidth: 90, fontSize: 10 }}>
+                      {files[i]?.name}
+                    </span>
+                  </div>
+                ) : (
+                  <img src={src} alt={`Dokument ${i + 1}`} className="rounded-lg object-cover"
+                    style={{ width: 100, height: 100, border: '1px solid #E2E8F0' }} />
+                )}
                 <button onClick={() => removeFile(i)}
                   className="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
                   style={{ background: '#EF4444', color: 'white' }}>×</button>
