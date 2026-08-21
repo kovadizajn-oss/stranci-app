@@ -164,16 +164,13 @@ export default function UvozZaposlenika() {
     if (!ime || !prezime) return
     setSaving(true)
 
-    const selectedCompany = companies.find(c => c.id === companyId)
-    const resolvedPoslodavac = selectedCompany ? selectedCompany.naziv : poslodavac
-
     const { data: emp, error: empErr } = await supabase.from('employees').insert({
       ime, prezime,
       datum_rodjenja: datumRodjenja || null,
       drzava_rodjenja: drzavaRodjenja || null,
       oib: oib || null,
       ime_oca: imeOca || null,
-      poslodavac: resolvedPoslodavac || null,
+      poslodavac: companies.find(c => c.id === companyId)?.naziv || null,
       radno_mjesto: radnoMjesto || null,
       company_id: companyId || null,
       status_zaposlenika: 'U postupku',
@@ -314,11 +311,6 @@ export default function UvozZaposlenika() {
                 {companies.map(c => <option key={c.id} value={c.id}>{c.naziv}</option>)}
               </select>
             </Field>
-            {!companyId && (
-              <Field label="Poslodavac (ručni unos)" aiField={aiFields.has('poslodavac')}>
-                <input className={inputCls} style={inputStyle} value={poslodavac} onChange={e => setPoslodavac(e.target.value)} placeholder="Naziv poslodavca" />
-              </Field>
-            )}
             <Field label="Radno mjesto" aiField={aiFields.has('radno_mjesto')}>
               <input className={inputCls} style={inputStyle} value={radnoMjesto} onChange={e => setRadnoMjesto(e.target.value)} placeholder="Npr. Zidar, Konobar..." />
             </Field>

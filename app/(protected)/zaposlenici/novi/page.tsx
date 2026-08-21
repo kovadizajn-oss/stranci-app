@@ -133,8 +133,7 @@ export default function NoviZaposlenik() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [companies, setCompanies] = useState<{ id: string; naziv: string }[]>([])
-  const [companyId, setCompanyId] = useState<string>('') // '' = manual, uuid = linked
-  const [poslodavacManual, setPoslodavacManual] = useState('')
+  const [companyId, setCompanyId] = useState<string>('')
 
   useEffect(() => {
     supabase.from('companies').select('id, naziv').order('naziv').then(({ data }) => setCompanies(data || []))
@@ -182,9 +181,7 @@ export default function NoviZaposlenik() {
           ime_oca: extra.ime_oca || null,
           iban: extra.iban || null,
           company_id: companyId || null,
-          poslodavac: companyId
-            ? (companies.find(c => c.id === companyId)?.naziv || null)
-            : (poslodavacManual || null),
+          poslodavac: companies.find(c => c.id === companyId)?.naziv || null,
           radno_mjesto: radnoMjesto || null,
         })
         .select('id').single()
@@ -284,14 +281,13 @@ export default function NoviZaposlenik() {
                 <select className={inputCls} style={inputStyle}
                   value={companyId}
                   onChange={e => setCompanyId(e.target.value)}>
-                  <option value="">— Ručni unos —</option>
+                  <option value="">— Odaberi tvrtku —</option>
                   {companies.map(c => <option key={c.id} value={c.id}>{c.naziv}</option>)}
                 </select>
-                {!companyId && (
-                  <input className={inputCls + ' mt-2'} style={inputStyle}
-                    placeholder="Upiši naziv poslodavca..."
-                    value={poslodavacManual}
-                    onChange={e => setPoslodavacManual(e.target.value)} />
+                {companies.length === 0 && (
+                  <p className="text-xs mt-1.5" style={{ color: '#94A3B8' }}>
+                    Nema tvrtki. <Link href="/tvrtke" style={{ color: '#2563EB' }}>Dodaj tvrtku →</Link>
+                  </p>
                 )}
               </Field>
             </div>
