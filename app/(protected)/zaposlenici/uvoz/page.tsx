@@ -184,16 +184,37 @@ export default function UvozZaposlenika() {
 
     if (empErr || !emp) { setSaving(false); setError('Greška pri spremanju'); return }
 
-    // Auto-create document records for each detected document
+    // Upload scanned files to storage — file[i] maps to dokumenti[i] where possible
+    const uploadedUrls: (string | null)[] = []
+    for (let i = 0; i < files.length; i++) {
+      try {
+        const { data: uploaded } = await supabase.storage
+          .from('dokumenti')
+          .upload(`${emp.id}/doc_${Date.now()}_${files[i].name}`, files[i], { upsert: true })
+        if (uploaded) {
+          const { data: urlData } = supabase.storage.from('dokumenti').getPublicUrl(uploaded.path)
+          uploadedUrls.push(urlData.publicUrl)
+        } else {
+          uploadedUrls.push(null)
+        }
+      } catch {
+        uploadedUrls.push(null)
+      }
+    }
+
+    // Auto-create document records — match each doc to its file by index
     const detectedDocs = extracted?.dokumenti?.filter(d => d.dokument_naziv && d.kategorija) || []
-    for (const doc of detectedDocs) {
+    for (let i = 0; i < detectedDocs.length; i++) {
+      const doc = detectedDocs[i]
+      // If more docs than files (e.g. both docs from one scan), reuse last file
+      const fileUrl = uploadedUrls[i] ?? uploadedUrls[uploadedUrls.length - 1] ?? null
       await supabase.from('documents').insert({
         employee_id: emp.id,
         naziv: doc.dokument_naziv,
         kategorija: doc.kategorija,
         datum_izdavanja: doc.datum_izdavanja || null,
         datum_isteka: doc.dokument_vrijedi_do || null,
-        file_url: null,
+        file_url: fileUrl,
       })
     }
 
