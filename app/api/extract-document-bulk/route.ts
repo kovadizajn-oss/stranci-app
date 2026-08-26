@@ -47,13 +47,15 @@ Return ONLY a valid JSON array where each element is one worker:
         "dokument_naziv": "one of: Putovnica, Osobna iskaznica, Vozačka dozvola, Boravišna dozvola, Radna dozvola, Liječnički pregled, Ugovor o radu, Potvrda o boravku — pick the best match",
         "kategorija": "osobni if identity document (Putovnica, Osobna iskaznica, Vozačka dozvola, Boravišna dozvola), or prateci if work/administrative (Radna dozvola, Liječnički pregled, Ugovor o radu, Potvrda o boravku)",
         "dokument_vrijedi_do": "document expiry date in YYYY-MM-DD format, or null",
-        "datum_izdavanja": "document issue date in YYYY-MM-DD format, or null"
+        "datum_izdavanja": "document issue date in YYYY-MM-DD format, or null",
+        "file_index": "the 0-based index of the image/file in the provided list that this document came from (0 = first image, 1 = second image, etc.)"
       }
     ]
   }
 ]
 
 If multiple documents belong to the same person, list them all in that person's "dokumenti" array — do not create duplicate worker entries.
+The images are provided in order starting from index 0. Each document entry must include the correct file_index pointing to its source image.
 
 Return ONLY the JSON array, no explanation, no markdown, no code blocks.`,
     })

@@ -9,6 +9,7 @@ type DokumentInfo = {
   kategorija: 'osobni' | 'prateci' | null
   dokument_vrijedi_do: string | null
   datum_izdavanja: string | null
+  file_index: number | null
 }
 
 type DetectedWorker = {
@@ -62,6 +63,7 @@ export default function BulkUvoz() {
 
     for (let i = 0; i < batches.length; i++) {
       setBatchCurrent(i + 1)
+      const batchOffset = i * BATCH_SIZE
       const fd = new FormData()
       batches[i].forEach(f => fd.append('files', f))
 
@@ -69,7 +71,15 @@ export default function BulkUvoz() {
         const res = await fetch('/api/extract-document-bulk', { method: 'POST', body: fd })
         const json = await res.json()
         if (!res.ok || json.error) throw new Error(json.error || 'Greška')
-        allWorkers.push(...(json.data || []))
+
+        // Offset file_index values so they point to the global files array
+        const batchWorkers: DetectedWorker[] = json.data || []
+        for (const w of batchWorkers) {
+          for (const doc of w.dokumenti || []) {
+            if (doc.file_index != null) doc.file_index += batchOffset
+          }
+        }
+        allWorkers.push(...batchWorkers)
       } catch (e: any) {
         setError(e.message)
         setPhase('upload')
@@ -119,13 +129,29 @@ export default function BulkUvoz() {
       if (empErr || !emp) { failed++; continue }
 
       for (const doc of (w.dokumenti || []).filter(d => d.dokument_naziv && d.kategorija)) {
+        let fileUrl: string | null = null
+
+        // Upload the source file if Gemini gave us a valid file_index
+        const srcFile = doc.file_index != null ? files[doc.file_index] : null
+        if (srcFile) {
+          try {
+            const { data: uploaded } = await supabase.storage
+              .from('dokumenti')
+              .upload(`${emp.id}/doc_${Date.now()}_${srcFile.name}`, srcFile, { upsert: true })
+            if (uploaded) {
+              const { data: urlData } = supabase.storage.from('dokumenti').getPublicUrl(uploaded.path)
+              fileUrl = urlData.publicUrl
+            }
+          } catch { /* skip file upload on error, still save the record */ }
+        }
+
         await supabase.from('documents').insert({
           employee_id: emp.id,
           naziv: doc.dokument_naziv,
           kategorija: doc.kategorija,
           datum_izdavanja: doc.datum_izdavanja || null,
           datum_isteka: doc.dokument_vrijedi_do || null,
-          file_url: null,
+          file_url: fileUrl,
         })
       }
 
@@ -325,7 +351,7 @@ export default function BulkUvoz() {
         </p>
         {saveResults.length > 0 && (
           <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>
-            Dokumenti su evidentirani — datoteke možete dodati na stranici svakog zaposlenika.
+            Dokumenti su evidentirani s priloženim datotekama. Kliknite na zaposlenika za pregled.
           </p>
         )}
       </div>
