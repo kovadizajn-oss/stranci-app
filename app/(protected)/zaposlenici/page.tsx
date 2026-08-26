@@ -9,6 +9,7 @@ const STATUS_ZAP_CONFIG: Record<string, { color: string; bg: string }> = {
   'U postupku': { color: '#2563EB', bg: '#EFF6FF' },
   'Na čekanju': { color: '#CA8A04', bg: '#FEF9C3' },
   'Otkazan':    { color: '#DC2626', bg: '#FEE2E2' },
+  'Novi uvoz':  { color: '#4338CA', bg: '#EEF2FF' },
 }
 
 type EmployeeRow = {
@@ -46,7 +47,7 @@ const DOC_TYPES: Record<string, string> = {
   lijecnicki: 'Liječnički pregled',
 }
 
-const ZAP_STATUSES = Object.keys(STATUS_ZAP_CONFIG)
+const ZAP_STATUSES = ['Aktivan', 'U postupku', 'Na čekanju', 'Otkazan', 'Novi uvoz']
 const DOC_STATUS_CONFIG: Record<string, { color: string; bg: string }> = {
   'Vrijedi':        { color: '#16A34A', bg: '#DCFCE7' },
   'Uskoro istječe': { color: '#CA8A04', bg: '#FEF9C3' },
@@ -314,7 +315,8 @@ export default function ZaposleniciPage() {
                     </td>
                     <td className="px-4 py-3">
                       {emp.status_zaposlenika && (
-                        <span className="text-xs px-2.5 py-1 rounded-full font-medium"
+                        <span
+                          className={`text-xs px-2.5 py-1 rounded-full font-medium${emp.status_zaposlenika === 'Novi uvoz' ? ' badge-novi-uvoz' : ''}`}
                           style={{ background: zapCfg.bg, color: zapCfg.color }}>
                           {emp.status_zaposlenika}
                         </span>

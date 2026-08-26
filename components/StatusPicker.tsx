@@ -7,8 +7,10 @@ export const STATUS_CONFIG: Record<string, { color: string; bg: string; border: 
   'U postupku': { color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
   'Na čekanju': { color: '#CA8A04', bg: '#FEF9C3', border: '#FDE047' },
   'Otkazan':    { color: '#DC2626', bg: '#FEE2E2', border: '#FECACA' },
+  'Novi uvoz':  { color: '#4338CA', bg: '#EEF2FF', border: '#C7D2FE' },
 }
 
+// "Novi uvoz" intentionally excluded — can't manually assign it, only change away from it
 const STATUSI = ['Aktivan', 'U postupku', 'Na čekanju', 'Otkazan']
 
 type Props = {
@@ -47,7 +49,7 @@ export default function StatusPicker({ value, onChange }: Props) {
         }}
       >
         <span
-          className="px-2.5 py-0.5 rounded-full text-xs font-semibold"
+          className={`px-2.5 py-0.5 rounded-full text-xs font-semibold${value === 'Novi uvoz' ? ' badge-novi-uvoz' : ''}`}
           style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}
         >
           {value}

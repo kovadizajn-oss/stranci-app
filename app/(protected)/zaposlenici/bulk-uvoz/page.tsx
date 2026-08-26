@@ -139,7 +139,7 @@ export default function BulkUvoz() {
         oib: w.oib || null,
         ime_oca: w.ime_oca || null,
         radno_mjesto: w.radno_mjesto || null,
-        status_zaposlenika: 'U postupku',
+        status_zaposlenika: 'Novi uvoz',
       }).select().single()
 
       if (empErr || !emp) { failed++; continue }

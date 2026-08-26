@@ -179,7 +179,7 @@ export default function UvozZaposlenika() {
       poslodavac: companies.find(c => c.id === companyId)?.naziv || null,
       radno_mjesto: radnoMjesto || null,
       company_id: companyId || null,
-      status_zaposlenika: 'U postupku',
+      status_zaposlenika: 'Novi uvoz',
     }).select().single()
 
     if (empErr || !emp) { setSaving(false); setError('Greška pri spremanju'); return }
