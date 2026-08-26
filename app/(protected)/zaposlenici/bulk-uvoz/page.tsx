@@ -32,6 +32,7 @@ export default function BulkUvoz() {
   const [phase, setPhase] = useState<'upload' | 'processing' | 'review' | 'saving' | 'done'>('upload')
   const [batchCurrent, setBatchCurrent] = useState(0)
   const [batchTotal, setBatchTotal] = useState(0)
+  const [batchProgress, setBatchProgress] = useState(0)
   const [workers, setWorkers] = useState<DetectedWorker[]>([])
   const [error, setError] = useState('')
   const [saveResults, setSaveResults] = useState<{ name: string; id: string }[]>([])
@@ -60,9 +61,19 @@ export default function BulkUvoz() {
     setBatchTotal(batches.length)
 
     const allWorkers: DetectedWorker[] = []
+    setBatchProgress(0)
 
     for (let i = 0; i < batches.length; i++) {
       setBatchCurrent(i + 1)
+      setBatchProgress(0)
+
+      // Simulated progress within each batch
+      const interval = setInterval(() => {
+        setBatchProgress(prev => {
+          const inc = prev < 30 ? 4 : prev < 60 ? 2 : prev < 80 ? 0.8 : prev < 90 ? 0.15 : prev < 95 ? 0.06 : 0.02
+          return Math.min(prev + inc, 99)
+        })
+      }, 200)
       const batchOffset = i * BATCH_SIZE
       const fd = new FormData()
       batches[i].forEach(f => fd.append('files', f))
@@ -70,7 +81,11 @@ export default function BulkUvoz() {
       try {
         const res = await fetch('/api/extract-document-bulk', { method: 'POST', body: fd })
         const json = await res.json()
+        clearInterval(interval)
         if (!res.ok || json.error) throw new Error(json.error || 'Greška')
+
+        setBatchProgress(100)
+        await new Promise(r => setTimeout(r, 300))
 
         // Offset file_index values so they point to the global files array
         const batchWorkers: DetectedWorker[] = json.data || []
@@ -81,6 +96,7 @@ export default function BulkUvoz() {
         }
         allWorkers.push(...batchWorkers)
       } catch (e: any) {
+        clearInterval(interval)
         setError(e.message)
         setPhase('upload')
         return
@@ -235,17 +251,27 @@ export default function BulkUvoz() {
   // ── Processing ──
   if (phase === 'processing') return (
     <div className="p-4 md:p-8 flex items-center justify-center" style={{ minHeight: '60vh' }}>
-      <div className="text-center" style={{ maxWidth: 400 }}>
+      <div className="text-center" style={{ maxWidth: 420 }}>
         <div className="text-5xl mb-6">🔍</div>
         <h2 className="text-xl font-bold mb-2" style={{ color: '#0F172A' }}>Analiza u tijeku...</h2>
         <p className="text-sm mb-6" style={{ color: '#64748B' }}>
-          Obrađujem grupu {batchCurrent} od {batchTotal} — AI čita dokumente i grupira zaposlenike
+          {batchTotal > 1 ? `Grupa ${batchCurrent} od ${batchTotal} — ` : ''}
+          {batchProgress < 30 ? '📤 Učitavanje dokumenata...' : batchProgress < 70 ? '🔍 Čitanje dokumenata...' : batchProgress < 100 ? '✍️ Grupiranje zaposlenika...' : '✅ Gotovo!'}
         </p>
-        <div className="w-full rounded-full overflow-hidden" style={{ height: 8, background: '#E2E8F0' }}>
-          <div className="h-full rounded-full transition-all"
-            style={{ width: `${(batchCurrent / batchTotal) * 100}%`, background: 'linear-gradient(135deg, #2563EB, #1D4ED8)', transition: 'width 0.4s ease' }} />
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs" style={{ color: '#94A3B8' }}>
+            {batchTotal > 1 ? `${batchCurrent} / ${batchTotal} grupa` : ''}
+          </span>
+          <span className="text-xs font-medium" style={{ color: '#94A3B8' }}>{Math.round(batchProgress)}%</span>
         </div>
-        <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>{batchCurrent} / {batchTotal} {batchTotal === 1 ? 'grupa' : 'grupe'}</p>
+        <div className="w-full rounded-full overflow-hidden" style={{ height: 8, background: '#E2E8F0' }}>
+          <div className="h-full rounded-full"
+            style={{
+              width: `${batchProgress}%`,
+              background: batchProgress === 100 ? '#16A34A' : 'linear-gradient(135deg, #2563EB, #1D4ED8)',
+              transition: 'width 0.2s ease, background 0.3s ease',
+            }} />
+        </div>
       </div>
     </div>
   )
@@ -316,15 +342,6 @@ export default function BulkUvoz() {
         ))}
       </div>
 
-      {workers.length > 0 && (
-        <div className="flex justify-end">
-          <button onClick={save}
-            className="btn-primary px-6 py-3 rounded-xl text-sm font-semibold text-white"
-            style={{ background: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}>
-            💾 Spremi {workers.length} zaposlenika
-          </button>
-        </div>
-      )}
     </div>
   )
 
@@ -373,18 +390,11 @@ export default function BulkUvoz() {
         ))}
       </div>
 
-      <div className="flex gap-3">
-        <Link href="/zaposlenici"
-          className="btn-primary flex-1 py-2.5 rounded-xl text-sm font-semibold text-white text-center"
-          style={{ background: 'linear-gradient(135deg, #2563EB, #1D4ED8)', textDecoration: 'none' }}>
-          Idi na zaposlenike
-        </Link>
-        <button onClick={() => { setFiles([]); setWorkers([]); setPhase('upload') }}
-          className="px-5 py-2.5 rounded-xl text-sm font-medium"
-          style={{ background: '#F1F5F9', color: '#475569' }}>
-          Novi uvoz
-        </button>
-      </div>
+      <Link href="/zaposlenici"
+        className="btn-primary block w-full py-2.5 rounded-xl text-sm font-semibold text-white text-center"
+        style={{ background: 'linear-gradient(135deg, #2563EB, #1D4ED8)', textDecoration: 'none' }}>
+        Idi na zaposlenike
+      </Link>
     </div>
   )
 }
