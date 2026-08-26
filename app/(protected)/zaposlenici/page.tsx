@@ -190,6 +190,16 @@ export default function ZaposleniciPage() {
     }
     if (filterZap) result = result.filter(e => e.status_zaposlenika === filterZap)
     if (filterDoc) result = result.filter(e => statusFromExpiry(e.doc_isteka).label === filterDoc)
+
+    // When no filters active, float "Novi uvoz" workers to the top
+    if (!search && !filterZap && !filterDoc) {
+      result = [...result].sort((a, b) => {
+        const aNew = a.status_zaposlenika === 'Novi uvoz' ? 0 : 1
+        const bNew = b.status_zaposlenika === 'Novi uvoz' ? 0 : 1
+        return aNew - bNew
+      })
+    }
+
     setFiltered(result)
   }, [search, filterZap, filterDoc, employees])
 
@@ -316,7 +326,7 @@ export default function ZaposleniciPage() {
                     <td className="px-4 py-3">
                       {emp.status_zaposlenika && (
                         <span
-                          className={`text-xs px-2.5 py-1 rounded-full font-medium${emp.status_zaposlenika === 'Novi uvoz' ? ' badge-novi-uvoz' : ''}`}
+                          className="text-xs px-2.5 py-1 rounded-full font-medium"
                           style={{ background: zapCfg.bg, color: zapCfg.color }}>
                           {emp.status_zaposlenika}
                         </span>

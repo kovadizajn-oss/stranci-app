@@ -49,7 +49,7 @@ export default function StatusPicker({ value, onChange }: Props) {
         }}
       >
         <span
-          className={`px-2.5 py-0.5 rounded-full text-xs font-semibold${value === 'Novi uvoz' ? ' badge-novi-uvoz' : ''}`}
+          className="px-2.5 py-0.5 rounded-full text-xs font-semibold"
           style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}
         >
           {value}
