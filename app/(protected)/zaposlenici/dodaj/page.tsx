@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 export default function DodajZaposlenika() {
   return (
-    <div className="p-4 md:p-8" style={{ maxWidth: 600, margin: '0 auto' }}>
+    <div className="p-4 md:p-8" style={{ maxWidth: 700, margin: '0 auto' }}>
       <Link href="/zaposlenici" className="text-sm mb-6 inline-block" style={{ color: '#64748B' }}>
         ← Zaposlenici
       </Link>
@@ -12,7 +12,7 @@ export default function DodajZaposlenika() {
       <h1 className="text-2xl font-semibold mb-2" style={{ color: '#1E293B' }}>Dodaj zaposlenika</h1>
       <p className="text-sm mb-8" style={{ color: '#64748B' }}>Odaberite način unosa podataka.</p>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-4">
         {/* Manual */}
         <Link href="/zaposlenici/novi"
           className="bg-white rounded-xl p-6 flex flex-col gap-4 transition-all"
@@ -73,6 +73,37 @@ export default function DodajZaposlenika() {
           </div>
         </Link>
       </div>
+
+      {/* Bulk upload */}
+      <Link href="/zaposlenici/bulk-uvoz"
+        className="bg-white rounded-xl p-6 flex items-center gap-5 transition-all"
+        style={{ border: '1px solid #E2E8F0', textDecoration: 'none' }}
+        onMouseEnter={e => {
+          (e.currentTarget as HTMLElement).style.borderColor = '#0891B2'
+          ;(e.currentTarget as HTMLElement).style.boxShadow = '0 0 0 3px rgba(8,145,178,0.08)'
+        }}
+        onMouseLeave={e => {
+          (e.currentTarget as HTMLElement).style.borderColor = '#E2E8F0'
+          ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
+        }}>
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+          style={{ background: '#ECFEFF' }}>
+          📂
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <p className="font-semibold text-sm" style={{ color: '#1E293B' }}>Grupni AI uvoz</p>
+            <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: '#DCFCE7', color: '#16A34A' }}>AI</span>
+          </div>
+          <p className="text-xs leading-relaxed" style={{ color: '#64748B' }}>
+            Učitajte dokumente više zaposlenika odjednom — AI automatski prepoznaje tko je tko i kreira profile.
+          </p>
+        </div>
+        <span className="text-xs font-medium px-3 py-1.5 rounded-lg flex-shrink-0"
+          style={{ background: '#ECFEFF', color: '#0891B2' }}>
+          Grupni uvoz →
+        </span>
+      </Link>
     </div>
   )
 }
