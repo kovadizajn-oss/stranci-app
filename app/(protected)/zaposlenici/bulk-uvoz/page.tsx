@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 type DokumentInfo = {
@@ -131,18 +130,22 @@ export default function BulkUvoz() {
     for (const w of workers) {
       if (!w.ime || !w.prezime) { failed++; continue }
 
-      const { data: emp, error: empErr } = await supabase.from('employees').insert({
-        ime: w.ime,
-        prezime: w.prezime,
-        datum_rodjenja: w.datum_rodjenja || null,
-        drzava_rodjenja: w.drzava_rodjenja || null,
-        oib: w.oib || null,
-        ime_oca: w.ime_oca || null,
-        radno_mjesto: w.radno_mjesto || null,
-        status_zaposlenika: 'Novi uvoz',
-      }).select().single()
-
-      if (empErr || !emp) { failed++; continue }
+      const empRes = await fetch('/api/employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ime: w.ime,
+          prezime: w.prezime,
+          datum_rodjenja: w.datum_rodjenja || null,
+          drzava_rodjenja: w.drzava_rodjenja || null,
+          oib: w.oib || null,
+          ime_oca: w.ime_oca || null,
+          radno_mjesto: w.radno_mjesto || null,
+          status_zaposlenika: 'Novi uvoz',
+        }),
+      })
+      if (!empRes.ok) { failed++; continue }
+      const { id: empId } = await empRes.json()
 
       for (const doc of (w.dokumenti || []).filter(d => d.dokument_naziv && d.kategorija)) {
         let fileUrl: string | null = null
@@ -151,27 +154,32 @@ export default function BulkUvoz() {
         const srcFile = doc.file_index != null ? files[doc.file_index] : null
         if (srcFile) {
           try {
-            const { data: uploaded } = await supabase.storage
-              .from('dokumenti')
-              .upload(`${emp.id}/doc_${Date.now()}_${srcFile.name}`, srcFile, { upsert: true })
-            if (uploaded) {
-              const { data: urlData } = supabase.storage.from('dokumenti').getPublicUrl(uploaded.path)
-              fileUrl = urlData.publicUrl
+            const fd = new FormData()
+            fd.append('file', srcFile)
+            fd.append('path', `${empId}/doc_${Date.now()}_${srcFile.name}`)
+            const upRes = await fetch('/api/upload', { method: 'POST', body: fd })
+            if (upRes.ok) {
+              const { url } = await upRes.json()
+              fileUrl = url
             }
           } catch { /* skip file upload on error, still save the record */ }
         }
 
-        await supabase.from('documents').insert({
-          employee_id: emp.id,
-          naziv: doc.dokument_naziv,
-          kategorija: doc.kategorija,
-          datum_izdavanja: doc.datum_izdavanja || null,
-          datum_isteka: doc.dokument_vrijedi_do || null,
-          file_url: fileUrl,
+        await fetch('/api/documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            employee_id: empId,
+            naziv: doc.dokument_naziv,
+            kategorija: doc.kategorija,
+            datum_izdavanja: doc.datum_izdavanja || null,
+            datum_isteka: doc.dokument_vrijedi_do || null,
+            file_url: fileUrl,
+          }),
         })
       }
 
-      results.push({ name: `${w.ime} ${w.prezime}`, id: emp.id })
+      results.push({ name: `${w.ime} ${w.prezime}`, id: empId })
     }
 
     setSaveResults(results)

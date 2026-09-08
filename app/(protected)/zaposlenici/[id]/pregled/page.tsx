@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 function daysUntil(dateStr: string) {
@@ -114,15 +113,11 @@ export default function CandidatePregled() {
 
   useEffect(() => {
     async function load() {
-      const { data: employee } = await supabase.from('employees').select('*').eq('id', id).single()
+      const res = await fetch(`/api/employees/${id}`)
+      if (!res.ok) return
+      const { employee, documents: docs, vacations: vacs, sick_leaves: sick } = await res.json()
       if (!employee) return
       setEmp(employee)
-
-      const [{ data: docs }, { data: vacs }, { data: sick }] = await Promise.all([
-        supabase.from('documents').select('*').eq('employee_id', id).order('naziv'),
-        supabase.from('vacations').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
-        supabase.from('sick_leaves').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
-      ])
 
       const allDocs = docs || []
       setOsobniDocs(allDocs.filter((d: any) => d.kategorija === 'osobni'))

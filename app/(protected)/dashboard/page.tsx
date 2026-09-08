@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 type DeadlineItem = {
@@ -61,35 +60,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function fetchData() {
-      const today = new Date()
-      const in60 = new Date()
-      in60.setDate(today.getDate() + 60)
-      const todayStr = today.toISOString().split('T')[0]
-      const in60Str = in60.toISOString().split('T')[0]
-
-      const [
-        { data: docs },
-        { data: expiredDocs },
-        { data: workers },
-        { data: upcomingOb },
-      ] = await Promise.all([
-        supabase.from('documents')
-          .select('id, employee_id, naziv, datum_isteka, employees(ime, prezime)')
-          .lte('datum_isteka', in60Str)
-          .gte('datum_isteka', todayStr)
-          .order('datum_isteka'),
-        supabase.from('documents')
-          .select('id, employee_id, naziv, datum_isteka, employees(ime, prezime)')
-          .lt('datum_isteka', todayStr)
-          .order('datum_isteka'),
-        supabase.from('employees')
-          .select('id, status_zaposlenika'),
-        supabase.from('obaveze')
-          .select('id, naziv, rok, employee_id, employees(ime, prezime)')
-          .gte('rok', todayStr)
-          .order('rok')
-          .limit(5),
-      ])
+      const res = await fetch('/api/dashboard')
+      if (!res.ok) { setLoading(false); return }
+      const { docs, expiredDocs, workers, upcomingOb } = await res.json()
 
       const toItem = (d: any): DeadlineItem => {
         const emp = d.employees

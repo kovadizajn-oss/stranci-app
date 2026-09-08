@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 const STATUS_ZAP_CONFIG: Record<string, { color: string; bg: string }> = {
@@ -64,13 +63,9 @@ export default function CompanyDetail() {
   useEffect(() => { load() }, [id])
 
   async function load() {
-    const [{ data: co }, { data: emps }] = await Promise.all([
-      supabase.from('companies').select('*').eq('id', id).single(),
-      supabase.from('employees')
-        .select('id, ime, prezime, status_zaposlenika, documents(datum_isteka)')
-        .eq('company_id', id)
-        .order('prezime'),
-    ])
+    const res = await fetch(`/api/companies/${id}`)
+    if (!res.ok) { router.push('/tvrtke'); return }
+    const { company: co, workers: emps } = await res.json()
     if (!co) { router.push('/tvrtke'); return }
     setCompany(co)
     setWorkers(emps || [])
@@ -86,12 +81,16 @@ export default function CompanyDetail() {
   async function handleEditSave() {
     if (!editForm.naziv.trim()) return
     setEditSaving(true)
-    await supabase.from('companies').update({
-      naziv: editForm.naziv.trim(),
-      kontakt_ime: editForm.kontakt_ime.trim() || null,
-      kontakt_telefon: editForm.kontakt_telefon.trim() || null,
-      kontakt_email: editForm.kontakt_email.trim() || null,
-    }).eq('id', id)
+    await fetch(`/api/companies/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        naziv: editForm.naziv.trim(),
+        kontakt_ime: editForm.kontakt_ime.trim() || null,
+        kontakt_telefon: editForm.kontakt_telefon.trim() || null,
+        kontakt_email: editForm.kontakt_email.trim() || null,
+      }),
+    })
     setCompany((prev: any) => ({ ...prev, ...editForm }))
     setEditing(false)
     setEditSaving(false)
@@ -100,7 +99,7 @@ export default function CompanyDetail() {
   async function handleDelete() {
     if (!confirm('Jeste li sigurni? Ovo će odmah obrisati tvrtku (radnici ostaju).')) return
     setDeleting(true)
-    await supabase.from('companies').delete().eq('id', id)
+    await fetch(`/api/companies/${id}`, { method: 'DELETE' })
     router.push('/tvrtke')
   }
 

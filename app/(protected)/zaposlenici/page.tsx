@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 const STATUS_ZAP_CONFIG: Record<string, { color: string; bg: string }> = {
@@ -102,68 +101,9 @@ export default function ZaposleniciPage() {
 
   useEffect(() => {
     async function fetchEmployees() {
-      const today = new Date()
-      const todayStr = today.toISOString().split('T')[0]
-      const sixMonthsAgo = new Date(today)
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
-      const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0]
-
-      const { data: emps } = await supabase
-        .from('employees')
-        .select('id, ime, prezime, photo_url, drzava_rodjenja, poslodavac, status_zaposlenika')
-        .order('prezime')
-
-      if (!emps) { setLoading(false); return }
-
-      // Fetch active vacations and sick leaves in bulk
-      const { data: vacations } = await supabase
-        .from('vacations')
-        .select('employee_id')
-        .lte('datum_od', todayStr)
-        .gte('datum_do', todayStr)
-
-      const { data: sickLeaves } = await supabase
-        .from('sick_leaves')
-        .select('employee_id')
-        .lte('datum_od', todayStr)
-        .gte('datum_do', todayStr)
-
-      // Sick leaves in last 6 months
-      const { data: recentSick } = await supabase
-        .from('sick_leaves')
-        .select('employee_id')
-        .gte('datum_do', sixMonthsAgoStr)
-
-      const vacationIds = new Set((vacations || []).map((v: any) => v.employee_id))
-      const sickIds = new Set((sickLeaves || []).map((s: any) => s.employee_id))
-      const recentSickIds = new Set((recentSick || []).map((s: any) => s.employee_id))
-
-      const rows: EmployeeRow[] = await Promise.all(
-        emps.map(async (emp: any) => {
-          const { data: docs } = await supabase
-            .from('documents')
-            .select('tip_dokumenta, datum_isteka')
-            .eq('employee_id', emp.id)
-            .order('datum_isteka', { ascending: true })
-            .limit(1)
-
-          const doc = docs?.[0]
-          return {
-            id: emp.id,
-            ime: emp.ime,
-            prezime: emp.prezime,
-            photo_url: emp.photo_url,
-            drzava_rodjenja: emp.drzava_rodjenja,
-            poslodavac: emp.poslodavac,
-            status_zaposlenika: emp.status_zaposlenika || null,
-            doc_tip: doc?.tip_dokumenta || null,
-            doc_isteka: doc?.datum_isteka || null,
-            on_vacation: vacationIds.has(emp.id),
-            on_sick_leave: sickIds.has(emp.id),
-            no_sick_6mo: !recentSickIds.has(emp.id),
-          }
-        })
-      )
+      const res = await fetch('/api/employees')
+      if (!res.ok) { setLoading(false); return }
+      const rows: EmployeeRow[] = await res.json()
 
       rows.sort((a, b) => {
         if (!a.doc_isteka) return 1
@@ -205,7 +145,7 @@ export default function ZaposleniciPage() {
 
   async function deleteEmployee(id: string) {
     if (!confirm('Jeste li sigurni da želite obrisati ovog zaposlenika?')) return
-    await supabase.from('employees').delete().eq('id', id)
+    await fetch(`/api/employees/${id}`, { method: 'DELETE' })
     setEmployees(prev => prev.filter(e => e.id !== id))
   }
 

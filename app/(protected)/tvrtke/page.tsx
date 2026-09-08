@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 type Company = {
@@ -25,14 +24,17 @@ export default function TvrtkePage() {
   useEffect(() => { load() }, [])
 
   async function load() {
-    const { data } = await supabase
-      .from('companies')
-      .select('id, naziv, kontakt_ime, kontakt_telefon, kontakt_email, created_at, employees(id)')
-      .order('naziv')
-
+    const res = await fetch('/api/companies')
+    if (!res.ok) { setLoading(false); return }
+    const data = await res.json()
     setCompanies((data || []).map((c: any) => ({
-      ...c,
-      worker_count: c.employees?.length || 0,
+      id: c.id,
+      naziv: c.naziv,
+      kontakt_ime: c.kontakt_ime,
+      kontakt_telefon: c.kontakt_telefon,
+      kontakt_email: c.kontakt_email,
+      created_at: c.created_at,
+      worker_count: Array.isArray(c.employees) ? c.employees[0]?.count ?? c.employees.length : 0,
     })))
     setLoading(false)
   }
@@ -42,15 +44,29 @@ export default function TvrtkePage() {
     if (!form.naziv.trim()) return
     setSaving(true)
 
-    const { data } = await supabase.from('companies').insert({
-      naziv: form.naziv.trim(),
-      kontakt_ime: form.kontakt_ime.trim() || null,
-      kontakt_telefon: form.kontakt_telefon.trim() || null,
-      kontakt_email: form.kontakt_email.trim() || null,
-    }).select('id, naziv, kontakt_ime, kontakt_telefon, kontakt_email, created_at').single()
+    const res = await fetch('/api/companies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        naziv: form.naziv.trim(),
+        kontakt_ime: form.kontakt_ime.trim() || null,
+        kontakt_telefon: form.kontakt_telefon.trim() || null,
+        kontakt_email: form.kontakt_email.trim() || null,
+      }),
+    })
 
-    if (data) {
-      setCompanies(prev => [...prev, { ...data, worker_count: 0 }].sort((a, b) => a.naziv.localeCompare(b.naziv)))
+    if (res.ok) {
+      const data = await res.json()
+      const newCo: Company = {
+        id: data.id,
+        naziv: form.naziv.trim(),
+        kontakt_ime: form.kontakt_ime.trim() || null,
+        kontakt_telefon: form.kontakt_telefon.trim() || null,
+        kontakt_email: form.kontakt_email.trim() || null,
+        created_at: new Date().toISOString(),
+        worker_count: 0,
+      }
+      setCompanies(prev => [...prev, newCo].sort((a, b) => a.naziv.localeCompare(b.naziv)))
     }
 
     setForm({ naziv: '', kontakt_ime: '', kontakt_telefon: '', kontakt_email: '' })

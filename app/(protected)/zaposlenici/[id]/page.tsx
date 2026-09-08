@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import StatusPicker from '@/components/StatusPicker'
 
@@ -210,28 +209,22 @@ export default function EmployeeDetail() {
   function setE(key: string, value: string) { setExtra(prev => ({ ...prev, [key]: value })) }
 
   useEffect(() => {
-    supabase.from('companies').select('id, naziv').order('naziv').then(({ data }) => setCompanies(data || []))
+    fetch('/api/companies').then(r => r.json()).then(data => setCompanies((data || []).map((c: any) => ({ id: c.id, naziv: c.naziv }))))
   }, [])
 
   useEffect(() => {
     async function load() {
-      const { data: emp } = await supabase.from('employees').select('*').eq('id', id).single()
-      if (!emp) { router.push('/zaposlenici'); return }
+      const res = await fetch(`/api/employees/${id}`)
+      if (!res.ok) { router.push('/zaposlenici'); return }
+      const { employee: emp, documents: docs, vacations: vacs, sick_leaves: sick } = await res.json()
 
       setForm({ ime: emp.ime || '', prezime: emp.prezime || '', drzava_rodjenja: emp.drzava_rodjenja || '', datum_rodjenja: emp.datum_rodjenja || '', oib: emp.oib || '', status_zaposlenika: emp.status_zaposlenika || 'Aktivan', poslodavac: emp.poslodavac || '', radno_mjesto: emp.radno_mjesto || '' })
       setExtra({ email: emp.email || '', telefon: emp.telefon || '', adresa_smjestaja: emp.adresa_smjestaja || '', ime_oca: emp.ime_oca || '', iban: emp.iban || '' })
       setCompanyId(emp.company_id || '')
       setPoslodavacManual(emp.company_id ? '' : (emp.poslodavac || ''))
 
-      const [{ data: docs }, { data: vacs }, { data: sick }] = await Promise.all([
-        supabase.from('documents').select('*').eq('employee_id', id),
-        supabase.from('vacations').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
-        supabase.from('sick_leaves').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
-      ])
-
-      const allDocs = docs || []
-      setOsobniDocs(allDocs.filter((d: any) => d.kategorija === 'osobni').map(docFromDB))
-      setPrateciDocs(allDocs.filter((d: any) => d.kategorija !== 'osobni').map(docFromDB))
+      setOsobniDocs((docs || []).filter((d: any) => d.kategorija === 'osobni').map(docFromDB))
+      setPrateciDocs((docs || []).filter((d: any) => d.kategorija !== 'osobni').map(docFromDB))
       setVacations(vacs || [])
       setSickLeaves(sick || [])
       setLoading(false)
@@ -246,27 +239,31 @@ export default function EmployeeDetail() {
     setSuccess(false)
 
     try {
-      await supabase.from('employees').update({
-        ime: form.ime, prezime: form.prezime,
-        drzava_rodjenja: form.drzava_rodjenja || null,
-        datum_rodjenja: form.datum_rodjenja || null,
-        oib: form.oib || null,
-        status_zaposlenika: form.status_zaposlenika,
-        email: extra.email || null,
-        telefon: extra.telefon || null,
-        adresa_smjestaja: extra.adresa_smjestaja || null,
-        ime_oca: extra.ime_oca || null,
-        iban: extra.iban || null,
-        company_id: companyId || null,
-        poslodavac: companyId
-          ? (companies.find(c => c.id === companyId)?.naziv || null)
-          : (poslodavacManual || null),
-        radno_mjesto: form.radno_mjesto || null,
-      }).eq('id', id)
+      await fetch(`/api/employees/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ime: form.ime, prezime: form.prezime,
+          drzava_rodjenja: form.drzava_rodjenja || null,
+          datum_rodjenja: form.datum_rodjenja || null,
+          oib: form.oib || null,
+          status_zaposlenika: form.status_zaposlenika,
+          email: extra.email || null,
+          telefon: extra.telefon || null,
+          adresa_smjestaja: extra.adresa_smjestaja || null,
+          ime_oca: extra.ime_oca || null,
+          iban: extra.iban || null,
+          company_id: companyId || null,
+          poslodavac: companyId
+            ? (companies.find(c => c.id === companyId)?.naziv || null)
+            : (poslodavacManual || null),
+          radno_mjesto: form.radno_mjesto || null,
+        }),
+      })
 
       // Delete removed docs
       for (const docId of deletedDocIds) {
-        await supabase.from('documents').delete().eq('id', docId)
+        await fetch(`/api/documents/${docId}`, { method: 'DELETE' })
       }
 
       // Save all docs
@@ -275,11 +272,13 @@ export default function EmployeeDetail() {
 
         let fileUrl = doc.file_url || null
         if (doc._newFile) {
-          const { data: uploaded } = await supabase.storage.from('dokumenti')
-            .upload(`${id}/doc_${Date.now()}_${doc._newFile.name}`, doc._newFile, { upsert: true })
-          if (uploaded) {
-            const { data: urlData } = supabase.storage.from('dokumenti').getPublicUrl(uploaded.path)
-            fileUrl = urlData.publicUrl
+          const fd = new FormData()
+          fd.append('file', doc._newFile)
+          fd.append('path', `${id}/doc_${Date.now()}_${doc._newFile.name}`)
+          const upRes = await fetch('/api/upload', { method: 'POST', body: fd })
+          if (upRes.ok) {
+            const { url } = await upRes.json()
+            fileUrl = url
           }
         }
 
@@ -293,38 +292,64 @@ export default function EmployeeDetail() {
         }
 
         if (doc.id) {
-          await supabase.from('documents').update(payload).eq('id', doc.id)
+          await fetch(`/api/documents/${doc.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
         } else {
-          await supabase.from('documents').insert(payload)
+          await fetch('/api/documents', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
         }
       }
 
       // Reload docs to get fresh ids
-      const { data: freshDocs } = await supabase.from('documents').select('*').eq('employee_id', id)
-      const allFresh = freshDocs || []
-      setOsobniDocs(allFresh.filter((d: any) => d.kategorija === 'osobni').map(docFromDB))
-      setPrateciDocs(allFresh.filter((d: any) => d.kategorija !== 'osobni').map(docFromDB))
+      const empRes = await fetch(`/api/employees/${id}`)
+      if (empRes.ok) {
+        const { documents: freshDocs } = await empRes.json()
+        setOsobniDocs((freshDocs || []).filter((d: any) => d.kategorija === 'osobni').map(docFromDB))
+        setPrateciDocs((freshDocs || []).filter((d: any) => d.kategorija !== 'osobni').map(docFromDB))
+      }
       setDeletedDocIds([])
 
       // Vacations
-      for (const vacId of deletedVacationIds) await supabase.from('vacations').delete().eq('id', vacId)
+      for (const vacId of deletedVacationIds) await fetch(`/api/vacations/${vacId}`, { method: 'DELETE' })
       for (const vac of vacations) {
         if (!vac.datum_od || !vac.datum_do) continue
         if (vac._new || !vac.id) {
-          await supabase.from('vacations').insert({ employee_id: id, datum_od: vac.datum_od, datum_do: vac.datum_do, napomena: vac.napomena || null })
+          await fetch('/api/vacations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ employee_id: id, datum_od: vac.datum_od, datum_do: vac.datum_do, napomena: vac.napomena || null }),
+          })
         } else {
-          await supabase.from('vacations').update({ datum_od: vac.datum_od, datum_do: vac.datum_do, napomena: vac.napomena || null }).eq('id', vac.id)
+          await fetch(`/api/vacations/${vac.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ datum_od: vac.datum_od, datum_do: vac.datum_do, napomena: vac.napomena || null }),
+          })
         }
       }
 
       // Sick leaves
-      for (const sickId of deletedSickIds) await supabase.from('sick_leaves').delete().eq('id', sickId)
+      for (const sickId of deletedSickIds) await fetch(`/api/sick-leaves/${sickId}`, { method: 'DELETE' })
       for (const sick of sickLeaves) {
         if (!sick.datum_od || !sick.datum_do) continue
         if (sick._new || !sick.id) {
-          await supabase.from('sick_leaves').insert({ employee_id: id, datum_od: sick.datum_od, datum_do: sick.datum_do, napomena: sick.napomena || null })
+          await fetch('/api/sick-leaves', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ employee_id: id, datum_od: sick.datum_od, datum_do: sick.datum_do, napomena: sick.napomena || null }),
+          })
         } else {
-          await supabase.from('sick_leaves').update({ datum_od: sick.datum_od, datum_do: sick.datum_do, napomena: sick.napomena || null }).eq('id', sick.id)
+          await fetch(`/api/sick-leaves/${sick.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ datum_od: sick.datum_od, datum_do: sick.datum_do, napomena: sick.napomena || null }),
+          })
         }
       }
 

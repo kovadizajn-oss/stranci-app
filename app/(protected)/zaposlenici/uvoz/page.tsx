@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 const COUNTRIES = [
@@ -86,9 +85,7 @@ export default function UvozZaposlenika() {
   const [companyId, setCompanyId] = useState('')
 
   useEffect(() => {
-    supabase.from('companies').select('id, naziv').order('naziv').then(({ data }) => {
-      setCompanies(data || [])
-    })
+    fetch('/api/companies').then(r => r.json()).then(data => setCompanies((data || []).map((c: any) => ({ id: c.id, naziv: c.naziv }))))
   }, [])
 
   const addFiles = useCallback((newFiles: File[]) => {
@@ -170,30 +167,35 @@ export default function UvozZaposlenika() {
     if (!ime || !prezime) return
     setSaving(true)
 
-    const { data: emp, error: empErr } = await supabase.from('employees').insert({
-      ime, prezime,
-      datum_rodjenja: datumRodjenja || null,
-      drzava_rodjenja: drzavaRodjenja || null,
-      oib: oib || null,
-      ime_oca: imeOca || null,
-      poslodavac: companies.find(c => c.id === companyId)?.naziv || null,
-      radno_mjesto: radnoMjesto || null,
-      company_id: companyId || null,
-      status_zaposlenika: 'Novi uvoz',
-    }).select().single()
-
-    if (empErr || !emp) { setSaving(false); setError('Greška pri spremanju'); return }
+    const empRes = await fetch('/api/employees', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ime, prezime,
+        datum_rodjenja: datumRodjenja || null,
+        drzava_rodjenja: drzavaRodjenja || null,
+        oib: oib || null,
+        ime_oca: imeOca || null,
+        poslodavac: companies.find(c => c.id === companyId)?.naziv || null,
+        radno_mjesto: radnoMjesto || null,
+        company_id: companyId || null,
+        status_zaposlenika: 'Novi uvoz',
+      }),
+    })
+    if (!empRes.ok) { setSaving(false); setError('Greška pri spremanju'); return }
+    const { id: empId } = await empRes.json()
 
     // Upload scanned files to storage — file[i] maps to dokumenti[i] where possible
     const uploadedUrls: (string | null)[] = []
     for (let i = 0; i < files.length; i++) {
       try {
-        const { data: uploaded } = await supabase.storage
-          .from('dokumenti')
-          .upload(`${emp.id}/doc_${Date.now()}_${files[i].name}`, files[i], { upsert: true })
-        if (uploaded) {
-          const { data: urlData } = supabase.storage.from('dokumenti').getPublicUrl(uploaded.path)
-          uploadedUrls.push(urlData.publicUrl)
+        const fd = new FormData()
+        fd.append('file', files[i])
+        fd.append('path', `${empId}/doc_${Date.now()}_${files[i].name}`)
+        const upRes = await fetch('/api/upload', { method: 'POST', body: fd })
+        if (upRes.ok) {
+          const { url } = await upRes.json()
+          uploadedUrls.push(url)
         } else {
           uploadedUrls.push(null)
         }
@@ -208,17 +210,21 @@ export default function UvozZaposlenika() {
       const doc = detectedDocs[i]
       // If more docs than files (e.g. both docs from one scan), reuse last file
       const fileUrl = uploadedUrls[i] ?? uploadedUrls[uploadedUrls.length - 1] ?? null
-      await supabase.from('documents').insert({
-        employee_id: emp.id,
-        naziv: doc.dokument_naziv,
-        kategorija: doc.kategorija,
-        datum_izdavanja: doc.datum_izdavanja || null,
-        datum_isteka: doc.dokument_vrijedi_do || null,
-        file_url: fileUrl,
+      await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employee_id: empId,
+          naziv: doc.dokument_naziv,
+          kategorija: doc.kategorija,
+          datum_izdavanja: doc.datum_izdavanja || null,
+          datum_isteka: doc.dokument_vrijedi_do || null,
+          file_url: fileUrl,
+        }),
       })
     }
 
-    router.push(`/zaposlenici/${emp.id}`)
+    router.push(`/zaposlenici/${empId}`)
   }
 
   return (

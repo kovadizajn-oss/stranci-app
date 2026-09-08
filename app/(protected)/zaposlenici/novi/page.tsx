@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import StatusPicker from '@/components/StatusPicker'
 
@@ -137,7 +136,7 @@ function NoviZaposlenik() {
   const [companyId, setCompanyId] = useState<string>(searchParams.get('company_id') || '')
 
   useEffect(() => {
-    supabase.from('companies').select('id, naziv').order('naziv').then(({ data }) => setCompanies(data || []))
+    fetch('/api/companies').then(r => r.json()).then(data => setCompanies((data || []).map((c: any) => ({ id: c.id, naziv: c.naziv }))))
   }, [])
 
   const [form, setForm] = useState({
@@ -161,10 +160,13 @@ function NoviZaposlenik() {
   function setE(key: string, value: string) { setExtra(prev => ({ ...prev, [key]: value })) }
 
   async function uploadFile(file: File, path: string): Promise<string | null> {
-    const { data, error } = await supabase.storage.from('dokumenti').upload(path, file, { upsert: true })
-    if (error) return null
-    const { data: urlData } = supabase.storage.from('dokumenti').getPublicUrl(data.path)
-    return urlData.publicUrl
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('path', path)
+    const res = await fetch('/api/upload', { method: 'POST', body: fd })
+    if (!res.ok) return null
+    const { url } = await res.json()
+    return url
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -174,9 +176,10 @@ function NoviZaposlenik() {
     setError('')
 
     try {
-      const { data: emp, error: empErr } = await supabase
-        .from('employees')
-        .insert({
+      const empRes = await fetch('/api/employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           ime: form.ime, prezime: form.prezime,
           drzava_rodjenja: form.drzava_rodjenja || null,
           datum_rodjenja: form.datum_rodjenja || null,
@@ -190,22 +193,26 @@ function NoviZaposlenik() {
           company_id: companyId || null,
           poslodavac: companies.find(c => c.id === companyId)?.naziv || null,
           radno_mjesto: radnoMjesto || null,
-        })
-        .select('id').single()
-      if (empErr) throw empErr
-      const empId = emp.id
+        }),
+      })
+      if (!empRes.ok) throw new Error((await empRes.json()).error || 'Greška')
+      const { id: empId } = await empRes.json()
 
       for (const doc of [...osobniDocs, ...prateciDocs]) {
         if (!doc.naziv && !doc.file && !doc.datum_isteka && !doc.datum_izdavanja) continue
         let fileUrl = null
         if (doc.file) fileUrl = await uploadFile(doc.file, `${empId}/doc_${Date.now()}_${doc.file.name}`)
-        await supabase.from('documents').insert({
-          employee_id: empId,
-          naziv: doc.naziv || null,
-          kategorija: doc.kategorija,
-          datum_izdavanja: doc.datum_izdavanja || null,
-          datum_isteka: doc.datum_isteka || null,
-          file_url: fileUrl,
+        await fetch('/api/documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            employee_id: empId,
+            naziv: doc.naziv || null,
+            kategorija: doc.kategorija,
+            datum_izdavanja: doc.datum_izdavanja || null,
+            datum_isteka: doc.datum_isteka || null,
+            file_url: fileUrl,
+          }),
         })
       }
 

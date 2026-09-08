@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 type Obaveza = {
@@ -54,13 +53,9 @@ export default function ObavezePage() {
 
   useEffect(() => {
     async function load() {
-      const [{ data: obs }, { data: emps }] = await Promise.all([
-        supabase.from('obaveze')
-          .select('id, naziv, employee_id, rok, zavrseno, created_at, employees(ime, prezime)')
-          .order('zavrseno', { ascending: true })
-          .order('rok', { ascending: true, nullsFirst: false }),
-        supabase.from('employees').select('id, ime, prezime').order('prezime'),
-      ])
+      const res = await fetch('/api/obaveze')
+      if (!res.ok) { setLoading(false); return }
+      const { obaveze: obs, employees: emps } = await res.json()
 
       setObaveze((obs || []).map((o: any) => ({
         id: o.id,
@@ -82,14 +77,14 @@ export default function ObavezePage() {
     if (!form.naziv.trim()) return
     setSaving(true)
 
-    const { data } = await supabase.from('obaveze').insert({
-      naziv: form.naziv.trim(),
-      employee_id: form.employee_id || null,
-      rok: form.rok || null,
-      zavrseno: false,
-    }).select('id, naziv, employee_id, rok, zavrseno, created_at, employees(ime, prezime)').single()
+    const res = await fetch('/api/obaveze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ naziv: form.naziv.trim(), employee_id: form.employee_id || null, rok: form.rok || null }),
+    })
 
-    if (data) {
+    if (res.ok) {
+      const data = await res.json()
       const newOb: Obaveza = {
         id: data.id,
         naziv: data.naziv,
@@ -126,11 +121,11 @@ export default function ObavezePage() {
     setEditSaving(true)
 
     const emp = employees.find(e => e.id === editForm.employee_id)
-    await supabase.from('obaveze').update({
-      naziv: editForm.naziv.trim(),
-      employee_id: editForm.employee_id || null,
-      rok: editForm.rok || null,
-    }).eq('id', id)
+    await fetch(`/api/obaveze/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ naziv: editForm.naziv.trim(), employee_id: editForm.employee_id || null, rok: editForm.rok || null }),
+    })
 
     setObaveze(prev => prev.map(o => o.id === id ? {
       ...o,
@@ -147,20 +142,20 @@ export default function ObavezePage() {
   async function toggleDone(id: string, current: boolean) {
     if (!current && filter === 'otvoreno') {
       setCompleting(id)
-      await supabase.from('obaveze').update({ zavrseno: true }).eq('id', id)
+      await fetch(`/api/obaveze/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ zavrseno: true }) })
       setTimeout(() => {
         setObaveze(prev => prev.map(o => o.id === id ? { ...o, zavrseno: true } : o))
         setCompleting(null)
       }, 400)
     } else {
-      await supabase.from('obaveze').update({ zavrseno: !current }).eq('id', id)
+      await fetch(`/api/obaveze/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ zavrseno: !current }) })
       setObaveze(prev => prev.map(o => o.id === id ? { ...o, zavrseno: !current } : o))
     }
   }
 
   async function deleteObaveza(id: string) {
     setDeleting(id)
-    await supabase.from('obaveze').delete().eq('id', id)
+    await fetch(`/api/obaveze/${id}`, { method: 'DELETE' })
     setObaveze(prev => prev.filter(o => o.id !== id))
     setEditingId(null)
     setDeleting(null)
