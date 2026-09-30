@@ -66,11 +66,12 @@ Return ONLY the JSON object, no explanation, no markdown, no code blocks.`,
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}))
+      console.error('[extract-document] Gemini error:', response.status, JSON.stringify(errData))
       const status = errData?.error?.code
       if (status === 503 || status === 429) {
         return NextResponse.json({ error: 'AI servis je trenutno zauzet. Pokušajte ponovo za nekoliko sekundi.' }, { status: 503 })
       }
-      return NextResponse.json({ error: 'Greška pri analizi dokumenta. Pokušajte ponovo.' }, { status: 500 })
+      return NextResponse.json({ error: `Greška: HTTP ${response.status} – ${errData?.error?.message || 'Pokušajte ponovo.'}` }, { status: 500 })
     }
 
     const result = await response.json()
