@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import StatusPicker from '@/components/StatusPicker'
@@ -204,6 +204,62 @@ export default function EmployeeDetail() {
   const [sickLeaves, setSickLeaves] = useState<any[]>([])
   const [deletedVacationIds, setDeletedVacationIds] = useState<string[]>([])
   const [deletedSickIds, setDeletedSickIds] = useState<string[]>([])
+
+  const [aiScanning, setAiScanning] = useState(false)
+  const [aiError, setAiError] = useState('')
+  const aiFileRef = useRef<HTMLInputElement>(null)
+
+  async function handleAiScan(e: React.ChangeEvent<HTMLInputElement>) {
+    const selectedFiles = Array.from(e.target.files || [])
+    if (!selectedFiles.length) return
+    e.target.value = ''
+
+    const totalSize = selectedFiles.reduce((s, f) => s + f.size, 0)
+    if (totalSize > 3.5 * 1024 * 1024) {
+      setAiError(`Datoteke su prevelike (${(totalSize / 1024 / 1024).toFixed(1)} MB). Maksimalno 3.5 MB ukupno.`)
+      return
+    }
+
+    setAiScanning(true)
+    setAiError('')
+    try {
+      const fd = new FormData()
+      selectedFiles.forEach(f => fd.append('files', f))
+      const res = await fetch('/api/extract-document', { method: 'POST', body: fd })
+      const text = await res.text()
+      let json: any
+      try { json = JSON.parse(text) } catch { throw new Error(`Greška servera: ${text.slice(0, 120)}`) }
+      if (!res.ok || json.error) throw new Error(json.error || 'Greška')
+
+      const d = json.data
+      // Fill empty personal fields only
+      if (d.ime)             setForm(p => ({ ...p, ime:            p.ime            || d.ime }))
+      if (d.prezime)         setForm(p => ({ ...p, prezime:        p.prezime        || d.prezime }))
+      if (d.datum_rodjenja)  setForm(p => ({ ...p, datum_rodjenja: p.datum_rodjenja || d.datum_rodjenja }))
+      if (d.drzava_rodjenja) setForm(p => ({ ...p, drzava_rodjenja: p.drzava_rodjenja || d.drzava_rodjenja }))
+      if (d.oib)             setForm(p => ({ ...p, oib:            p.oib            || d.oib }))
+      if (d.radno_mjesto)    setForm(p => ({ ...p, radno_mjesto:   p.radno_mjesto   || d.radno_mjesto }))
+      if (d.ime_oca)         setExtra(p => ({ ...p, ime_oca:       p.ime_oca        || d.ime_oca }))
+
+      // Add detected documents to the right list
+      const docs: DocState[] = (d.dokumenti || []).map((doc: any) => ({
+        naziv: doc.dokument_naziv || '',
+        kategorija: doc.kategorija === 'osobni' ? 'osobni' : 'prateci',
+        datum_izdavanja: doc.datum_izdavanja || '',
+        datum_isteka: doc.dokument_vrijedi_do || '',
+        file_url: '',
+        _isCustom: false,
+      }))
+      const osobni = docs.filter(d => d.kategorija === 'osobni')
+      const prateci = docs.filter(d => d.kategorija === 'prateci')
+      if (osobni.length)  setOsobniDocs(p => [...p, ...osobni])
+      if (prateci.length) setPrateciDocs(p => [...p, ...prateci])
+    } catch (e: any) {
+      setAiError(e.message)
+    } finally {
+      setAiScanning(false)
+    }
+  }
 
   function setF(key: string, value: string) { setForm(prev => ({ ...prev, [key]: value })) }
   function setE(key: string, value: string) { setExtra(prev => ({ ...prev, [key]: value })) }
@@ -418,6 +474,22 @@ export default function EmployeeDetail() {
             </div>
           </div>
         </Section>
+
+        {/* AI Scan */}
+        <div className="bg-white rounded-2xl p-5 mb-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #E2E8F0' }}>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <p className="font-semibold text-sm" style={{ color: '#1E293B' }}>🤖 AI skeniranje dokumenta</p>
+              <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>Skeniraj putovnicu, DBR ili drugi dokument — AI će popuniti prazna polja i dodati dokument u listu.</p>
+            </div>
+            <label className={`cursor-pointer text-sm font-medium px-4 py-2 rounded-xl flex items-center gap-2 flex-shrink-0 ${aiScanning ? 'opacity-50 pointer-events-none' : ''}`}
+              style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE' }}>
+              {aiScanning ? '⏳ Skeniranje...' : '📄 Odaberi dokument(e)'}
+              <input ref={aiFileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" multiple className="hidden" onChange={handleAiScan} />
+            </label>
+          </div>
+          {aiError && <p className="text-xs mt-3 px-3 py-2 rounded-lg" style={{ background: '#FEF2F2', color: '#DC2626' }}>{aiError}</p>}
+        </div>
 
         {/* Osobni dokumenti */}
         <Section icon="🪪" title="Osobni dokumenti" desc="Identifikacijski i osobni dokumenti radnika.">
