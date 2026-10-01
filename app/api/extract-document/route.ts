@@ -55,22 +55,27 @@ The "dokumenti" array must contain one entry per distinct document found across 
 Return ONLY the JSON object, no explanation, no markdown, no code blocks.`,
     })
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts }] }),
-      }
-    )
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}))
-      console.error('[extract-document] Gemini error:', response.status, JSON.stringify(errData))
-      return NextResponse.json({ error: `Greška: HTTP ${response.status} – ${errData?.error?.message || JSON.stringify(errData)}` }, { status: 500 })
+    let response: Response | null = null
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts }] }),
+        }
+      )
+      if (response.ok || response.status !== 503) break
+      if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 2000))
     }
 
-    const result = await response.json()
+    if (!response!.ok) {
+      const errData = await response!.json().catch(() => ({}))
+      console.error('[extract-document] Gemini error:', response!.status, JSON.stringify(errData))
+      return NextResponse.json({ error: `Greška: HTTP ${response!.status} – ${errData?.error?.message || JSON.stringify(errData)}` }, { status: 500 })
+    }
+
+    const result = await response!.json()
     const text = result.candidates?.[0]?.content?.parts?.[0]?.text || ''
 
     // Strip markdown code blocks if present
