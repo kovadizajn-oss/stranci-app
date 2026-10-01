@@ -79,7 +79,9 @@ export default function BulkUvoz() {
 
       try {
         const res = await fetch('/api/extract-document-bulk', { method: 'POST', body: fd })
-        const json = await res.json()
+        const text = await res.text()
+        let json: any
+        try { json = JSON.parse(text) } catch { throw new Error(`Greška servera: ${text.slice(0, 120)}`) }
         clearInterval(interval)
         if (!res.ok || json.error) throw new Error(json.error || 'Greška')
 

@@ -126,12 +126,23 @@ export default function UvozZaposlenika() {
       })
     }, 200)
 
+    const totalSize = files.reduce((sum, f) => sum + f.size, 0)
+    if (totalSize > 3.5 * 1024 * 1024) {
+      clearInterval(interval)
+      setProgress(0)
+      setLoading(false)
+      setError(`Datoteke su prevelike (${(totalSize / 1024 / 1024).toFixed(1)} MB). Maksimalno 3.5 MB ukupno — koristite manje dokumente ili skenirajte po 2-3 odjednom.`)
+      return
+    }
+
     const fd = new FormData()
     files.forEach(f => fd.append('files', f))
 
     try {
       const res = await fetch('/api/extract-document', { method: 'POST', body: fd })
-      const json = await res.json()
+      const text = await res.text()
+      let json: any
+      try { json = JSON.parse(text) } catch { throw new Error(`Greška servera: ${text.slice(0, 120)}`) }
       clearInterval(interval)
       if (!res.ok || json.error) throw new Error(json.error || 'Greška')
 
