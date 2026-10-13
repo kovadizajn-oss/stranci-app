@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 
 const STATUS_ZAP_CONFIG: Record<string, { color: string; bg: string }> = {
@@ -93,41 +93,7 @@ export default function ZaposleniciPage() {
   const [filterTvrtka, setFilterTvrtka] = useState('')
   const [filterDrzava, setFilterDrzava] = useState('')
   const [filterPrisutnost, setFilterPrisutnost] = useState('')
-  const [openFilter, setOpenFilter] = useState<'zap' | 'doc' | null>(null)
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 })
-  const zapBtnRef = useRef<HTMLButtonElement>(null)
-  const docBtnRef = useRef<HTMLButtonElement>(null)
-  const zapDropRef = useRef<HTMLDivElement>(null)
-  const docDropRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      const target = e.target as Node
-      const inZapBtn = zapBtnRef.current?.contains(target)
-      const inDocBtn = docBtnRef.current?.contains(target)
-      const inZapDrop = zapDropRef.current?.contains(target)
-      const inDocDrop = docDropRef.current?.contains(target)
-      if (!inZapBtn && !inDocBtn && !inZapDrop && !inDocDrop) {
-        setOpenFilter(null)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
-
-  function openZap() {
-    if (openFilter === 'zap') { setOpenFilter(null); return }
-    const rect = zapBtnRef.current?.getBoundingClientRect()
-    if (rect) setDropdownPos({ top: rect.bottom + 4, left: rect.left })
-    setOpenFilter('zap')
-  }
-
-  function openDoc() {
-    if (openFilter === 'doc') { setOpenFilter(null); return }
-    const rect = docBtnRef.current?.getBoundingClientRect()
-    if (rect) setDropdownPos({ top: rect.bottom + 4, left: rect.left })
-    setOpenFilter('doc')
-  }
 
   useEffect(() => {
     async function fetchEmployees() {
@@ -244,25 +210,9 @@ export default function ZaposleniciPage() {
           <thead>
             <tr style={{ borderBottom: '1px solid #F1F5F9', background: '#F8FAFC' }}>
               <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Zaposlenik</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold">
-                <button ref={zapBtnRef} onClick={openZap}
-                  className="flex items-center gap-1 whitespace-nowrap"
-                  style={{ color: filterZap ? '#2563EB' : '#64748B', fontWeight: 600 }}>
-                  Status zaposlenika
-                  {filterZap && <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#2563EB' }} />}
-                  <span style={{ fontSize: 9 }}>▾</span>
-                </button>
-              </th>
+              <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Status zaposlenika</th>
               <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Nadolazeći istek</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold">
-                <button ref={docBtnRef} onClick={openDoc}
-                  className="flex items-center gap-1 whitespace-nowrap"
-                  style={{ color: filterDoc ? '#2563EB' : '#64748B', fontWeight: 600 }}>
-                  Status dokumenata
-                  {filterDoc && <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#2563EB' }} />}
-                  <span style={{ fontSize: 9 }}>▾</span>
-                </button>
-              </th>
+              <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Status dokumenata</th>
               <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Akcije</th>
             </tr>
           </thead>
@@ -341,37 +291,7 @@ export default function ZaposleniciPage() {
       </div>
       </div>
 
-      {/* Fixed-position dropdowns — escape all overflow contexts */}
-      {openFilter === 'zap' && (
-        <div ref={zapDropRef} style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 1000, background: 'white', border: '1px solid #E2E8F0', borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160, padding: '4px 0' }}>
-          {ZAP_STATUSES.map(s => {
-            const cfg = STATUS_ZAP_CONFIG[s]
-            return (
-              <button key={s} onClick={() => { setFilterZap(s); setOpenFilter(null) }}
-                className="w-full text-left px-3 py-2 text-xs flex items-center gap-2"
-                style={{ fontWeight: filterZap === s ? 600 : 400 }}>
-                <span className="px-2 py-0.5 rounded-full font-medium"
-                  style={{ background: cfg.bg, color: cfg.color }}>{s}</span>
-              </button>
-            )
-          })}
-        </div>
-      )}
-      {openFilter === 'doc' && (
-        <div ref={docDropRef} style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 1000, background: 'white', border: '1px solid #E2E8F0', borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160, padding: '4px 0' }}>
-          {DOC_STATUSES.map(s => {
-            const cfg = DOC_STATUS_CONFIG[s]
-            return (
-              <button key={s} onClick={() => { setFilterDoc(s); setOpenFilter(null) }}
-                className="w-full text-left px-3 py-2 text-xs flex items-center gap-2"
-                style={{ fontWeight: filterDoc === s ? 600 : 400 }}>
-                <span className="px-2 py-0.5 rounded-full font-medium"
-                  style={{ background: cfg.bg, color: cfg.color }}>{s}</span>
-              </button>
-            )
-          })}
-        </div>
-      )}
+
     </div>
   )
 }
