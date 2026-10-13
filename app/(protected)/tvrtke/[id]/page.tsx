@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import CompanyContacts, { type Contact } from '@/components/CompanyContacts'
+import CompanyLinks, { type CompanyLink } from '@/components/CompanyLinks'
 import { VRSTA_BADGE, type VrstaZaposlenja } from '@/lib/zaposlenje'
 
 const STATUS_ZAP_CONFIG: Record<string, { color: string; bg: string }> = {
@@ -46,6 +47,7 @@ export default function CompanyDetail() {
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({ naziv: '' })
   const [contacts, setContacts] = useState<Contact[]>([])
+  const [links, setLinks] = useState<CompanyLink[]>([])
   const [editSaving, setEditSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [filterZap, setFilterZap] = useState<string>('')
@@ -68,11 +70,12 @@ export default function CompanyDetail() {
   async function load() {
     const res = await fetch(`/api/companies/${id}`)
     if (!res.ok) { router.push('/tvrtke'); return }
-    const { company: co, workers: emps, contacts: cts } = await res.json()
+    const { company: co, workers: emps, contacts: cts, links: lks } = await res.json()
     if (!co) { router.push('/tvrtke'); return }
     setCompany(co)
     setWorkers(emps || [])
     setContacts(cts || [])
+    setLinks(lks || [])
     setEditForm({ naziv: co.naziv || '' })
     setLoading(false)
   }
@@ -317,7 +320,10 @@ export default function CompanyDetail() {
         </div>
 
         {/* Kontakt osobe */}
-        <CompanyContacts key={id} companyId={id} initial={contacts} />
+        <div className="flex flex-col gap-4">
+          <CompanyContacts key={`c-${id}`} companyId={id} initial={contacts} />
+          <CompanyLinks key={`l-${id}`} companyId={id} initial={links} />
+        </div>
       </div>
     </div>
   )

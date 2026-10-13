@@ -9,17 +9,18 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const { id } = await params
   const supabase = createAdminClient()
 
-  const [{ data: co }, { data: emps }, { data: contacts }] = await Promise.all([
+  const [{ data: co }, { data: emps }, { data: contacts }, { data: links }] = await Promise.all([
     supabase.from('companies').select('*').eq('id', id).single(),
     supabase.from('employees')
       .select('*, documents(datum_isteka)')
       .eq('company_id', id)
       .order('prezime'),
     supabase.from('company_contacts').select('*').eq('company_id', id).order('created_at'),
+    supabase.from('company_links').select('*').eq('company_id', id).order('created_at'),
   ])
 
   if (!co) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json({ company: co, workers: emps || [], contacts: contacts || [] })
+  return NextResponse.json({ company: co, workers: emps || [], contacts: contacts || [], links: links || [] })
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
