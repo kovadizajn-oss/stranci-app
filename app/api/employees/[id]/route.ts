@@ -44,6 +44,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     company_id: body.company_id || null,
     poslodavac: body.poslodavac || null,
     radno_mjesto: body.radno_mjesto || null,
+    ...('vrsta_zaposlenja' in body ? {
+      vrsta_zaposlenja: body.vrsta_zaposlenja || null,
+      ustupanje_od: body.ustupanje_od || null,
+      ustupanje_do: body.ustupanje_do || null,
+    } : {}),
   }).eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

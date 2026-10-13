@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import CompanyContacts, { type Contact } from '@/components/CompanyContacts'
+import { VRSTA_BADGE, type VrstaZaposlenja } from '@/lib/zaposlenje'
 
 const STATUS_ZAP_CONFIG: Record<string, { color: string; bg: string }> = {
   'Aktivan':    { color: '#16A34A', bg: '#DCFCE7' },
@@ -117,6 +118,12 @@ export default function CompanyDetail() {
             <h1 className="text-2xl font-semibold" style={{ color: '#1E293B' }}>{company.naziv}</h1>
             <p className="text-sm mt-0.5" style={{ color: '#64748B' }}>
               {workers.length} {workers.length === 1 ? 'radnik' : 'radnika'}
+              {(() => {
+                const ust = workers.filter(w => w.vrsta_zaposlenja === 'ustupanje').length
+                const izr = workers.filter(w => w.vrsta_zaposlenja === 'izravno').length
+                if (!ust && !izr) return null
+                return <span style={{ color: '#94A3B8' }}>{` · ${ust} ustupljenih · ${izr} izravno zaposlenih`}</span>
+              })()}
             </p>
           </div>
         </div>
@@ -280,8 +287,14 @@ export default function CompanyDetail() {
                     style={{ background: '#EFF6FF', color: '#2563EB' }}>
                     {w.ime[0]}{w.prezime[0]}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 flex items-center gap-2">
                     <p className="text-sm font-medium" style={{ color: '#1E293B' }}>{w.ime} {w.prezime}</p>
+                    {w.vrsta_zaposlenja && VRSTA_BADGE[w.vrsta_zaposlenja as VrstaZaposlenja] && (
+                      <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                        style={{ background: VRSTA_BADGE[w.vrsta_zaposlenja as VrstaZaposlenja].bg, color: VRSTA_BADGE[w.vrsta_zaposlenja as VrstaZaposlenja].color }}>
+                        {VRSTA_BADGE[w.vrsta_zaposlenja as VrstaZaposlenja].label}
+                      </span>
+                    )}
                   </div>
                   <div className="flex-shrink-0 flex justify-center" style={{ width: 130 }}>
                     {w.status_zaposlenika && (

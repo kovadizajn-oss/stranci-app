@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { AGENCIJA, VRSTA_LABEL, type VrstaZaposlenja } from '@/lib/zaposlenje'
 import StatusPicker from '@/components/StatusPicker'
 
 const COUNTRIES = [
@@ -237,6 +238,9 @@ export default function EmployeeDetail() {
   const [companies, setCompanies] = useState<{ id: string; naziv: string }[]>([])
   const [companyId, setCompanyId] = useState<string>('')
   const [poslodavacManual, setPoslodavacManual] = useState('')
+  const [vrsta, setVrsta] = useState<VrstaZaposlenja | ''>('')
+  const [ustupanjeOd, setUstupanjeOd] = useState('')
+  const [ustupanjeDo, setUstupanjeDo] = useState('')
   const [osobniDocs, setOsobniDocs] = useState<DocState[]>([])
   const [prateciDocs, setPrateciDocs] = useState<DocState[]>([])
   const [deletedDocIds, setDeletedDocIds] = useState<string[]>([])
@@ -319,6 +323,9 @@ export default function EmployeeDetail() {
       setExtra({ email: emp.email || '', telefon: emp.telefon || '', adresa_smjestaja: emp.adresa_smjestaja || '', ime_oca: emp.ime_oca || '', iban: emp.iban || '' })
       setCompanyId(emp.company_id || '')
       setPoslodavacManual(emp.company_id ? '' : (emp.poslodavac || ''))
+      setVrsta(emp.vrsta_zaposlenja || '')
+      setUstupanjeOd(emp.ustupanje_od || '')
+      setUstupanjeDo(emp.ustupanje_do || '')
 
       setOsobniDocs((docs || []).filter((d: any) => d.kategorija === 'osobni').map(docFromDB))
       setPrateciDocs((docs || []).filter((d: any) => d.kategorija !== 'osobni').map(docFromDB))
@@ -355,6 +362,9 @@ export default function EmployeeDetail() {
             ? (companies.find(c => c.id === companyId)?.naziv || null)
             : (poslodavacManual || null),
           radno_mjesto: form.radno_mjesto || null,
+          vrsta_zaposlenja: vrsta || null,
+          ustupanje_od: vrsta === 'ustupanje' ? (ustupanjeOd || null) : null,
+          ustupanje_do: vrsta === 'ustupanje' ? (ustupanjeDo || null) : null,
         }),
       })
 
@@ -577,10 +587,29 @@ export default function EmployeeDetail() {
         </Section>
 
         {/* Rad stranca */}
-        <Section icon="💼" title="Rad stranca" desc="Poslodavac i radno mjesto.">
+        <Section icon="💼" title="Rad stranca" desc="Vrsta zaposlenja, tvrtka i radno mjesto.">
           <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <Field label="Vrsta zaposlenja">
+                <select className={inputCls} style={inputStyle} value={vrsta}
+                  onChange={e => setVrsta(e.target.value as VrstaZaposlenja | '')}>
+                  <option value="">— Odaberi —</option>
+                  {(Object.keys(VRSTA_LABEL) as VrstaZaposlenja[]).map(v => <option key={v} value={v}>{VRSTA_LABEL[v]}</option>)}
+                </select>
+              </Field>
+              {vrsta === 'ustupanje' && (
+                <p className="text-xs mt-1.5" style={{ color: '#64748B' }}>
+                  Poslodavac je <b>{AGENCIJA}</b> — radnik je ustupljen tvrtki odabranoj ispod.
+                </p>
+              )}
+              {vrsta === 'izravno' && (
+                <p className="text-xs mt-1.5" style={{ color: '#64748B' }}>
+                  Radnik je zaposlen izravno kod tvrtke odabrane ispod.
+                </p>
+              )}
+            </div>
             <div className="col-span-2 md:col-span-1">
-              <Field label="Poslodavac / firma">
+              <Field label={vrsta === 'ustupanje' ? 'Ustupljen tvrtki (korisnik)' : vrsta === 'izravno' ? 'Poslodavac (tvrtka)' : 'Tvrtka'}>
                 <select className={inputCls} style={inputStyle}
                   value={companyId}
                   onChange={e => setCompanyId(e.target.value)}>
@@ -596,6 +625,16 @@ export default function EmployeeDetail() {
               </Field>
             </div>
             <Field label="Radno mjesto"><input className={inputCls} style={inputStyle} value={form.radno_mjesto} onChange={e => setF('radno_mjesto', e.target.value)} /></Field>
+            {vrsta === 'ustupanje' && (
+              <>
+                <Field label="Ustupljen od">
+                  <input type="date" className={inputCls} style={inputStyle} value={ustupanjeOd} onChange={e => setUstupanjeOd(e.target.value)} />
+                </Field>
+                <Field label="Ustupljen do">
+                  <input type="date" className={inputCls} style={inputStyle} value={ustupanjeDo} onChange={e => setUstupanjeDo(e.target.value)} />
+                </Field>
+              </>
+            )}
           </div>
         </Section>
 

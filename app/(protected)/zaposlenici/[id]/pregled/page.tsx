@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { AGENCIJA, VRSTA_BADGE, ustupanjeUpozorenje, type VrstaZaposlenja } from '@/lib/zaposlenje'
 
 function daysUntil(dateStr: string) {
   const today = new Date(); today.setHours(0,0,0,0)
@@ -162,11 +163,19 @@ export default function CandidatePregled() {
                   🌍 {emp.drzava_rodjenja}
                 </span>
               )}
+              {emp.vrsta_zaposlenja && VRSTA_BADGE[emp.vrsta_zaposlenja as VrstaZaposlenja] && (() => {
+                const b = VRSTA_BADGE[emp.vrsta_zaposlenja as VrstaZaposlenja]
+                return <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: b.bg, color: b.color }}>{b.label}</span>
+              })()}
               {emp.poslodavac && (
                 <span className="text-xs px-2.5 py-1 rounded-full" style={{ background: '#F1F5F9', color: '#475569' }}>
                   💼 {emp.poslodavac}
                 </span>
               )}
+              {(() => {
+                const w = emp.vrsta_zaposlenja === 'ustupanje' ? ustupanjeUpozorenje(emp.ustupanje_do) : null
+                return w && <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: w.bg, color: w.color }}>{w.label}</span>
+              })()}
               {emp.radno_mjesto && (
                 <span className="text-xs px-2.5 py-1 rounded-full" style={{ background: '#F1F5F9', color: '#475569' }}>
                   {emp.radno_mjesto}
@@ -214,11 +223,21 @@ export default function CandidatePregled() {
           </Card>
 
           <Card title="Rad stranca" icon="💼">
-            {!emp.poslodavac && !emp.radno_mjesto ? (
+            {!emp.poslodavac && !emp.radno_mjesto && !emp.vrsta_zaposlenja ? (
               <p className="text-sm" style={{ color: '#CBD5E1' }}>Nema podataka o zaposlenju.</p>
+            ) : emp.vrsta_zaposlenja === 'ustupanje' ? (
+              <div className="grid grid-cols-2 gap-x-6">
+                <Row label="Vrsta zaposlenja" value="Ustupanje (agencija)" />
+                <Row label="Poslodavac" value={AGENCIJA} />
+                <Row label="Ustupljen tvrtki" value={emp.poslodavac} />
+                <Row label="Radno mjesto" value={emp.radno_mjesto} />
+                <Row label="Ustupljen od" value={emp.ustupanje_od ? formatDate(emp.ustupanje_od) : null} />
+                <Row label="Ustupljen do" value={emp.ustupanje_do ? formatDate(emp.ustupanje_do) : null} />
+              </div>
             ) : (
               <div className="grid grid-cols-2 gap-x-6">
-                <Row label="Poslodavac / firma" value={emp.poslodavac} />
+                <Row label="Vrsta zaposlenja" value={emp.vrsta_zaposlenja === 'izravno' ? 'Izravno zaposlenje' : null} />
+                <Row label="Poslodavac / tvrtka" value={emp.poslodavac} />
                 <Row label="Radno mjesto" value={emp.radno_mjesto} />
               </div>
             )}

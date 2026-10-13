@@ -12,7 +12,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const [{ data: co }, { data: emps }, { data: contacts }] = await Promise.all([
     supabase.from('companies').select('*').eq('id', id).single(),
     supabase.from('employees')
-      .select('id, ime, prezime, status_zaposlenika, documents(datum_isteka)')
+      .select('*, documents(datum_isteka)')
       .eq('company_id', id)
       .order('prezime'),
     supabase.from('company_contacts').select('*').eq('company_id', id).order('created_at'),

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
+import { VRSTA_BADGE, ustupanjeUpozorenje, type VrstaZaposlenja } from '@/lib/zaposlenje'
 
 const STATUS_ZAP_CONFIG: Record<string, { color: string; bg: string }> = {
   'Aktivan':    { color: '#16A34A', bg: '#DCFCE7' },
@@ -20,6 +21,8 @@ type EmployeeRow = {
   poslodavac: string | null
   status_zaposlenika: string | null
   oib: string | null
+  vrsta_zaposlenja: VrstaZaposlenja | null
+  ustupanje_do: string | null
   doc_tip: string | null
   doc_isteka: string | null
   on_vacation: boolean
@@ -57,6 +60,7 @@ const DOC_STATUS_CONFIG: Record<string, { color: string; bg: string }> = {
 }
 const DOC_STATUSES = Object.keys(DOC_STATUS_CONFIG)
 const PRISUTNOST = ['Radi', 'Na godišnjem', 'Na bolovanju']
+const ZAPOSLENJE = ['Ustupanje', 'Izravno', 'Nije određeno']
 
 const selectStyle: CSSProperties = {
   borderColor: '#D1D5DB', background: 'white', color: '#334155', minWidth: 150,
@@ -93,6 +97,7 @@ export default function ZaposleniciPage() {
   const [filterTvrtka, setFilterTvrtka] = useState('')
   const [filterDrzava, setFilterDrzava] = useState('')
   const [filterPrisutnost, setFilterPrisutnost] = useState('')
+  const [filterZaposlenje, setFilterZaposlenje] = useState('')
 
 
   useEffect(() => {
@@ -133,9 +138,12 @@ export default function ZaposleniciPage() {
     if (filterPrisutnost === 'Na godišnjem') result = result.filter(e => e.on_vacation)
     if (filterPrisutnost === 'Na bolovanju') result = result.filter(e => e.on_sick_leave)
     if (filterPrisutnost === 'Radi') result = result.filter(e => !e.on_vacation && !e.on_sick_leave)
+    if (filterZaposlenje === 'Ustupanje') result = result.filter(e => e.vrsta_zaposlenja === 'ustupanje')
+    if (filterZaposlenje === 'Izravno') result = result.filter(e => e.vrsta_zaposlenja === 'izravno')
+    if (filterZaposlenje === 'Nije određeno') result = result.filter(e => !e.vrsta_zaposlenja)
 
     // When no filters active, float "Novi uvoz" workers to the top
-    if (!search && !filterZap && !filterDoc && !filterTvrtka && !filterDrzava && !filterPrisutnost) {
+    if (!search && !filterZap && !filterDoc && !filterTvrtka && !filterDrzava && !filterPrisutnost && !filterZaposlenje) {
       result = [...result].sort((a, b) => {
         const aNew = a.status_zaposlenika === 'Novi uvoz' ? 0 : 1
         const bNew = b.status_zaposlenika === 'Novi uvoz' ? 0 : 1
@@ -144,14 +152,14 @@ export default function ZaposleniciPage() {
     }
 
     setFiltered(result)
-  }, [search, filterZap, filterDoc, filterTvrtka, filterDrzava, filterPrisutnost, employees])
+  }, [search, filterZap, filterDoc, filterTvrtka, filterDrzava, filterPrisutnost, filterZaposlenje, employees])
 
-  const anyFilter = !!(search || filterZap || filterDoc || filterTvrtka || filterDrzava || filterPrisutnost)
+  const anyFilter = !!(search || filterZap || filterDoc || filterTvrtka || filterDrzava || filterPrisutnost || filterZaposlenje)
   const tvrtke = uniqueSorted(employees.map(e => e.poslodavac))
   const drzave = uniqueSorted(employees.map(e => e.drzava_rodjenja))
 
   function clearFilters() {
-    setSearch(''); setFilterZap(''); setFilterDoc(''); setFilterTvrtka(''); setFilterDrzava(''); setFilterPrisutnost('')
+    setSearch(''); setFilterZap(''); setFilterDoc(''); setFilterTvrtka(''); setFilterDrzava(''); setFilterPrisutnost(''); setFilterZaposlenje('')
   }
 
   async function deleteEmployee(id: string) {
@@ -189,6 +197,7 @@ export default function ZaposleniciPage() {
         />
         <FilterSelect label="Status" value={filterZap} onChange={setFilterZap} options={ZAP_STATUSES} />
         <FilterSelect label="Dokumenti" value={filterDoc} onChange={setFilterDoc} options={DOC_STATUSES} />
+        <FilterSelect label="Zaposlenje" value={filterZaposlenje} onChange={setFilterZaposlenje} options={ZAPOSLENJE} />
         {tvrtke.length > 0 && <FilterSelect label="Tvrtka" value={filterTvrtka} onChange={setFilterTvrtka} options={tvrtke} />}
         {drzave.length > 0 && <FilterSelect label="Država" value={filterDrzava} onChange={setFilterDrzava} options={drzave} />}
         <FilterSelect label="Prisutnost" value={filterPrisutnost} onChange={setFilterPrisutnost} options={PRISUTNOST} />
@@ -239,7 +248,17 @@ export default function ZaposleniciPage() {
                           <Link href={`/zaposlenici/${emp.id}/pregled`} className="text-sm font-medium hover:underline" style={{ color: '#1E293B' }}>
                             {emp.ime} {emp.prezime}
                           </Link>
-                          <div className="flex gap-1 mt-0.5">
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {emp.vrsta_zaposlenja && VRSTA_BADGE[emp.vrsta_zaposlenja] && (
+                              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                                style={{ background: VRSTA_BADGE[emp.vrsta_zaposlenja].bg, color: VRSTA_BADGE[emp.vrsta_zaposlenja].color }}>
+                                {VRSTA_BADGE[emp.vrsta_zaposlenja].label}
+                              </span>
+                            )}
+                            {(() => {
+                              const w = emp.vrsta_zaposlenja === 'ustupanje' ? ustupanjeUpozorenje(emp.ustupanje_do) : null
+                              return w && <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: w.bg, color: w.color }}>{w.label}</span>
+                            })()}
                             {emp.on_vacation && (
                               <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
                                 style={{ background: '#DCFCE7', color: '#16A34A' }}>Na godišnjem</span>
