@@ -4,7 +4,8 @@ import { useState } from 'react'
 
 export type Contact = {
   id: string
-  company_id: string
+  company_id?: string
+  partner_id?: string
   ime: string
   uloga: string | null
   telefon: string | null
@@ -41,7 +42,10 @@ function ContactForm({ initial, saving, onSave, onCancel }: {
   )
 }
 
-export default function CompanyContacts({ companyId, initial }: { companyId: string; initial: Contact[] }) {
+/** Kontakt osobe za tvrtku (zadano) ili partnersku agenciju (endpoint="/api/partner-contacts", parentKey="partner_id"). */
+export default function CompanyContacts({ companyId, initial, endpoint = '/api/company-contacts', parentKey = 'company_id' }: {
+  companyId: string; initial: Contact[]; endpoint?: string; parentKey?: string
+}) {
   const [contacts, setContacts] = useState<Contact[]>(initial)
   const [editingId, setEditingId] = useState<string | 'new' | null>(null)
   const [saving, setSaving] = useState(false)
@@ -50,10 +54,10 @@ export default function CompanyContacts({ companyId, initial }: { companyId: str
   async function save(d: Draft) {
     setSaving(true); setError('')
     const isNew = editingId === 'new'
-    const res = await fetch(isNew ? '/api/company-contacts' : `/api/company-contacts/${editingId}`, {
+    const res = await fetch(isNew ? endpoint : `${endpoint}/${editingId}`, {
       method: isNew ? 'POST' : 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...d, company_id: companyId }),
+      body: JSON.stringify({ ...d, [parentKey]: companyId }),
     })
     const json = await res.json().catch(() => ({}))
     setSaving(false)
@@ -64,7 +68,7 @@ export default function CompanyContacts({ companyId, initial }: { companyId: str
 
   async function remove(c: Contact) {
     if (!confirm(`Obrisati kontakt "${c.ime}"?`)) return
-    const res = await fetch(`/api/company-contacts/${c.id}`, { method: 'DELETE' })
+    const res = await fetch(`${endpoint}/${c.id}`, { method: 'DELETE' })
     if (res.ok) setContacts(prev => prev.filter(x => x.id !== c.id))
     else setError('Brisanje nije uspjelo.')
   }

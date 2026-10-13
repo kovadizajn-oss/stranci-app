@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-export type CompanyLink = { id: string; company_id: string; naziv: string; url: string }
+export type CompanyLink = { id: string; company_id?: string; partner_id?: string; naziv: string; url: string }
 
 const inputCls = 'w-full px-3 py-2 rounded-lg border text-sm'
 const inputStyle = { borderColor: '#D1D5DB', color: '#1E293B', background: 'white' }
@@ -33,7 +33,10 @@ function LinkForm({ initial, saving, onSave, onCancel }: {
   )
 }
 
-export default function CompanyLinks({ companyId, initial }: { companyId: string; initial: CompanyLink[] }) {
+/** Linkovi za tvrtku (zadano) ili partnersku agenciju (endpoint="/api/partner-links", parentKey="partner_id"). */
+export default function CompanyLinks({ companyId, initial, endpoint = '/api/company-links', parentKey = 'company_id' }: {
+  companyId: string; initial: CompanyLink[]; endpoint?: string; parentKey?: string
+}) {
   const [links, setLinks] = useState<CompanyLink[]>(initial)
   const [editingId, setEditingId] = useState<string | 'new' | null>(null)
   const [saving, setSaving] = useState(false)
@@ -42,10 +45,10 @@ export default function CompanyLinks({ companyId, initial }: { companyId: string
   async function save(d: { naziv: string; url: string }) {
     setSaving(true); setError('')
     const isNew = editingId === 'new'
-    const res = await fetch(isNew ? '/api/company-links' : `/api/company-links/${editingId}`, {
+    const res = await fetch(isNew ? endpoint : `${endpoint}/${editingId}`, {
       method: isNew ? 'POST' : 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...d, company_id: companyId }),
+      body: JSON.stringify({ ...d, [parentKey]: companyId }),
     })
     const json = await res.json().catch(() => ({}))
     setSaving(false)
@@ -56,7 +59,7 @@ export default function CompanyLinks({ companyId, initial }: { companyId: string
 
   async function remove(l: CompanyLink) {
     if (!confirm(`Obrisati link "${l.naziv}"?`)) return
-    const res = await fetch(`/api/company-links/${l.id}`, { method: 'DELETE' })
+    const res = await fetch(`${endpoint}/${l.id}`, { method: 'DELETE' })
     if (res.ok) setLinks(prev => prev.filter(x => x.id !== l.id))
     else setError('Brisanje nije uspjelo.')
   }

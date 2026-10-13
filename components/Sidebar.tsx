@@ -8,6 +8,7 @@ const navItems = [
   { href: '/dashboard',    label: 'Pregled',      icon: <IconDashboard /> },
   { href: '/zaposlenici',  label: 'Zaposlenici',  icon: <IconWorkers /> },
   { href: '/tvrtke',       label: 'Tvrtke',       icon: <IconCompany /> },
+  { href: '/partneri',     label: 'Partnerske agencije', short: 'Partneri', icon: <IconPartner /> },
   { href: '/kalendar',     label: 'Kalendar',     icon: <IconCalendar /> },
   { href: '/obaveze',      label: 'Obaveze',      icon: <IconObaveze /> },
 ]
@@ -20,6 +21,9 @@ function IconWorkers() {
 }
 function IconCompany() {
   return <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path d="M3 21h18M3 7v14M21 7v14M6 3h12l2 4H4L6 3z"/><path d="M9 21v-6h6v6"/></svg>
+}
+function IconPartner() {
+  return <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/></svg>
 }
 function IconCalendar() {
   return <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
@@ -139,7 +143,7 @@ export default function Sidebar() {
                 fontWeight: active ? 600 : 400,
               }}>
               {item.icon}
-              {item.label}
+              {'short' in item ? item.short : item.label}
             </Link>
           )
         })}
