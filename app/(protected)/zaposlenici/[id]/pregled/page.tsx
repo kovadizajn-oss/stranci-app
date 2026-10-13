@@ -231,8 +231,14 @@ export default function CandidatePregled() {
                 <Row label="Poslodavac" value={AGENCIJA} />
                 <Row label="Ustupljen tvrtki" value={emp.poslodavac} />
                 <Row label="Radno mjesto" value={emp.radno_mjesto} />
-                <Row label="Ustupljen od" value={emp.ustupanje_od ? formatDate(emp.ustupanje_od) : null} />
-                <Row label="Ustupljen do" value={emp.ustupanje_do ? formatDate(emp.ustupanje_do) : null} />
+                {emp.ustupanje_od || emp.ustupanje_do ? (
+                  <>
+                    <Row label="Ustupljen od" value={emp.ustupanje_od ? formatDate(emp.ustupanje_od) : null} />
+                    <Row label="Ustupljen do" value={emp.ustupanje_do ? formatDate(emp.ustupanje_do) : null} />
+                  </>
+                ) : (
+                  <Row label="Trajanje ustupanja" value="Neodređeno" />
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-x-6">

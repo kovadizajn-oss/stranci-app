@@ -241,6 +241,7 @@ export default function EmployeeDetail() {
   const [vrsta, setVrsta] = useState<VrstaZaposlenja | ''>('')
   const [ustupanjeOd, setUstupanjeOd] = useState('')
   const [ustupanjeDo, setUstupanjeDo] = useState('')
+  const [ustupanjeOdredeno, setUstupanjeOdredeno] = useState(false) // zadano: neodređeno
   const [osobniDocs, setOsobniDocs] = useState<DocState[]>([])
   const [prateciDocs, setPrateciDocs] = useState<DocState[]>([])
   const [deletedDocIds, setDeletedDocIds] = useState<string[]>([])
@@ -326,6 +327,7 @@ export default function EmployeeDetail() {
       setVrsta(emp.vrsta_zaposlenja || '')
       setUstupanjeOd(emp.ustupanje_od || '')
       setUstupanjeDo(emp.ustupanje_do || '')
+      setUstupanjeOdredeno(!!(emp.ustupanje_od || emp.ustupanje_do))
 
       setOsobniDocs((docs || []).filter((d: any) => d.kategorija === 'osobni').map(docFromDB))
       setPrateciDocs((docs || []).filter((d: any) => d.kategorija !== 'osobni').map(docFromDB))
@@ -363,8 +365,8 @@ export default function EmployeeDetail() {
             : (poslodavacManual || null),
           radno_mjesto: form.radno_mjesto || null,
           vrsta_zaposlenja: vrsta || null,
-          ustupanje_od: vrsta === 'ustupanje' ? (ustupanjeOd || null) : null,
-          ustupanje_do: vrsta === 'ustupanje' ? (ustupanjeDo || null) : null,
+          ustupanje_od: vrsta === 'ustupanje' && ustupanjeOdredeno ? (ustupanjeOd || null) : null,
+          ustupanje_do: vrsta === 'ustupanje' && ustupanjeOdredeno ? (ustupanjeDo || null) : null,
         }),
       })
 
@@ -626,6 +628,14 @@ export default function EmployeeDetail() {
             </div>
             <Field label="Radno mjesto"><input className={inputCls} style={inputStyle} value={form.radno_mjesto} onChange={e => setF('radno_mjesto', e.target.value)} /></Field>
             {vrsta === 'ustupanje' && (
+              <div className="col-span-2">
+                <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: '#374151' }}>
+                  <input type="checkbox" checked={ustupanjeOdredeno} onChange={e => setUstupanjeOdredeno(e.target.checked)} />
+                  Ustupanje na određeno vrijeme <span style={{ color: '#94A3B8' }}>(inače neodređeno)</span>
+                </label>
+              </div>
+            )}
+            {vrsta === 'ustupanje' && ustupanjeOdredeno && (
               <>
                 <Field label="Ustupljen od">
                   <input type="date" className={inputCls} style={inputStyle} value={ustupanjeOd} onChange={e => setUstupanjeOd(e.target.value)} />
