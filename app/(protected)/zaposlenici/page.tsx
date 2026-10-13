@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
-import { VRSTA_BADGE, ustupanjeUpozorenje, type VrstaZaposlenja } from '@/lib/zaposlenje'
+import { ustupanjeUpozorenje, type VrstaZaposlenja } from '@/lib/zaposlenje'
 
 const STATUS_ZAP_CONFIG: Record<string, { color: string; bg: string }> = {
   'Aktivan':    { color: '#16A34A', bg: '#DCFCE7' },
@@ -249,12 +249,6 @@ export default function ZaposleniciPage() {
                             {emp.ime} {emp.prezime}
                           </Link>
                           <div className="flex flex-wrap gap-1 mt-0.5">
-                            {emp.vrsta_zaposlenja && VRSTA_BADGE[emp.vrsta_zaposlenja] && (
-                              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-                                style={{ background: VRSTA_BADGE[emp.vrsta_zaposlenja].bg, color: VRSTA_BADGE[emp.vrsta_zaposlenja].color }}>
-                                {VRSTA_BADGE[emp.vrsta_zaposlenja].label}
-                              </span>
-                            )}
                             {(() => {
                               const w = emp.vrsta_zaposlenja === 'ustupanje' ? ustupanjeUpozorenje(emp.ustupanje_do) : null
                               return w && <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: w.bg, color: w.color }}>{w.label}</span>
