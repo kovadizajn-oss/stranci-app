@@ -1,97 +1,26 @@
-import { NextResponse } from 'next/server'
+import { requireSession } from "@/lib/session";
+import { izvuciRadnika, odgovorNaGresku, procitajDatotekeIzForme } from "@/lib/claude-extract";
+
+// AI skeniranje dokumenata za JEDNOG radnika — Claude API (umjesto Gemini).
+// Koriste ga /zaposlenici/uvoz i AI gumb na /zaposlenici/[id].
+// Ulaz:  FormData s poljem "files" (jedna ili više slika/PDF-ova iste osobe; stranice ograničavaju na 3.5 MB)
+// Izlaz: { data: { ime, prezime, datum_rodjenja, drzava_rodjenja, oib, ime_oca, poslodavac, radno_mjesto,
+//                  dokumenti: [{ dokument_naziv, kategorija, dokument_vrijedi_do, datum_izdavanja, file_index }] } }
+//        ili { error: "poruka" } uz odgovarajući status.
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) {
-    return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 })
-  }
+  const neprijavljen = await requireSession();
+  if (neprijavljen) return neprijavljen;
 
   try {
-    const formData = await request.formData()
-    const files = formData.getAll('files') as File[]
-
-    if (!files || files.length === 0) {
-      return NextResponse.json({ error: 'No files provided' }, { status: 400 })
-    }
-
-    const parts: any[] = []
-
-    for (const file of files) {
-      const bytes = await file.arrayBuffer()
-      const base64 = Buffer.from(bytes).toString('base64')
-      parts.push({
-        inline_data: {
-          mime_type: file.type,
-          data: base64,
-        },
-      })
-    }
-
-    parts.push({
-      text: `You are a document reader for a Croatian worker management system. Extract all available worker information from the provided document image(s) (passport, ID card, work permit, or similar).
-
-Return ONLY a valid JSON object with these exact fields (use null for any field not found):
-{
-  "ime": "first name",
-  "prezime": "last name",
-  "datum_rodjenja": "date of birth in YYYY-MM-DD format",
-  "drzava_rodjenja": "country of birth or nationality — translate to Croatian (e.g. Ukrajina, Bosna i Hercegovina, Nepal)",
-  "oib": "Croatian OIB (11-digit personal ID number) if present, otherwise null",
-  "ime_oca": "father's name if present, otherwise null",
-  "poslodavac": "employer name if this is a work permit, otherwise null",
-  "radno_mjesto": "job position/title if present, otherwise null",
-  "dokumenti": [
-    {
-      "dokument_naziv": "the document type in Croatian, one of: Putovnica, Osobna iskaznica, Vozačka dozvola, Boravišna dozvola, Radna dozvola, Liječnički pregled, Ugovor o radu, Potvrda o boravku — pick the best match, or null if unknown",
-      "kategorija": "osobni if the document is an identity document (Putovnica, Osobna iskaznica, Vozačka dozvola, Boravišna dozvola), or prateci if it is a work/administrative document (Radna dozvola, Liječnički pregled, Ugovor o radu, Potvrda o boravku), or null if unknown",
-      "dokument_vrijedi_do": "document expiry date in YYYY-MM-DD format, or null",
-      "datum_izdavanja": "document issue/start date in YYYY-MM-DD format, or null"
-    }
-  ]
-}
-
-The "dokumenti" array must contain one entry per distinct document found across all provided images. If a passport and a work permit are both provided, return two entries in the array.
-
-Return ONLY the JSON object, no explanation, no markdown, no code blocks.`,
-    })
-
-    let response: Response | null = null
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts }] }),
-        }
-      )
-      if (response.ok || response.status !== 503) break
-      if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 2000))
-    }
-
-    if (!response!.ok) {
-      const errData = await response!.json().catch(() => ({}))
-      console.error('[extract-document] Gemini error:', response!.status, JSON.stringify(errData))
-      return NextResponse.json({ error: `Greška: HTTP ${response!.status} – ${errData?.error?.message || JSON.stringify(errData)}` }, { status: 500 })
-    }
-
-    const result = await response!.json()
-    const text = result.candidates?.[0]?.content?.parts?.[0]?.text || ''
-
-    // Strip markdown code blocks if present
-    const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-
-    let extracted
-    try {
-      extracted = JSON.parse(cleaned)
-    } catch {
-      const match = cleaned.match(/\{[\s\S]*\}/)
-      if (!match) return NextResponse.json({ error: 'Could not parse AI response' }, { status: 500 })
-      extracted = JSON.parse(match[0])
-    }
-
-    return NextResponse.json({ data: extracted })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    const formData = await request.formData();
+    const datoteke = await procitajDatotekeIzForme(formData);
+    const data = await izvuciRadnika(datoteke);
+    return Response.json({ data });
+  } catch (err) {
+    return odgovorNaGresku(err);
   }
 }

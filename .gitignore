@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# projektni kontekst za AI sesije (sadrži lozinke)
+PROJEKT_CONTEXT.json
+
+# osobni podaci radnika za jednokratni uvoz — ne smije na GitHub
+scripts/intercars-import.json
+scripts/import-intercars.log.json

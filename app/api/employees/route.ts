@@ -19,7 +19,7 @@ export async function GET() {
     { data: sickLeaves },
     { data: recentSick },
   ] = await Promise.all([
-    supabase.from('employees').select('id, ime, prezime, photo_url, drzava_rodjenja, poslodavac, status_zaposlenika').order('prezime'),
+    supabase.from('employees').select('id, ime, prezime, oib, photo_url, drzava_rodjenja, poslodavac, status_zaposlenika').order('prezime'),
     supabase.from('documents').select('employee_id, naziv, datum_isteka').order('datum_isteka', { ascending: true }),
     supabase.from('vacations').select('employee_id').lte('datum_od', today).gte('datum_do', today),
     supabase.from('sick_leaves').select('employee_id').lte('datum_od', today).gte('datum_do', today),
@@ -48,6 +48,7 @@ export async function GET() {
       drzava_rodjenja: emp.drzava_rodjenja,
       poslodavac: emp.poslodavac,
       status_zaposlenika: emp.status_zaposlenika || null,
+      oib: emp.oib || null,
       doc_tip: doc?.naziv || null,
       doc_isteka: doc?.datum_isteka || null,
       on_vacation: vacationIds.has(emp.id),

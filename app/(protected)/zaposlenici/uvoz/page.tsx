@@ -31,6 +31,7 @@ type DokumentInfo = {
   kategorija: 'osobni' | 'prateci' | null
   dokument_vrijedi_do: string | null
   datum_izdavanja: string | null
+  file_index?: number | null
 }
 
 type Extracted = {
@@ -215,12 +216,14 @@ export default function UvozZaposlenika() {
       }
     }
 
-    // Auto-create document records — match each doc to its file by index
+    // Auto-create document records — AI says which file each doc came from (file_index)
     const detectedDocs = extracted?.dokumenti?.filter(d => d.dokument_naziv && d.kategorija) || []
     for (let i = 0; i < detectedDocs.length; i++) {
       const doc = detectedDocs[i]
-      // If more docs than files (e.g. both docs from one scan), reuse last file
-      const fileUrl = uploadedUrls[i] ?? uploadedUrls[uploadedUrls.length - 1] ?? null
+      // Without file_index (old responses): match by position, then reuse last file
+      const fileUrl = doc.file_index != null
+        ? uploadedUrls[doc.file_index] ?? null
+        : uploadedUrls[i] ?? uploadedUrls[uploadedUrls.length - 1] ?? null
       await fetch('/api/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

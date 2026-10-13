@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 
 const STATUS_ZAP_CONFIG: Record<string, { color: string; bg: string }> = {
@@ -19,6 +19,7 @@ type EmployeeRow = {
   drzava_rodjenja: string | null
   poslodavac: string | null
   status_zaposlenika: string | null
+  oib: string | null
   doc_tip: string | null
   doc_isteka: string | null
   on_vacation: boolean
@@ -55,6 +56,32 @@ const DOC_STATUS_CONFIG: Record<string, { color: string; bg: string }> = {
   'Bez dokumenta':  { color: '#94A3B8', bg: '#F1F5F9' },
 }
 const DOC_STATUSES = Object.keys(DOC_STATUS_CONFIG)
+const PRISUTNOST = ['Radi', 'Na godišnjem', 'Na bolovanju']
+
+const selectStyle: CSSProperties = {
+  borderColor: '#D1D5DB', background: 'white', color: '#334155', minWidth: 150,
+}
+
+function uniqueSorted(values: (string | null)[]) {
+  return Array.from(new Set(values.filter((v): v is string => !!v && v.trim() !== ''))).sort((a, b) => a.localeCompare(b, 'hr'))
+}
+
+function FilterSelect({ label, value, onChange, options }: {
+  label: string; value: string; onChange: (v: string) => void; options: string[]
+}) {
+  return (
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      aria-label={label}
+      className="w-full md:w-auto px-3 py-2 rounded-lg border text-sm"
+      style={{ ...selectStyle, borderColor: value ? '#2563EB' : '#D1D5DB', color: value ? '#1D4ED8' : '#334155' }}
+    >
+      <option value="">{label}: sve</option>
+      {options.map(o => <option key={o} value={o}>{o}</option>)}
+    </select>
+  )
+}
 
 export default function ZaposleniciPage() {
   const [employees, setEmployees] = useState<EmployeeRow[]>([])
@@ -63,6 +90,9 @@ export default function ZaposleniciPage() {
   const [search, setSearch] = useState('')
   const [filterZap, setFilterZap] = useState('')
   const [filterDoc, setFilterDoc] = useState('')
+  const [filterTvrtka, setFilterTvrtka] = useState('')
+  const [filterDrzava, setFilterDrzava] = useState('')
+  const [filterPrisutnost, setFilterPrisutnost] = useState('')
   const [openFilter, setOpenFilter] = useState<'zap' | 'doc' | null>(null)
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 })
   const zapBtnRef = useRef<HTMLButtonElement>(null)
@@ -122,17 +152,24 @@ export default function ZaposleniciPage() {
   useEffect(() => {
     let result = employees
     if (search) {
-      const q = search.toLowerCase()
+      const q = search.toLowerCase().trim()
       result = result.filter(e =>
         `${e.ime} ${e.prezime}`.toLowerCase().includes(q) ||
-        (e.poslodavac || '').toLowerCase().includes(q)
+        `${e.prezime} ${e.ime}`.toLowerCase().includes(q) ||
+        (e.poslodavac || '').toLowerCase().includes(q) ||
+        (e.oib || '').includes(q)
       )
     }
     if (filterZap) result = result.filter(e => e.status_zaposlenika === filterZap)
     if (filterDoc) result = result.filter(e => statusFromExpiry(e.doc_isteka).label === filterDoc)
+    if (filterTvrtka) result = result.filter(e => e.poslodavac === filterTvrtka)
+    if (filterDrzava) result = result.filter(e => e.drzava_rodjenja === filterDrzava)
+    if (filterPrisutnost === 'Na godišnjem') result = result.filter(e => e.on_vacation)
+    if (filterPrisutnost === 'Na bolovanju') result = result.filter(e => e.on_sick_leave)
+    if (filterPrisutnost === 'Radi') result = result.filter(e => !e.on_vacation && !e.on_sick_leave)
 
     // When no filters active, float "Novi uvoz" workers to the top
-    if (!search && !filterZap && !filterDoc) {
+    if (!search && !filterZap && !filterDoc && !filterTvrtka && !filterDrzava && !filterPrisutnost) {
       result = [...result].sort((a, b) => {
         const aNew = a.status_zaposlenika === 'Novi uvoz' ? 0 : 1
         const bNew = b.status_zaposlenika === 'Novi uvoz' ? 0 : 1
@@ -141,7 +178,15 @@ export default function ZaposleniciPage() {
     }
 
     setFiltered(result)
-  }, [search, filterZap, filterDoc, employees])
+  }, [search, filterZap, filterDoc, filterTvrtka, filterDrzava, filterPrisutnost, employees])
+
+  const anyFilter = !!(search || filterZap || filterDoc || filterTvrtka || filterDrzava || filterPrisutnost)
+  const tvrtke = uniqueSorted(employees.map(e => e.poslodavac))
+  const drzave = uniqueSorted(employees.map(e => e.drzava_rodjenja))
+
+  function clearFilters() {
+    setSearch(''); setFilterZap(''); setFilterDoc(''); setFilterTvrtka(''); setFilterDrzava(''); setFilterPrisutnost('')
+  }
 
   async function deleteEmployee(id: string) {
     if (!confirm('Jeste li sigurni da želite obrisati ovog zaposlenika?')) return
@@ -167,34 +212,28 @@ export default function ZaposleniciPage() {
         </Link>
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-5">
+      <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-2 md:gap-3 mb-5">
         <input
           type="text"
-          placeholder="Pretraži zaposlenike..."
+          placeholder="Pretraži po imenu, OIB-u ili tvrtki..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="w-full md:w-auto px-3 py-2 rounded-lg border text-sm"
-          style={{ borderColor: '#D1D5DB', minWidth: 220, background: 'white' }}
+          style={{ borderColor: '#D1D5DB', minWidth: 260, background: 'white' }}
         />
-        {(filterZap || filterDoc) && (
-          <div className="flex items-center gap-2">
-            {filterZap && (
-              <button onClick={() => setFilterZap('')}
-                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
-                style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE' }}>
-                {filterZap} ✕
-              </button>
-            )}
-            {filterDoc && (
-              <button onClick={() => setFilterDoc('')}
-                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
-                style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE' }}>
-                {filterDoc} ✕
-              </button>
-            )}
-          </div>
+        <FilterSelect label="Status" value={filterZap} onChange={setFilterZap} options={ZAP_STATUSES} />
+        <FilterSelect label="Dokumenti" value={filterDoc} onChange={setFilterDoc} options={DOC_STATUSES} />
+        {tvrtke.length > 0 && <FilterSelect label="Tvrtka" value={filterTvrtka} onChange={setFilterTvrtka} options={tvrtke} />}
+        {drzave.length > 0 && <FilterSelect label="Država" value={filterDrzava} onChange={setFilterDrzava} options={drzave} />}
+        <FilterSelect label="Prisutnost" value={filterPrisutnost} onChange={setFilterPrisutnost} options={PRISUTNOST} />
+        {anyFilter && (
+          <button onClick={clearFilters}
+            className="text-xs px-2.5 py-1.5 rounded-lg whitespace-nowrap"
+            style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE' }}>
+            Očisti filtere ✕
+          </button>
         )}
-        <span className="text-sm md:ml-auto" style={{ color: '#94A3B8' }}>
+        <span className="text-sm md:ml-auto whitespace-nowrap" style={{ color: '#94A3B8' }}>
           {filtered.length} {filtered.length === 1 ? 'zaposlenik' : 'zaposlenika'}
         </span>
       </div>
