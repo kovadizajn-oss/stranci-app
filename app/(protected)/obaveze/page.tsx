@@ -8,14 +8,32 @@ type Obaveza = {
   naziv: string
   employee_id: string | null
   employee_name: string | null
+  company_id: string | null
+  company_name: string | null
   rok: string | null
   zavrseno: boolean
   created_at: string
 }
 
 type Employee = { id: string; ime: string; prezime: string }
+type Company = { id: string; naziv: string }
 
-type EditForm = { naziv: string; employee_id: string; rok: string }
+type EditForm = { naziv: string; employee_id: string; company_id: string; rok: string }
+const EMPTY_FORM: EditForm = { naziv: '', employee_id: '', company_id: '', rok: '' }
+
+function toObaveza(o: any): Obaveza {
+  return {
+    id: o.id,
+    naziv: o.naziv,
+    employee_id: o.employee_id,
+    employee_name: o.employees ? `${o.employees.ime} ${o.employees.prezime}` : null,
+    company_id: o.company_id ?? null,
+    company_name: o.companies?.naziv ?? null,
+    rok: o.rok,
+    zavrseno: o.zavrseno,
+    created_at: o.created_at,
+  }
+}
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return null
@@ -40,14 +58,16 @@ function RokBadge({ rok }: { rok: string | null }) {
 export default function ObavezePage() {
   const [obaveze, setObaveze] = useState<Obaveza[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [vezano, setVezano] = useState<'sve' | 'radnici' | 'tvrtke' | 'opce'>('sve')
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'sve' | 'otvoreno' | 'zavrseno'>('otvoreno')
   const [adding, setAdding] = useState(false)
-  const [form, setForm] = useState({ naziv: '', employee_id: '', rok: '' })
+  const [form, setForm] = useState<EditForm>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [completing, setCompleting] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState<EditForm>({ naziv: '', employee_id: '', rok: '' })
+  const [editForm, setEditForm] = useState<EditForm>(EMPTY_FORM)
   const [editSaving, setEditSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
 
@@ -55,18 +75,11 @@ export default function ObavezePage() {
     async function load() {
       const res = await fetch('/api/obaveze')
       if (!res.ok) { setLoading(false); return }
-      const { obaveze: obs, employees: emps } = await res.json()
+      const { obaveze: obs, employees: emps, companies: cos } = await res.json()
 
-      setObaveze((obs || []).map((o: any) => ({
-        id: o.id,
-        naziv: o.naziv,
-        employee_id: o.employee_id,
-        employee_name: o.employees ? `${o.employees.ime} ${o.employees.prezime}` : null,
-        rok: o.rok,
-        zavrseno: o.zavrseno,
-        created_at: o.created_at,
-      })))
+      setObaveze((obs || []).map(toObaveza))
       setEmployees(emps || [])
+      setCompanies(cos || [])
       setLoading(false)
     }
     load()
@@ -80,24 +93,15 @@ export default function ObavezePage() {
     const res = await fetch('/api/obaveze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ naziv: form.naziv.trim(), employee_id: form.employee_id || null, rok: form.rok || null }),
+      body: JSON.stringify({ naziv: form.naziv.trim(), employee_id: form.employee_id || null, company_id: form.company_id || null, rok: form.rok || null }),
     })
 
     if (res.ok) {
       const data = await res.json()
-      const newOb: Obaveza = {
-        id: data.id,
-        naziv: data.naziv,
-        employee_id: data.employee_id,
-        employee_name: data.employees ? `${(data.employees as any).ime} ${(data.employees as any).prezime}` : null,
-        rok: data.rok,
-        zavrseno: data.zavrseno,
-        created_at: data.created_at,
-      }
-      setObaveze(prev => [newOb, ...prev])
+      setObaveze(prev => [toObaveza(data), ...prev])
     }
 
-    setForm({ naziv: '', employee_id: '', rok: '' })
+    setForm(EMPTY_FORM)
     setAdding(false)
     setSaving(false)
   }
@@ -107,13 +111,14 @@ export default function ObavezePage() {
     setEditForm({
       naziv: ob.naziv,
       employee_id: ob.employee_id || '',
+      company_id: ob.company_id || '',
       rok: ob.rok || '',
     })
   }
 
   function cancelEdit() {
     setEditingId(null)
-    setEditForm({ naziv: '', employee_id: '', rok: '' })
+    setEditForm(EMPTY_FORM)
   }
 
   async function handleEditSave(id: string) {
@@ -121,10 +126,11 @@ export default function ObavezePage() {
     setEditSaving(true)
 
     const emp = employees.find(e => e.id === editForm.employee_id)
+    const co = companies.find(c => c.id === editForm.company_id)
     await fetch(`/api/obaveze/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ naziv: editForm.naziv.trim(), employee_id: editForm.employee_id || null, rok: editForm.rok || null }),
+      body: JSON.stringify({ naziv: editForm.naziv.trim(), employee_id: editForm.employee_id || null, company_id: editForm.company_id || null, rok: editForm.rok || null }),
     })
 
     setObaveze(prev => prev.map(o => o.id === id ? {
@@ -132,6 +138,8 @@ export default function ObavezePage() {
       naziv: editForm.naziv.trim(),
       employee_id: editForm.employee_id || null,
       employee_name: emp ? `${emp.ime} ${emp.prezime}` : null,
+      company_id: editForm.company_id || null,
+      company_name: co ? co.naziv : null,
       rok: editForm.rok || null,
     } : o))
 
@@ -162,8 +170,11 @@ export default function ObavezePage() {
   }
 
   const filtered = obaveze.filter(o => {
-    if (filter === 'otvoreno') return !o.zavrseno
-    if (filter === 'zavrseno') return o.zavrseno
+    if (filter === 'otvoreno' && o.zavrseno) return false
+    if (filter === 'zavrseno' && !o.zavrseno) return false
+    if (vezano === 'radnici' && !o.employee_id) return false
+    if (vezano === 'tvrtke' && !o.company_id) return false
+    if (vezano === 'opce' && (o.employee_id || o.company_id)) return false
     return true
   })
 
@@ -214,13 +225,22 @@ export default function ObavezePage() {
                   <option key={e.id} value={e.id}>{e.ime} {e.prezime}</option>
                 ))}
               </select>
+              <select
+                className={`${inputCls} flex-1`} style={inputStyle}
+                value={form.company_id}
+                onChange={e => setForm(p => ({ ...p, company_id: e.target.value }))}>
+                <option value="">Bez tvrtke (opcionalno)</option>
+                {companies.map(c => (
+                  <option key={c.id} value={c.id}>{c.naziv}</option>
+                ))}
+              </select>
               <input type="date" className={inputCls} style={inputStyle}
                 value={form.rok}
                 onChange={e => setForm(p => ({ ...p, rok: e.target.value }))} />
             </div>
             <div className="flex gap-2 justify-end">
               <button type="button"
-                onClick={() => { setAdding(false); setForm({ naziv: '', employee_id: '', rok: '' }) }}
+                onClick={() => { setAdding(false); setForm(EMPTY_FORM) }}
                 className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium"
                 style={{ background: '#F1F5F9', color: '#374151' }}>
                 Odustani
@@ -236,7 +256,8 @@ export default function ObavezePage() {
       )}
 
       {/* Filter tabs */}
-      <div className="flex gap-1 mb-4 p-1 rounded-lg w-fit" style={{ background: '#F1F5F9' }}>
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+      <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: '#F1F5F9' }}>
         {([['otvoreno', 'Otvoreno'], ['zavrseno', 'Završeno'], ['sve', 'Sve']] as const).map(([val, label]) => (
           <button key={val} onClick={() => setFilter(val)}
             className="btn-tab px-3 py-1.5 rounded-md text-sm font-medium"
@@ -252,6 +273,15 @@ export default function ObavezePage() {
             )}
           </button>
         ))}
+      </div>
+      <select value={vezano} onChange={e => setVezano(e.target.value as typeof vezano)}
+        className="px-3 py-2 rounded-lg border text-sm"
+        style={{ borderColor: vezano !== 'sve' ? '#2563EB' : '#D1D5DB', color: vezano !== 'sve' ? '#1D4ED8' : '#334155', background: 'white' }}>
+        <option value="sve">Vezano za: sve</option>
+        <option value="radnici">Radnike</option>
+        <option value="tvrtke">Tvrtke</option>
+        <option value="opce">Općenito (bez radnika i tvrtke)</option>
+      </select>
       </div>
 
       {/* List */}
@@ -289,6 +319,15 @@ export default function ObavezePage() {
                           <option value="">Bez radnika (opcionalno)</option>
                           {employees.map(e => (
                             <option key={e.id} value={e.id}>{e.ime} {e.prezime}</option>
+                          ))}
+                        </select>
+                        <select
+                          className={`${inputCls} flex-1`} style={inputStyle}
+                          value={editForm.company_id}
+                          onChange={e => setEditForm(p => ({ ...p, company_id: e.target.value }))}>
+                          <option value="">Bez tvrtke (opcionalno)</option>
+                          {companies.map(c => (
+                            <option key={c.id} value={c.id}>{c.naziv}</option>
                           ))}
                         </select>
                         <input type="date" className={inputCls} style={inputStyle}
@@ -357,6 +396,13 @@ export default function ObavezePage() {
                         className="text-xs font-medium hover:underline"
                         style={{ color: '#2563EB' }}>
                         🔗 {ob.employee_name}
+                      </Link>
+                    )}
+                    {ob.company_name && (
+                      <Link href={`/tvrtke/${ob.company_id}`}
+                        className="text-xs font-medium hover:underline"
+                        style={{ color: '#7C3AED' }}>
+                        🏢 {ob.company_name}
                       </Link>
                     )}
                     <RokBadge rok={ob.rok} />

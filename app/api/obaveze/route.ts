@@ -8,16 +8,17 @@ export async function GET() {
 
   const supabase = createAdminClient()
 
-  const [{ data: obs }, { data: emps }] = await Promise.all([
+  const [{ data: obs }, { data: emps }, { data: cos }] = await Promise.all([
     supabase
       .from('obaveze')
-      .select('id, naziv, employee_id, rok, zavrseno, created_at, employees(ime, prezime)')
+      .select('id, naziv, employee_id, company_id, rok, zavrseno, created_at, employees(ime, prezime), companies(naziv)')
       .order('zavrseno', { ascending: true })
       .order('rok', { ascending: true, nullsFirst: false }),
     supabase.from('employees').select('id, ime, prezime').order('prezime'),
+    supabase.from('companies').select('id, naziv').order('naziv'),
   ])
 
-  return NextResponse.json({ obaveze: obs || [], employees: emps || [] })
+  return NextResponse.json({ obaveze: obs || [], employees: emps || [], companies: cos || [] })
 }
 
 export async function POST(request: Request) {
@@ -32,10 +33,11 @@ export async function POST(request: Request) {
     .insert({
       naziv: body.naziv,
       employee_id: body.employee_id || null,
+      company_id: body.company_id || null,
       rok: body.rok || null,
       zavrseno: false,
     })
-    .select('id, naziv, employee_id, rok, zavrseno, created_at, employees(ime, prezime)')
+    .select('id, naziv, employee_id, company_id, rok, zavrseno, created_at, employees(ime, prezime), companies(naziv)')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

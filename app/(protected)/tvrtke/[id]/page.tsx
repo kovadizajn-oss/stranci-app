@@ -48,6 +48,7 @@ export default function CompanyDetail() {
   const [editForm, setEditForm] = useState({ naziv: '' })
   const [contacts, setContacts] = useState<Contact[]>([])
   const [links, setLinks] = useState<CompanyLink[]>([])
+  const [obaveze, setObaveze] = useState<{ id: string; naziv: string; rok: string | null }[]>([])
   const [editSaving, setEditSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [filterZap, setFilterZap] = useState<string>('')
@@ -70,12 +71,13 @@ export default function CompanyDetail() {
   async function load() {
     const res = await fetch(`/api/companies/${id}`)
     if (!res.ok) { router.push('/tvrtke'); return }
-    const { company: co, workers: emps, contacts: cts, links: lks } = await res.json()
+    const { company: co, workers: emps, contacts: cts, links: lks, obaveze: obs } = await res.json()
     if (!co) { router.push('/tvrtke'); return }
     setCompany(co)
     setWorkers(emps || [])
     setContacts(cts || [])
     setLinks(lks || [])
+    setObaveze(obs || [])
     setEditForm({ naziv: co.naziv || '' })
     setLoading(false)
   }
@@ -321,6 +323,31 @@ export default function CompanyDetail() {
 
         {/* Kontakt osobe */}
         <div className="flex flex-col gap-4">
+          <div className="bg-white rounded-2xl p-5 h-fit" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.05)' }}>
+            <div className="flex items-center justify-between mb-3" style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: 12 }}>
+              <p className="font-semibold text-sm" style={{ color: '#1E293B' }}>✅ Otvorene obaveze</p>
+              <Link href="/obaveze" className="text-xs font-medium" style={{ color: '#2563EB' }}>Sve obaveze →</Link>
+            </div>
+            {obaveze.length === 0 ? (
+              <p className="text-sm" style={{ color: '#CBD5E1' }}>Nema otvorenih obaveza.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {obaveze.map(o => {
+                  const late = o.rok && o.rok < new Date().toISOString().slice(0, 10)
+                  return (
+                    <div key={o.id} className="text-sm" style={{ color: '#1E293B' }}>
+                      {o.naziv}
+                      {o.rok && (
+                        <span className="block text-xs" style={{ color: late ? '#DC2626' : '#64748B' }}>
+                          Rok: {o.rok.split('-').reverse().join('.')}.{late ? ' — kasni' : ''}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
           <CompanyContacts key={`c-${id}`} companyId={id} initial={contacts} />
           <CompanyLinks key={`l-${id}`} companyId={id} initial={links} />
         </div>

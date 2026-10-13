@@ -9,7 +9,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const { id } = await params
   const supabase = createAdminClient()
 
-  const [{ data: co }, { data: emps }, { data: contacts }, { data: links }] = await Promise.all([
+  const [{ data: co }, { data: emps }, { data: contacts }, { data: links }, { data: obaveze }] = await Promise.all([
     supabase.from('companies').select('*').eq('id', id).single(),
     supabase.from('employees')
       .select('*, documents(datum_isteka)')
@@ -17,10 +17,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       .order('prezime'),
     supabase.from('company_contacts').select('*').eq('company_id', id).order('created_at'),
     supabase.from('company_links').select('*').eq('company_id', id).order('created_at'),
+    supabase.from('obaveze').select('id, naziv, rok, zavrseno').eq('company_id', id).eq('zavrseno', false)
+      .order('rok', { ascending: true, nullsFirst: false }),
   ])
 
   if (!co) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json({ company: co, workers: emps || [], contacts: contacts || [], links: links || [] })
+  return NextResponse.json({ company: co, workers: emps || [], contacts: contacts || [], links: links || [], obaveze: obaveze || [] })
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {

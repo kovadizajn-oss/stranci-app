@@ -13,6 +13,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const update: Record<string, any> = {}
   if (body.naziv !== undefined) update.naziv = body.naziv
   if (body.employee_id !== undefined) update.employee_id = body.employee_id || null
+  if (body.company_id !== undefined) update.company_id = body.company_id || null
   if (body.rok !== undefined) update.rok = body.rok || null
   if (body.zavrseno !== undefined) update.zavrseno = body.zavrseno
 
