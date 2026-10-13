@@ -238,6 +238,7 @@ export default function CandidatePregled() {
                       <div className="flex-1">
                         <span className="text-sm font-medium" style={{ color: '#1E293B' }}>Godišnji odmor</span>
                       </div>
+                      {v.file_url && <a href={v.file_url} target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: '#2563EB' }}>📄 Zahtjev</a>}
                       <span className="text-xs" style={{ color: '#64748B' }}>{formatDate(v.datum_od)} – {formatDate(v.datum_do)}</span>
                       {active && <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#DCFCE7', color: '#16A34A' }}>Aktivno</span>}
                     </div>
@@ -252,6 +253,7 @@ export default function CandidatePregled() {
                       <div className="flex-1">
                         <span className="text-sm font-medium" style={{ color: '#1E293B' }}>Bolovanje</span>
                       </div>
+                      {s.file_url && <a href={s.file_url} target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: '#2563EB' }}>📄 Doznaka</a>}
                       <span className="text-xs" style={{ color: '#64748B' }}>{formatDate(s.datum_od)} – {formatDate(s.datum_do)}</span>
                       {active && <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#FEF9C3', color: '#CA8A04' }}>Aktivno</span>}
                     </div>

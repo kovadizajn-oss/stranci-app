@@ -60,8 +60,49 @@ function Section({ icon, title, desc, children }: { icon: string; title: string;
 function fileNameFromUrl(url: string) {
   try {
     const parts = decodeURIComponent(url).split('/')
-    return parts[parts.length - 1].replace(/^(doc|att|photo)_\d+_/, '')
+    return parts[parts.length - 1].replace(/^(doc|att|photo|godisnji|bolovanje)_\d+_/, '')
   } catch { return 'Datoteka' }
+}
+
+function safeFileName(name: string) {
+  return name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_')
+}
+
+/** Jedna datoteka uz godišnji / bolovanje (npr. zahtjev za GO, doznaka liječnika). */
+function AbsenceFile({ fileUrl, newFile, onPick, onClear, hint }: {
+  fileUrl?: string | null; newFile?: File | null
+  onPick: (f: File | null) => void; onClear: () => void; hint: string
+}) {
+  const input = (
+    <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+      onChange={e => onPick(e.target.files?.[0] || null)} />
+  )
+  if (newFile) return (
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+      <span className="text-xs truncate" style={{ color: '#16A34A' }}>✓ {newFile.name}</span>
+      <button type="button" onClick={() => onPick(null)} className="text-xs ml-auto" style={{ color: '#94A3B8' }}>✕</button>
+    </div>
+  )
+  if (fileUrl) return (
+    <div className="flex items-center gap-2">
+      <a href={fileUrl} target="_blank" rel="noopener noreferrer"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg flex-1 min-w-0" style={{ background: 'white', border: '1px solid #E2E8F0' }}>
+        <span style={{ fontSize: 13 }}>📄</span>
+        <span className="text-xs truncate" style={{ color: '#2563EB' }}>{fileNameFromUrl(fileUrl)}</span>
+      </a>
+      <label className="cursor-pointer text-xs px-2.5 py-1.5 rounded-lg flex-shrink-0" style={{ background: '#F1F5F9', color: '#374151' }}>
+        Zamijeni{input}
+      </label>
+      <button type="button" onClick={onClear} className="text-xs flex-shrink-0" style={{ color: '#94A3B8' }} title="Ukloni datoteku">✕</button>
+    </div>
+  )
+  return (
+    <label className="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-lg border text-xs"
+      style={{ borderColor: '#D1D5DB', background: 'white', color: '#64748B' }}>
+      📎 Priloži {hint} <span style={{ color: '#94A3B8' }}>(PDF, JPG, PNG — opcionalno)</span>
+      {input}
+    </label>
+  )
 }
 
 type DocState = {
@@ -371,46 +412,42 @@ export default function EmployeeDetail() {
       }
       setDeletedDocIds([])
 
-      // Vacations
-      for (const vacId of deletedVacationIds) await fetch(`/api/vacations/${vacId}`, { method: 'DELETE' })
-      for (const vac of vacations) {
-        if (!vac.datum_od || !vac.datum_do) continue
-        if (vac._new || !vac.id) {
-          await fetch('/api/vacations', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ employee_id: id, datum_od: vac.datum_od, datum_do: vac.datum_do, napomena: vac.napomena || null }),
-          })
-        } else {
-          await fetch(`/api/vacations/${vac.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ datum_od: vac.datum_od, datum_do: vac.datum_do, napomena: vac.napomena || null }),
-          })
+      // Godišnji odmori i bolovanja (s pripadajućom datotekom)
+      async function saveAbsences(list: any[], deletedIds: string[], endpoint: string, prefix: string) {
+        for (const delId of deletedIds) await fetch(`${endpoint}/${delId}`, { method: 'DELETE' })
+        for (const item of list) {
+          if (!item.datum_od || !item.datum_do) continue
+          const body: Record<string, unknown> = { datum_od: item.datum_od, datum_do: item.datum_do, napomena: item.napomena || null }
+          if (item._newFile) {
+            const fd = new FormData()
+            fd.append('file', item._newFile)
+            fd.append('path', `${id}/${prefix}_${Date.now()}_${safeFileName(item._newFile.name)}`)
+            const upRes = await fetch('/api/upload', { method: 'POST', body: fd })
+            if (!upRes.ok) throw new Error(`Učitavanje datoteke "${item._newFile.name}" nije uspjelo.`)
+            body.file_url = (await upRes.json()).url
+          } else if (item._fileRemoved) {
+            body.file_url = null
+          }
+          const res = item._new || !item.id
+            ? await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employee_id: id, ...body }) })
+            : await fetch(`${endpoint}/${item.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+          if (!res.ok) {
+            const j = await res.json().catch(() => ({}))
+            throw new Error(j.error || 'Greška pri spremanju godišnjeg/bolovanja.')
+          }
         }
       }
-
-      // Sick leaves
-      for (const sickId of deletedSickIds) await fetch(`/api/sick-leaves/${sickId}`, { method: 'DELETE' })
-      for (const sick of sickLeaves) {
-        if (!sick.datum_od || !sick.datum_do) continue
-        if (sick._new || !sick.id) {
-          await fetch('/api/sick-leaves', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ employee_id: id, datum_od: sick.datum_od, datum_do: sick.datum_do, napomena: sick.napomena || null }),
-          })
-        } else {
-          await fetch(`/api/sick-leaves/${sick.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ datum_od: sick.datum_od, datum_do: sick.datum_do, napomena: sick.napomena || null }),
-          })
-        }
-      }
+      await saveAbsences(vacations, deletedVacationIds, '/api/vacations', 'godisnji')
+      await saveAbsences(sickLeaves, deletedSickIds, '/api/sick-leaves', 'bolovanje')
 
       setDeletedVacationIds([])
       setDeletedSickIds([])
+      const absRes = await fetch(`/api/employees/${id}`)
+      if (absRes.ok) {
+        const { vacations: vacs, sick_leaves: sick } = await absRes.json()
+        setVacations(vacs || [])
+        setSickLeaves(sick || [])
+      }
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
@@ -579,6 +616,12 @@ export default function EmployeeDetail() {
                     <input type="date" className={inputCls} style={inputStyle} value={vac.datum_od || ''} onChange={e => setVacations(prev => prev.map((v, j) => j === i ? { ...v, datum_od: e.target.value } : v))} /></div>
                   <div><p className="text-xs mb-1" style={{ color: '#64748B' }}>Do</p>
                     <input type="date" className={inputCls} style={inputStyle} value={vac.datum_do || ''} onChange={e => setVacations(prev => prev.map((v, j) => j === i ? { ...v, datum_do: e.target.value } : v))} /></div>
+                  <div className="col-span-2">
+                    <AbsenceFile hint="zahtjev / odluku"
+                      fileUrl={vac._fileRemoved ? null : vac.file_url} newFile={vac._newFile}
+                      onPick={f => setVacations(prev => prev.map((v, j) => j === i ? { ...v, _newFile: f } : v))}
+                      onClear={() => setVacations(prev => prev.map((v, j) => j === i ? { ...v, _fileRemoved: true, _newFile: null } : v))} />
+                  </div>
                 </div>
                 <button type="button" onClick={() => { if (vac.id) setDeletedVacationIds(prev => [...prev, vac.id]); setVacations(prev => prev.filter((_, j) => j !== i)) }}
                   className="btn-text-danger text-xs flex-shrink-0" style={{ color: '#EF4444' }}>Ukloni</button>
@@ -601,6 +644,12 @@ export default function EmployeeDetail() {
                     <input type="date" className={inputCls} style={inputStyle} value={sick.datum_od || ''} onChange={e => setSickLeaves(prev => prev.map((s, j) => j === i ? { ...s, datum_od: e.target.value } : s))} /></div>
                   <div><p className="text-xs mb-1" style={{ color: '#64748B' }}>Do</p>
                     <input type="date" className={inputCls} style={inputStyle} value={sick.datum_do || ''} onChange={e => setSickLeaves(prev => prev.map((s, j) => j === i ? { ...s, datum_do: e.target.value } : s))} /></div>
+                  <div className="col-span-2">
+                    <AbsenceFile hint="doznaku / potvrdu liječnika"
+                      fileUrl={sick._fileRemoved ? null : sick.file_url} newFile={sick._newFile}
+                      onPick={f => setSickLeaves(prev => prev.map((s, j) => j === i ? { ...s, _newFile: f } : s))}
+                      onClear={() => setSickLeaves(prev => prev.map((s, j) => j === i ? { ...s, _fileRemoved: true, _newFile: null } : s))} />
+                  </div>
                 </div>
                 <button type="button" onClick={() => { if (sick.id) setDeletedSickIds(prev => [...prev, sick.id]); setSickLeaves(prev => prev.filter((_, j) => j !== i)) }}
                   className="btn-text-danger text-xs flex-shrink-0" style={{ color: '#EF4444' }}>Ukloni</button>

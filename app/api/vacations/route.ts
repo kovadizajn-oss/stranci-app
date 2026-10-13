@@ -16,6 +16,7 @@ export async function POST(request: Request) {
       datum_od: body.datum_od,
       datum_do: body.datum_do,
       napomena: body.napomena || null,
+      ...('file_url' in body ? { file_url: body.file_url || null } : {}),
     })
     .select('id')
     .single()

@@ -14,6 +14,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     datum_od: body.datum_od,
     datum_do: body.datum_do,
     napomena: body.napomena || null,
+    ...('file_url' in body ? { file_url: body.file_url || null } : {}),
   }).eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
