@@ -9,16 +9,17 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const { id } = await params
   const supabase = createAdminClient()
 
-  const [{ data: co }, { data: emps }] = await Promise.all([
+  const [{ data: co }, { data: emps }, { data: contacts }] = await Promise.all([
     supabase.from('companies').select('*').eq('id', id).single(),
     supabase.from('employees')
       .select('id, ime, prezime, status_zaposlenika, documents(datum_isteka)')
       .eq('company_id', id)
       .order('prezime'),
+    supabase.from('company_contacts').select('*').eq('company_id', id).order('created_at'),
   ])
 
   if (!co) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json({ company: co, workers: emps || [] })
+  return NextResponse.json({ company: co, workers: emps || [], contacts: contacts || [] })
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -29,12 +30,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const supabase = createAdminClient()
   const body = await request.json()
 
-  const { error } = await supabase.from('companies').update({
-    naziv: body.naziv,
-    kontakt_ime: body.kontakt_ime || null,
-    kontakt_telefon: body.kontakt_telefon || null,
-    kontakt_email: body.kontakt_email || null,
-  }).eq('id', id)
+  // Kontakt osobe su u tablici company_contacts; stara kontakt_* polja mijenjaju se samo ako su poslana
+  const update: Record<string, unknown> = { naziv: body.naziv }
+  for (const k of ['kontakt_ime', 'kontakt_telefon', 'kontakt_email']) if (k in body) update[k] = body[k] || null
+  const { error } = await supabase.from('companies').update(update).eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

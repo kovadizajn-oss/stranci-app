@@ -13,7 +13,14 @@ export async function GET() {
     .order('naziv')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data || [])
+
+  // Kontakt osobe (ako tablica još ne postoji, lista radi i bez njih)
+  const { data: contacts } = await supabase
+    .from('company_contacts').select('company_id, ime, uloga, telefon, email').order('created_at')
+  const byCompany: Record<string, unknown[]> = {}
+  for (const c of contacts || []) (byCompany[c.company_id] ||= []).push(c)
+
+  return NextResponse.json((data || []).map(co => ({ ...co, contacts: byCompany[co.id] || [] })))
 }
 
 export async function POST(request: Request) {

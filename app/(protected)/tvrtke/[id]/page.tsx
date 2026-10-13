@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import CompanyContacts, { type Contact } from '@/components/CompanyContacts'
 
 const STATUS_ZAP_CONFIG: Record<string, { color: string; bg: string }> = {
   'Aktivan':    { color: '#16A34A', bg: '#DCFCE7' },
@@ -42,7 +43,8 @@ export default function CompanyDetail() {
   const [workers, setWorkers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
-  const [editForm, setEditForm] = useState({ naziv: '', kontakt_ime: '', kontakt_telefon: '', kontakt_email: '' })
+  const [editForm, setEditForm] = useState({ naziv: '' })
+  const [contacts, setContacts] = useState<Contact[]>([])
   const [editSaving, setEditSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [filterZap, setFilterZap] = useState<string>('')
@@ -65,16 +67,12 @@ export default function CompanyDetail() {
   async function load() {
     const res = await fetch(`/api/companies/${id}`)
     if (!res.ok) { router.push('/tvrtke'); return }
-    const { company: co, workers: emps } = await res.json()
+    const { company: co, workers: emps, contacts: cts } = await res.json()
     if (!co) { router.push('/tvrtke'); return }
     setCompany(co)
     setWorkers(emps || [])
-    setEditForm({
-      naziv: co.naziv || '',
-      kontakt_ime: co.kontakt_ime || '',
-      kontakt_telefon: co.kontakt_telefon || '',
-      kontakt_email: co.kontakt_email || '',
-    })
+    setContacts(cts || [])
+    setEditForm({ naziv: co.naziv || '' })
     setLoading(false)
   }
 
@@ -84,12 +82,7 @@ export default function CompanyDetail() {
     await fetch(`/api/companies/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        naziv: editForm.naziv.trim(),
-        kontakt_ime: editForm.kontakt_ime.trim() || null,
-        kontakt_telefon: editForm.kontakt_telefon.trim() || null,
-        kontakt_email: editForm.kontakt_email.trim() || null,
-      }),
+      body: JSON.stringify({ naziv: editForm.naziv.trim() }),
     })
     setCompany((prev: any) => ({ ...prev, ...editForm }))
     setEditing(false)
@@ -146,24 +139,6 @@ export default function CompanyDetail() {
               <input className={inputCls} style={inputStyle}
                 value={editForm.naziv}
                 onChange={e => setEditForm(p => ({ ...p, naziv: e.target.value }))} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Kontakt osoba</label>
-              <input className={inputCls} style={inputStyle}
-                value={editForm.kontakt_ime}
-                onChange={e => setEditForm(p => ({ ...p, kontakt_ime: e.target.value }))} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Telefon</label>
-              <input className={inputCls} style={inputStyle}
-                value={editForm.kontakt_telefon}
-                onChange={e => setEditForm(p => ({ ...p, kontakt_telefon: e.target.value }))} />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Email</label>
-              <input type="email" className={inputCls} style={inputStyle}
-                value={editForm.kontakt_email}
-                onChange={e => setEditForm(p => ({ ...p, kontakt_email: e.target.value }))} />
             </div>
           </div>
           <div className="flex items-center justify-between pt-2">
@@ -328,40 +303,8 @@ export default function CompanyDetail() {
           })()}
         </div>
 
-        {/* Contact card */}
-        <div className="bg-white rounded-2xl p-5 h-fit" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.05)' }}>
-          <p className="font-semibold text-sm mb-4" style={{ color: '#1E293B', borderBottom: '1px solid #F1F5F9', paddingBottom: 12 }}>
-            📞 Kontakt
-          </p>
-          {company.kontakt_ime || company.kontakt_telefon || company.kontakt_email ? (
-            <div className="flex flex-col gap-3">
-              {company.kontakt_ime && (
-                <div>
-                  <p className="text-xs mb-0.5" style={{ color: '#94A3B8' }}>Kontakt osoba</p>
-                  <p className="text-sm" style={{ color: '#1E293B' }}>{company.kontakt_ime}</p>
-                </div>
-              )}
-              {company.kontakt_telefon && (
-                <div>
-                  <p className="text-xs mb-0.5" style={{ color: '#94A3B8' }}>Telefon</p>
-                  <a href={`tel:${company.kontakt_telefon}`} className="text-sm" style={{ color: '#2563EB' }}>
-                    {company.kontakt_telefon}
-                  </a>
-                </div>
-              )}
-              {company.kontakt_email && (
-                <div>
-                  <p className="text-xs mb-0.5" style={{ color: '#94A3B8' }}>Email</p>
-                  <a href={`mailto:${company.kontakt_email}`} className="text-sm" style={{ color: '#2563EB' }}>
-                    {company.kontakt_email}
-                  </a>
-                </div>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm" style={{ color: '#CBD5E1' }}>Nema kontakt podataka.</p>
-          )}
-        </div>
+        {/* Kontakt osobe */}
+        <CompanyContacts key={id} companyId={id} initial={contacts} />
       </div>
     </div>
   )

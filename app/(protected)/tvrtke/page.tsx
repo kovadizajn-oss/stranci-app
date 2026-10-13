@@ -11,6 +11,7 @@ type Company = {
   kontakt_email: string | null
   created_at: string
   worker_count: number
+  contacts: { ime: string; uloga: string | null; telefon: string | null; email: string | null }[]
 }
 
 export default function TvrtkePage() {
@@ -35,6 +36,7 @@ export default function TvrtkePage() {
       kontakt_email: c.kontakt_email,
       created_at: c.created_at,
       worker_count: Array.isArray(c.employees) ? c.employees[0]?.count ?? c.employees.length : 0,
+      contacts: c.contacts || [],
     })))
     setLoading(false)
   }
@@ -47,16 +49,21 @@ export default function TvrtkePage() {
     const res = await fetch('/api/companies', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        naziv: form.naziv.trim(),
-        kontakt_ime: form.kontakt_ime.trim() || null,
-        kontakt_telefon: form.kontakt_telefon.trim() || null,
-        kontakt_email: form.kontakt_email.trim() || null,
-      }),
+      body: JSON.stringify({ naziv: form.naziv.trim() }),
     })
 
     if (res.ok) {
       const data = await res.json()
+      // Prva kontakt osoba ide u tablicu kontakata; ostale se dodaju na stranici tvrtke
+      const contact = { ime: form.kontakt_ime.trim(), uloga: null, telefon: form.kontakt_telefon.trim() || null, email: form.kontakt_email.trim() || null }
+      const hasContact = !!(contact.ime || contact.telefon || contact.email)
+      if (hasContact) {
+        await fetch('/api/company-contacts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ company_id: data.id, ...contact, ime: contact.ime || 'Kontakt' }),
+        })
+      }
       const newCo: Company = {
         id: data.id,
         naziv: form.naziv.trim(),
@@ -65,6 +72,7 @@ export default function TvrtkePage() {
         kontakt_email: form.kontakt_email.trim() || null,
         created_at: new Date().toISOString(),
         worker_count: 0,
+        contacts: hasContact ? [{ ...contact, ime: contact.ime || 'Kontakt' }] : [],
       }
       setCompanies(prev => [...prev, newCo].sort((a, b) => a.naziv.localeCompare(b.naziv)))
     }
@@ -110,7 +118,7 @@ export default function TvrtkePage() {
                 required />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Kontakt osoba</label>
+              <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Kontakt osoba <span style={{ color: '#94A3B8', fontWeight: 400 }}>(ostale dodaj na stranici tvrtke)</span></label>
               <input className={inputCls} style={inputStyle}
                 placeholder="Ime i prezime"
                 value={form.kontakt_ime}
@@ -175,9 +183,11 @@ export default function TvrtkePage() {
             Nema dodanih tvrtki. Dodajte prvu tvrtku klikom na gumb gore.
           </div>
         ) : (() => {
+          const q = search.toLowerCase()
           const filtered = companies.filter(co =>
-            co.naziv.toLowerCase().includes(search.toLowerCase()) ||
-            (co.kontakt_ime || '').toLowerCase().includes(search.toLowerCase())
+            co.naziv.toLowerCase().includes(q) ||
+            (co.kontakt_ime || '').toLowerCase().includes(q) ||
+            co.contacts.some(c => `${c.ime} ${c.uloga || ''} ${c.telefon || ''} ${c.email || ''}`.toLowerCase().includes(q))
           )
           if (filtered.length === 0) return (
             <div className="p-8 text-center text-sm" style={{ color: '#94A3B8' }}>
@@ -203,12 +213,19 @@ export default function TvrtkePage() {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold" style={{ color: '#1E293B' }}>{co.naziv}</p>
-                {co.kontakt_ime && (
-                  <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>
-                    {co.kontakt_ime}
-                    {co.kontakt_telefon && ` · ${co.kontakt_telefon}`}
-                  </p>
-                )}
+                {(() => {
+                  const first = co.contacts[0] || (co.kontakt_ime ? { ime: co.kontakt_ime, telefon: co.kontakt_telefon, uloga: null } : null)
+                  if (!first) return null
+                  const more = co.contacts.length - 1
+                  return (
+                    <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>
+                      {first.ime}
+                      {first.uloga && ` (${first.uloga})`}
+                      {first.telefon && ` · ${first.telefon}`}
+                      {more > 0 && <span style={{ color: '#94A3B8' }}>{` · +${more} ${more === 1 ? 'kontakt' : 'kontakta'}`}</span>}
+                    </p>
+                  )
+                })()}
               </div>
 
               {/* Worker count */}
