@@ -45,6 +45,15 @@ function formatDateHR(dateStr: string | null) {
   return `${d.getDate().toString().padStart(2, '0')}.${(d.getMonth() + 1).toString().padStart(2, '0')}.${d.getFullYear()}.`
 }
 
+function daysLabel(dateStr: string) {
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const d = new Date(dateStr); d.setHours(0, 0, 0, 0)
+  const days = Math.round((d.getTime() - today.getTime()) / 86400000)
+  if (days === 0) return 'ističe danas'
+  if (days < 0) return `isteklo prije ${-days} ${-days === 1 ? 'dan' : 'dana'}`
+  return `za ${days} ${days === 1 ? 'dan' : 'dana'}`
+}
+
 const DOC_TYPES: Record<string, string> = {
   radna_dozvola: 'Radna dozvola',
   lijecnicki: 'Liječnički pregled',
@@ -274,7 +283,18 @@ export default function ZaposleniciPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{formatDateHR(emp.doc_isteka)}</td>
+                    <td className="px-4 py-3">
+                      {emp.doc_isteka ? (
+                        <div>
+                          <p className="text-sm font-medium" style={{ color: '#1E293B' }}>{emp.doc_tip || 'Dokument'}</p>
+                          <p className="text-xs" style={{ color: docStatus.label === 'Vrijedi' ? '#64748B' : docStatus.color }}>
+                            {formatDateHR(emp.doc_isteka)} · {daysLabel(emp.doc_isteka)}
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="text-sm" style={{ color: '#CBD5E1' }}>—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <span className="text-xs px-2.5 py-1 rounded-full font-medium"
                         style={{ background: docStatus.bg, color: docStatus.color }}>
