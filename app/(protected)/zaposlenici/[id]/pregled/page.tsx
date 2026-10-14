@@ -109,6 +109,7 @@ export default function CandidatePregled() {
   const [prateciDocs, setPrateciDocs] = useState<any[]>([])
   const [vacations, setVacations] = useState<any[]>([])
   const [sickLeaves, setSickLeaves] = useState<any[]>([])
+  const [smjestaj, setSmjestaj] = useState<any>(null)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -116,7 +117,8 @@ export default function CandidatePregled() {
     async function load() {
       const res = await fetch(`/api/employees/${id}`)
       if (!res.ok) return
-      const { employee, documents: docs, vacations: vacs, sick_leaves: sick } = await res.json()
+      const { employee, documents: docs, vacations: vacs, sick_leaves: sick, smjestaj: smj } = await res.json()
+      setSmjestaj(smj || null)
       if (!employee) return
       setEmp(employee)
 
@@ -180,6 +182,12 @@ export default function CandidatePregled() {
                 <span className="text-xs px-2.5 py-1 rounded-full" style={{ background: '#F1F5F9', color: '#475569' }}>
                   {emp.radno_mjesto}
                 </span>
+              )}
+              {smjestaj?.accommodations && (
+                <Link href={`/smjestaj/${smjestaj.accommodations.id}`}
+                  className="text-xs px-2.5 py-1 rounded-full font-medium hover:underline" style={{ background: '#ECFDF5', color: '#047857' }}>
+                  🏠 {smjestaj.accommodations.naziv}
+                </Link>
               )}
               {onVacation && (
                 <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: '#DCFCE7', color: '#16A34A' }}>🌴 Na godišnjem</span>

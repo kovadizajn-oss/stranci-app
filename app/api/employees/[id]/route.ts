@@ -9,16 +9,20 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const { id } = await params
   const supabase = createAdminClient()
 
-  const [{ data: emp }, { data: docs }, { data: vacs }, { data: sick }] = await Promise.all([
+  const [{ data: emp }, { data: docs }, { data: vacs }, { data: sick }, { data: smj }] = await Promise.all([
     supabase.from('employees').select('*').eq('id', id).single(),
     supabase.from('documents').select('*').eq('employee_id', id),
     supabase.from('vacations').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
     supabase.from('sick_leaves').select('*').eq('employee_id', id).order('datum_od', { ascending: false }),
+    supabase.from('accommodation_residents').select('id, datum_od, datum_do, ugovor_url, accommodations(id, naziv)')
+      .eq('employee_id', id).order('datum_od', { ascending: false }),
   ])
+  const danas = new Date().toISOString().slice(0, 10)
+  const smjestaj = (smj || []).find(r => !r.datum_do || r.datum_do >= danas) || null
 
   if (!emp) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  return NextResponse.json({ employee: emp, documents: docs || [], vacations: vacs || [], sick_leaves: sick || [] })
+  return NextResponse.json({ employee: emp, documents: docs || [], vacations: vacs || [], sick_leaves: sick || [], smjestaj })
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {

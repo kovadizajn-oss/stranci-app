@@ -9,6 +9,7 @@ const navItems = [
   { href: '/zaposlenici',  label: 'Zaposlenici',  icon: <IconWorkers /> },
   { href: '/tvrtke',       label: 'Tvrtke',       icon: <IconCompany /> },
   { href: '/partneri',     label: 'Partnerske agencije', short: 'Partneri', icon: <IconPartner /> },
+  { href: '/smjestaj',     label: 'Smještaj',     icon: <IconHome /> },
   { href: '/kalendar',     label: 'Kalendar',     icon: <IconCalendar /> },
   { href: '/obaveze',      label: 'Obaveze',      icon: <IconObaveze /> },
 ]
@@ -24,6 +25,9 @@ function IconCompany() {
 }
 function IconPartner() {
   return <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/></svg>
+}
+function IconHome() {
+  return <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9v12h14V9"/><path d="M10 21v-6h4v6"/></svg>
 }
 function IconCalendar() {
   return <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
