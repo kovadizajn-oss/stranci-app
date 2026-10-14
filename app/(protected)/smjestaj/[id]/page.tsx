@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import SmjestajDokumenti from '@/components/SmjestajDokumenti'
 import SmjestajForm, { smjestajDraft, type Smjestaj, type SmjestajDraft } from '@/components/SmjestajForm'
 import { efektivniKapacitet, formatDatum, jeTrenutni, popunjenost } from '@/lib/smjestaj'
 
@@ -144,7 +145,7 @@ export default function SmjestajDetail() {
   }
 
   async function handleDelete() {
-    if (!confirm('Obrisati ovaj smještaj? Obrisat će se i sobe te evidencija tko je u njemu živio.')) return
+    if (!confirm('Obrisati ovaj smještaj? Obrisat će se i sobe, dokumenti te evidencija tko je u njemu živio.')) return
     setDeleting(true)
     await fetch(`/api/smjestaj/${id}`, { method: 'DELETE' })
     router.push('/smjestaj')
@@ -497,6 +498,9 @@ export default function SmjestajDetail() {
           </div>
         </div>
       )}
+
+      {/* Dokumenti (ZK izvadak, posjedovni list, ugovor o najmu...) */}
+      <SmjestajDokumenti accommodationId={acc.id} />
 
       {/* Prijašnji stanari */}
       {bivsi.length > 0 && (

@@ -52,3 +52,29 @@ export function sobaPayload(body: Record<string, unknown>) {
 export function efektivniKapacitet(kapacitet: number | null | undefined, kreveti: number) {
   return kreveti > 0 ? kreveti : (kapacitet || null)
 }
+
+// ── Dokumenti smještaja ──
+export const DOKUMENT_VRSTE: { value: string; label: string; color: string; bg: string }[] = [
+  { value: 'zk_izvadak', label: 'Izvadak iz zemljišne knjige', color: '#2563EB', bg: '#EFF6FF' },
+  { value: 'posjedovni_list', label: 'Posjedovni list (katastar)', color: '#7C3AED', bg: '#F3E8FF' },
+  { value: 'katastarski_plan', label: 'Kopija katastarskog plana', color: '#0F766E', bg: '#CCFBF1' },
+  { value: 'ugovor_najam', label: 'Ugovor o najmu', color: '#16A34A', bg: '#DCFCE7' },
+  { value: 'uporabna_dozvola', label: 'Uporabna / građevinska dozvola', color: '#CA8A04', bg: '#FEF9C3' },
+  { value: 'tlocrt', label: 'Tlocrt / skica', color: '#EA580C', bg: '#FFEDD5' },
+  { value: 'ostalo', label: 'Ostalo', color: '#64748B', bg: '#F1F5F9' },
+]
+
+export function dokumentVrsta(v: string | null | undefined) {
+  return DOKUMENT_VRSTE.find(d => d.value === v) || DOKUMENT_VRSTE[DOKUMENT_VRSTE.length - 1]
+}
+
+export function dokumentPayload(body: Record<string, unknown>) {
+  const s = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null)
+  const vrsta = s(body.vrsta)
+  return {
+    vrsta: vrsta && DOKUMENT_VRSTE.some(d => d.value === vrsta) ? vrsta : 'ostalo',
+    naziv: s(body.naziv),
+    datum: s(body.datum),
+    napomena: s(body.napomena),
+  }
+}
