@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import FilterDropdown from '@/components/FilterDropdown'
 
 type Obaveza = {
   id: string
@@ -274,14 +275,13 @@ export default function ObavezePage() {
           </button>
         ))}
       </div>
-      <select value={vezano} onChange={e => setVezano(e.target.value as typeof vezano)}
-        className="px-3 py-2 rounded-lg border text-sm"
-        style={{ borderColor: vezano !== 'sve' ? '#2563EB' : '#D1D5DB', color: vezano !== 'sve' ? '#1D4ED8' : '#334155', background: 'white' }}>
-        <option value="sve">Vezano za: sve</option>
-        <option value="radnici">Radnike</option>
-        <option value="tvrtke">Tvrtke</option>
-        <option value="opce">Općenito (bez radnika i tvrtke)</option>
-      </select>
+      <FilterDropdown label="Vezano za" value={vezano === 'sve' ? '' : vezano}
+        onChange={v => setVezano((v || 'sve') as typeof vezano)}
+        options={[
+          { value: 'radnici', label: '🔗 Radnike', color: '#2563EB', bg: '#EFF6FF' },
+          { value: 'tvrtke', label: '🏢 Tvrtke', color: '#7C3AED', bg: '#F3E8FF' },
+          { value: 'opce', label: 'Općenito', color: '#64748B', bg: '#F1F5F9' },
+        ]} />
       </div>
 
       {/* List */}

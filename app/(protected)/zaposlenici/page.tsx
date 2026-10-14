@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ustupanjeUpozorenje, type VrstaZaposlenja } from '@/lib/zaposlenje'
+import { ustupanjeUpozorenje, VRSTA_BADGE, type VrstaZaposlenja } from '@/lib/zaposlenje'
+import FilterDropdown, { type FilterOption } from '@/components/FilterDropdown'
 
 const STATUS_ZAP_CONFIG: Record<string, { color: string; bg: string }> = {
   'Aktivan':    { color: '#16A34A', bg: '#DCFCE7' },
@@ -68,33 +69,22 @@ const DOC_STATUS_CONFIG: Record<string, { color: string; bg: string }> = {
   'Bez dokumenta':  { color: '#94A3B8', bg: '#F1F5F9' },
 }
 const DOC_STATUSES = Object.keys(DOC_STATUS_CONFIG)
-const PRISUTNOST = ['Radi', 'Na godišnjem', 'Na bolovanju']
-const ZAPOSLENJE = ['Ustupanje', 'Izravno', 'Nije određeno']
-
-const selectStyle: CSSProperties = {
-  borderColor: '#D1D5DB', background: 'white', color: '#334155', minWidth: 150,
-}
 
 function uniqueSorted(values: (string | null)[]) {
   return Array.from(new Set(values.filter((v): v is string => !!v && v.trim() !== ''))).sort((a, b) => a.localeCompare(b, 'hr'))
 }
 
-function FilterSelect({ label, value, onChange, options }: {
-  label: string; value: string; onChange: (v: string) => void; options: string[]
-}) {
-  return (
-    <select
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      aria-label={label}
-      className="w-full md:w-auto px-3 py-2 rounded-lg border text-sm"
-      style={{ ...selectStyle, borderColor: value ? '#2563EB' : '#D1D5DB', color: value ? '#1D4ED8' : '#334155' }}
-    >
-      <option value="">{label}: sve</option>
-      {options.map(o => <option key={o} value={o}>{o}</option>)}
-    </select>
-  )
-}
+const opts = (values: string[]): FilterOption[] => values.map(value => ({ value }))
+const PRISUTNOST_OPTS: FilterOption[] = [
+  { value: 'Radi' },
+  { value: 'Na godišnjem', color: '#16A34A', bg: '#DCFCE7' },
+  { value: 'Na bolovanju', color: '#CA8A04', bg: '#FEF9C3' },
+]
+const ZAPOSLENJE_OPTS: FilterOption[] = [
+  { value: 'Ustupanje', color: VRSTA_BADGE.ustupanje.color, bg: VRSTA_BADGE.ustupanje.bg },
+  { value: 'Izravno', color: VRSTA_BADGE.izravno.color, bg: VRSTA_BADGE.izravno.bg },
+  { value: 'Nije određeno', color: '#64748B', bg: '#F1F5F9' },
+]
 
 export default function ZaposleniciPage() {
   const [employees, setEmployees] = useState<EmployeeRow[]>([])
@@ -202,14 +192,16 @@ export default function ZaposleniciPage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="w-full md:w-auto px-3 py-2 rounded-lg border text-sm"
-          style={{ borderColor: '#D1D5DB', minWidth: 260, background: 'white' }}
+          style={{ borderColor: '#D1D5DB', minWidth: 260, height: 38, background: 'white' }}
         />
-        <FilterSelect label="Status" value={filterZap} onChange={setFilterZap} options={ZAP_STATUSES} />
-        <FilterSelect label="Dokumenti" value={filterDoc} onChange={setFilterDoc} options={DOC_STATUSES} />
-        <FilterSelect label="Zaposlenje" value={filterZaposlenje} onChange={setFilterZaposlenje} options={ZAPOSLENJE} />
-        {tvrtke.length > 0 && <FilterSelect label="Tvrtka" value={filterTvrtka} onChange={setFilterTvrtka} options={tvrtke} />}
-        {drzave.length > 0 && <FilterSelect label="Država" value={filterDrzava} onChange={setFilterDrzava} options={drzave} />}
-        <FilterSelect label="Prisutnost" value={filterPrisutnost} onChange={setFilterPrisutnost} options={PRISUTNOST} />
+        <FilterDropdown label="Status" value={filterZap} onChange={setFilterZap}
+          options={ZAP_STATUSES.map(v => ({ value: v, ...STATUS_ZAP_CONFIG[v] }))} />
+        <FilterDropdown label="Dokumenti" value={filterDoc} onChange={setFilterDoc}
+          options={DOC_STATUSES.map(v => ({ value: v, ...DOC_STATUS_CONFIG[v] }))} />
+        <FilterDropdown label="Zaposlenje" value={filterZaposlenje} onChange={setFilterZaposlenje} options={ZAPOSLENJE_OPTS} />
+        {tvrtke.length > 0 && <FilterDropdown label="Tvrtka" value={filterTvrtka} onChange={setFilterTvrtka} options={opts(tvrtke)} />}
+        {drzave.length > 0 && <FilterDropdown label="Država" value={filterDrzava} onChange={setFilterDrzava} options={opts(drzave)} />}
+        <FilterDropdown label="Prisutnost" value={filterPrisutnost} onChange={setFilterPrisutnost} options={PRISUTNOST_OPTS} />
         {anyFilter && (
           <button onClick={clearFilters}
             className="text-xs px-2.5 py-1.5 rounded-lg whitespace-nowrap"
