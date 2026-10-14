@@ -25,6 +25,7 @@ export async function POST(request: Request) {
     .insert({
       accommodation_id: body.accommodation_id,
       employee_id: body.employee_id,
+      room_id: body.room_id || null,
       datum_od: datumOd,
       ugovor_url: body.ugovor_url || null,
       napomena: body.napomena?.trim() || null,

@@ -10,7 +10,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params
   const body = await request.json()
   const update: Record<string, unknown> = {}
-  for (const k of ['datum_od', 'datum_do', 'ugovor_url', 'napomena']) if (k in body) update[k] = body[k] || null
+  for (const k of ['datum_od', 'datum_do', 'ugovor_url', 'napomena', 'room_id']) if (k in body) update[k] = body[k] || null
 
   const supabase = createAdminClient()
   const { data, error } = await supabase

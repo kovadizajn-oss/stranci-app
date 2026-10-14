@@ -34,3 +34,21 @@ export function formatDatum(d: string | null | undefined) {
   const [y, m, dd] = d.split('-')
   return `${dd}.${m}.${y}.`
 }
+
+export function sobaPayload(body: Record<string, unknown>) {
+  const naziv = String(body.naziv ?? '').trim() || null
+  const kreveti = Math.round(Number(String(body.broj_kreveta ?? '').replace(',', '.')))
+  const m2raw = String(body.povrsina_m2 ?? '').trim().replace(',', '.')
+  const m2 = m2raw === '' ? null : Number(m2raw)
+  return {
+    naziv,
+    broj_kreveta: Number.isFinite(kreveti) && kreveti > 0 ? kreveti : 1,
+    povrsina_m2: m2 !== null && Number.isFinite(m2) && m2 > 0 ? m2 : null,
+    napomena: String(body.napomena ?? '').trim() || null,
+  }
+}
+
+/** Kapacitet smještaja: zbroj kreveta ako ima sobe, inače ručno upisani kapacitet. */
+export function efektivniKapacitet(kapacitet: number | null | undefined, kreveti: number) {
+  return kreveti > 0 ? kreveti : (kapacitet || null)
+}

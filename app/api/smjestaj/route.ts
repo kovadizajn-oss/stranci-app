@@ -1,22 +1,34 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
 import { requireSession } from '@/lib/session'
-import { smjestajPayload, jeTrenutni } from '@/lib/smjestaj'
+import { smjestajPayload, jeTrenutni, efektivniKapacitet } from '@/lib/smjestaj'
 
 export async function GET() {
   const unauth = await requireSession()
   if (unauth) return unauth
 
   const supabase = createAdminClient()
-  const [{ data, error }, { data: res }] = await Promise.all([
+  const [{ data, error }, { data: res }, { data: rooms }] = await Promise.all([
     supabase.from('accommodations').select('*').order('naziv'),
     supabase.from('accommodation_residents').select('accommodation_id, datum_do'),
+    supabase.from('accommodation_rooms').select('accommodation_id, broj_kreveta'),
   ])
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const count: Record<string, number> = {}
   for (const r of res || []) if (jeTrenutni(r.datum_do)) count[r.accommodation_id] = (count[r.accommodation_id] || 0) + 1
-  return NextResponse.json((data || []).map(a => ({ ...a, broj_stanara: count[a.id] || 0 })))
+  const kreveti: Record<string, number> = {}
+  const sobe: Record<string, number> = {}
+  for (const r of rooms || []) {
+    kreveti[r.accommodation_id] = (kreveti[r.accommodation_id] || 0) + (r.broj_kreveta || 0)
+    sobe[r.accommodation_id] = (sobe[r.accommodation_id] || 0) + 1
+  }
+  return NextResponse.json((data || []).map(a => ({
+    ...a,
+    broj_stanara: count[a.id] || 0,
+    broj_soba: sobe[a.id] || a.broj_soba,
+    kapacitet: efektivniKapacitet(a.kapacitet, kreveti[a.id] || 0),
+  })))
 }
 
 export async function POST(request: Request) {

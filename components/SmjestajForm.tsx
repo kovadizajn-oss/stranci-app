@@ -57,6 +57,7 @@ export default function SmjestajForm({ title, initial, saving, error, onSave, on
           <div><L>Površina (m²)</L><input inputMode="decimal" className={inputCls} style={inputStyle} value={d.povrsina_m2} onChange={set('povrsina_m2')} /></div>
           <div><L>Broj soba</L><input inputMode="numeric" className={inputCls} style={inputStyle} value={d.broj_soba} onChange={set('broj_soba')} /></div>
           <div><L>Kapacitet (radnika)</L><input inputMode="numeric" className={inputCls} style={inputStyle} value={d.kapacitet} onChange={set('kapacitet')} /></div>
+          <p className="col-span-3 text-xs -mt-1" style={{ color: '#94A3B8' }}>Kad dodaš sobe s krevetima, broj soba i kapacitet računaju se automatski iz njih.</p>
         </div>
         <div><L>Najmodavac / vlasnik</L><input className={inputCls} style={inputStyle} value={d.najmodavac} onChange={set('najmodavac')} /></div>
         <div><L>Kontakt najmodavca</L><input className={inputCls} style={inputStyle} placeholder="telefon ili email" value={d.najmodavac_kontakt} onChange={set('najmodavac_kontakt')} /></div>
