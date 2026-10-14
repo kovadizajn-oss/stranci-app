@@ -33,10 +33,13 @@ export async function POST(request: Request) {
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Adresa smještaja na profilu radnika prati smještaj
+  // Adresa smještaja na profilu popunjava se samo ako je prazna — postojeća adresa se nikad ne prepisuje
   const { data: acc } = await supabase.from('accommodations').select('adresa, grad').eq('id', body.accommodation_id).single()
   const adresa = [acc?.adresa, acc?.grad].filter(Boolean).join(', ')
-  if (adresa) await supabase.from('employees').update({ adresa_smjestaja: adresa }).eq('id', body.employee_id)
+  if (adresa) {
+    await supabase.from('employees').update({ adresa_smjestaja: adresa })
+      .eq('id', body.employee_id).or('adresa_smjestaja.is.null,adresa_smjestaja.eq.')
+  }
 
   return NextResponse.json(data)
 }
