@@ -18,13 +18,19 @@ export async function GET() {
     { data: vacations },
     { data: sickLeaves },
     { data: recentSick },
+    { data: planovi },
   ] = await Promise.all([
     supabase.from('employees').select('*').order('prezime'),
     supabase.from('documents').select('employee_id, naziv, datum_isteka').order('datum_isteka', { ascending: true }),
     supabase.from('vacations').select('employee_id').lte('datum_od', today).gte('datum_do', today),
     supabase.from('sick_leaves').select('employee_id').lte('datum_od', today).gte('datum_do', today),
     supabase.from('sick_leaves').select('employee_id').gte('datum_do', sixMonthsAgoStr),
+    // planirani prelasci (ako tablica još ne postoji, lista radi i bez njih)
+    supabase.from('employee_assignments').select('employee_id, poslodavac, datum_od, status_prijave')
+      .eq('faza', 'planirano').order('datum_od', { ascending: true, nullsFirst: false }),
   ])
+  const planByEmp: Record<string, { poslodavac: string | null; datum_od: string | null; status_prijave: string | null }> = {}
+  for (const p of (planovi || []) as any[]) if (!planByEmp[p.employee_id]) planByEmp[p.employee_id] = p
 
   const vacationIds = new Set((vacations || []).map((v: any) => v.employee_id))
   const sickIds = new Set((sickLeaves || []).map((s: any) => s.employee_id))
@@ -56,6 +62,7 @@ export async function GET() {
       on_vacation: vacationIds.has(emp.id),
       on_sick_leave: sickIds.has(emp.id),
       no_sick_6mo: !recentSickIds.has(emp.id),
+      prelazak: planByEmp[emp.id] || null,
     }
   })
 

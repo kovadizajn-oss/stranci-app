@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import RadnaPovijest from '@/components/RadnaPovijest'
+import type { Angazman } from '@/lib/radna-povijest'
 import { AGENCIJA, VRSTA_BADGE, ustupanjeUpozorenje, type VrstaZaposlenja } from '@/lib/zaposlenje'
 
 function daysUntil(dateStr: string) {
@@ -110,6 +112,8 @@ export default function CandidatePregled() {
   const [vacations, setVacations] = useState<any[]>([])
   const [sickLeaves, setSickLeaves] = useState<any[]>([])
   const [smjestaj, setSmjestaj] = useState<any>(null)
+  const [povijest, setPovijest] = useState<Angazman[]>([])
+  const [reloadKey, setReloadKey] = useState(0)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -117,8 +121,9 @@ export default function CandidatePregled() {
     async function load() {
       const res = await fetch(`/api/employees/${id}`)
       if (!res.ok) return
-      const { employee, documents: docs, vacations: vacs, sick_leaves: sick, smjestaj: smj } = await res.json()
+      const { employee, documents: docs, vacations: vacs, sick_leaves: sick, smjestaj: smj, povijest: pov } = await res.json()
       setSmjestaj(smj || null)
+      setPovijest(pov || [])
       if (!employee) return
       setEmp(employee)
 
@@ -130,7 +135,7 @@ export default function CandidatePregled() {
       setLoading(false)
     }
     load()
-  }, [id])
+  }, [id, reloadKey])
 
   if (loading) return <div className="p-8 text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</div>
   if (!emp) return <div className="p-8 text-sm" style={{ color: '#EF4444' }}>Zaposlenik nije pronađen.</div>
@@ -255,6 +260,10 @@ export default function CandidatePregled() {
                 <Row label="Radno mjesto" value={emp.radno_mjesto} />
               </div>
             )}
+          </Card>
+
+          <Card title="Kretanje radnika" icon="🔀">
+            <RadnaPovijest employeeId={id} trenutno={emp} povijest={povijest} onChanged={() => setReloadKey(k => k + 1)} />
           </Card>
 
           <Card title="Godišnji odmor & Bolovanje" icon="📅">

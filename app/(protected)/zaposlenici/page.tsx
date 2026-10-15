@@ -29,6 +29,7 @@ type EmployeeRow = {
   on_vacation: boolean
   on_sick_leave: boolean
   no_sick_6mo: boolean
+  prelazak: { poslodavac: string | null; datum_od: string | null; status_prijave: string | null } | null
 }
 
 function statusFromExpiry(dateStr: string | null) {
@@ -84,6 +85,7 @@ const ZAPOSLENJE_OPTS: FilterOption[] = [
   { value: 'Ustupanje', color: VRSTA_BADGE.ustupanje.color, bg: VRSTA_BADGE.ustupanje.bg },
   { value: 'Izravno', color: VRSTA_BADGE.izravno.color, bg: VRSTA_BADGE.izravno.bg },
   { value: 'Nije određeno', color: '#64748B', bg: '#F1F5F9' },
+  { value: 'Planiran prelazak', label: '→ Planiran prelazak', color: '#2563EB', bg: '#EFF6FF' },
 ]
 
 export default function ZaposleniciPage() {
@@ -140,6 +142,7 @@ export default function ZaposleniciPage() {
     if (filterZaposlenje === 'Ustupanje') result = result.filter(e => e.vrsta_zaposlenja === 'ustupanje')
     if (filterZaposlenje === 'Izravno') result = result.filter(e => e.vrsta_zaposlenja === 'izravno')
     if (filterZaposlenje === 'Nije određeno') result = result.filter(e => !e.vrsta_zaposlenja)
+    if (filterZaposlenje === 'Planiran prelazak') result = result.filter(e => !!e.prelazak)
 
     // When no filters active, float "Novi uvoz" workers to the top
     if (!search && !filterZap && !filterDoc && !filterTvrtka && !filterDrzava && !filterPrisutnost && !filterZaposlenje) {
@@ -254,6 +257,12 @@ export default function ZaposleniciPage() {
                               const w = emp.vrsta_zaposlenja === 'ustupanje' ? ustupanjeUpozorenje(emp.ustupanje_do) : null
                               return w && <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: w.bg, color: w.color }}>{w.label}</span>
                             })()}
+                            {emp.prelazak && (
+                              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" title="Planirani prelazak"
+                                style={{ background: '#EFF6FF', color: '#2563EB' }}>
+                                → {emp.prelazak.poslodavac}{emp.prelazak.datum_od ? ` od ${formatDateHR(emp.prelazak.datum_od)}` : ''}
+                              </span>
+                            )}
                             {emp.on_vacation && (
                               <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
                                 style={{ background: '#DCFCE7', color: '#16A34A' }}>Na godišnjem</span>
