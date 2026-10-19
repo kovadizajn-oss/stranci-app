@@ -246,7 +246,7 @@ export default function CandidatePregled() {
         {/* RIGHT */}
         <div className="flex flex-col gap-4">
 
-          <RadnikDokumenti employeeId={id} docs={docs} onDocsChange={setDocs} urediHref={`/zaposlenici/${id}`} />
+          <RadnikDokumenti employeeId={id} docs={docs} onDocsChange={setDocs} samoPregled />
 
         </div>
       </div>
