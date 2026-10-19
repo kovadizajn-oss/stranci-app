@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ustupanjeUpozorenje, VRSTA_BADGE, type VrstaZaposlenja } from '@/lib/zaposlenje'
 import FilterDropdown, { type FilterOption } from '@/components/FilterDropdown'
+import GenerirajPopis from '@/components/GenerirajPopis'
 
 const STATUS_ZAP_CONFIG: Record<string, { color: string; bg: string }> = {
   'Aktivan':    { color: '#16A34A', bg: '#DCFCE7' },
@@ -99,6 +100,12 @@ export default function ZaposleniciPage() {
   const [filterDrzava, setFilterDrzava] = useState('')
   const [filterPrisutnost, setFilterPrisutnost] = useState('')
   const [filterZaposlenje, setFilterZaposlenje] = useState('')
+  // Odabir radnika za popise (npr. liječnički pregled)
+  const [odabrani, setOdabrani] = useState<Set<string>>(new Set())
+  const [popisOtvoren, setPopisOtvoren] = useState(false)
+  function prebaciOdabir(id: string) {
+    setOdabrani(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  }
 
 
   useEffect(() => {
@@ -222,6 +229,11 @@ export default function ZaposleniciPage() {
         <table className="w-full" style={{ minWidth: 750 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #F1F5F9', background: '#F8FAFC' }}>
+              <th className="pl-4 pr-1 py-3" style={{ width: 36 }}>
+                <input type="checkbox" aria-label="Odaberi sve" className="cursor-pointer"
+                  checked={filtered.length > 0 && filtered.every(e => odabrani.has(e.id))}
+                  onChange={e => setOdabrani(e.target.checked ? new Set([...odabrani, ...filtered.map(x => x.id)]) : new Set([...odabrani].filter(id => !filtered.some(x => x.id === id))))} />
+              </th>
               <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Zaposlenik</th>
               <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Status zaposlenika</th>
               <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Nadolazeći istek</th>
@@ -231,9 +243,9 @@ export default function ZaposleniciPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</td></tr>
+              <tr><td colSpan={6} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={5} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>
+              <tr><td colSpan={6} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>
                 {employees.length === 0 ? 'Još nema zaposlenika. Dodajte prvog zaposlenika klikom na gumb gore.' : 'Nema rezultata za unesene filtere.'}
               </td></tr>
             ) : (
@@ -241,7 +253,11 @@ export default function ZaposleniciPage() {
                 const docStatus = statusFromExpiry(emp.doc_isteka)
                 const zapCfg = STATUS_ZAP_CONFIG[emp.status_zaposlenika || ''] || { color: '#475569', bg: '#F1F5F9' }
                 return (
-                  <tr key={emp.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
+                  <tr key={emp.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid #F1F5F9' : 'none', background: odabrani.has(emp.id) ? '#F8FBFF' : undefined }}>
+                    <td className="pl-4 pr-1 py-3">
+                      <input type="checkbox" aria-label={`Odaberi ${emp.ime} ${emp.prezime}`} className="cursor-pointer"
+                        checked={odabrani.has(emp.id)} onChange={() => prebaciOdabir(emp.id)} />
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0"
@@ -324,6 +340,21 @@ export default function ZaposleniciPage() {
         </table>
       </div>
       </div>
+
+      {/* Traka za odabrane radnike */}
+      {odabrani.size > 0 && (
+        <div className="sticky bottom-[68px] md:bottom-4 z-10 mt-4 flex items-center gap-3 px-4 py-3 rounded-2xl flex-wrap"
+          style={{ background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', border: '1px solid #BFDBFE', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+          <span className="text-sm font-medium flex-1" style={{ color: '#1E293B' }}>
+            {odabrani.size} {odabrani.size === 1 ? 'radnik odabran' : 'radnika odabrano'}
+          </span>
+          <button type="button" onClick={() => setOdabrani(new Set())} className="btn-secondary px-3 py-2 rounded-lg text-xs font-medium"
+            style={{ background: '#F1F5F9', color: '#374151' }}>Poništi odabir</button>
+          <button type="button" onClick={() => setPopisOtvoren(true)} className="btn-primary px-4 py-2 rounded-lg text-xs font-medium text-white"
+            style={{ background: '#2563EB' }}>📘 Popis za liječnički pregled</button>
+        </div>
+      )}
+      {popisOtvoren && <GenerirajPopis employeeIds={[...odabrani]} onClose={() => setPopisOtvoren(false)} />}
 
 
     </div>

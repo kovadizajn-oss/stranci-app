@@ -156,8 +156,8 @@ export default function EmployeeDetail() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  const [form, setForm] = useState({ ime: '', prezime: '', drzava_rodjenja: '', datum_rodjenja: '', mjesto_rodjenja: '', oib: '', status_zaposlenika: 'Aktivan', poslodavac: '', radno_mjesto: '' })
-  const [extra, setExtra] = useState({ email: '', telefon: '', adresa_smjestaja: '', ime_oca: '', iban: '' })
+  const [form, setForm] = useState({ ime: '', prezime: '', drzava_rodjenja: '', datum_rodjenja: '', mjesto_rodjenja: '', drzavljanstvo: '', oib: '', status_zaposlenika: 'Aktivan', poslodavac: '', radno_mjesto: '' })
+  const [extra, setExtra] = useState({ email: '', telefon: '', adresa_smjestaja: '', ime_oca: '', iban: '', adresa_domovina: '', strucna_sprema: '' })
   const [companies, setCompanies] = useState<{ id: string; naziv: string }[]>([])
   const [companyId, setCompanyId] = useState<string>('')
   const [poslodavacManual, setPoslodavacManual] = useState('')
@@ -254,8 +254,8 @@ export default function EmployeeDetail() {
       if (!res.ok) { router.push('/zaposlenici'); return }
       const { employee: emp, documents: docs, vacations: vacs, sick_leaves: sick } = await res.json()
 
-      setForm({ ime: emp.ime || '', prezime: emp.prezime || '', drzava_rodjenja: emp.drzava_rodjenja || '', datum_rodjenja: emp.datum_rodjenja || '', mjesto_rodjenja: emp.mjesto_rodjenja || '', oib: emp.oib || '', status_zaposlenika: emp.status_zaposlenika || 'Aktivan', poslodavac: emp.poslodavac || '', radno_mjesto: emp.radno_mjesto || '' })
-      setExtra({ email: emp.email || '', telefon: emp.telefon || '', adresa_smjestaja: emp.adresa_smjestaja || '', ime_oca: emp.ime_oca || '', iban: emp.iban || '' })
+      setForm({ ime: emp.ime || '', prezime: emp.prezime || '', drzava_rodjenja: emp.drzava_rodjenja || '', datum_rodjenja: emp.datum_rodjenja || '', mjesto_rodjenja: emp.mjesto_rodjenja || '', drzavljanstvo: emp.drzavljanstvo || '', oib: emp.oib || '', status_zaposlenika: emp.status_zaposlenika || 'Aktivan', poslodavac: emp.poslodavac || '', radno_mjesto: emp.radno_mjesto || '' })
+      setExtra({ email: emp.email || '', telefon: emp.telefon || '', adresa_smjestaja: emp.adresa_smjestaja || '', ime_oca: emp.ime_oca || '', iban: emp.iban || '', adresa_domovina: emp.adresa_domovina || '', strucna_sprema: emp.strucna_sprema || '' })
       setCompanyId(emp.company_id || '')
       setPoslodavacManual(emp.company_id ? '' : (emp.poslodavac || ''))
       setVrsta(emp.vrsta_zaposlenja || '')
@@ -298,6 +298,9 @@ export default function EmployeeDetail() {
           telefon: extra.telefon || null,
           adresa_smjestaja: extra.adresa_smjestaja || null,
           ime_oca: extra.ime_oca || null,
+          adresa_domovina: extra.adresa_domovina || null,
+          strucna_sprema: extra.strucna_sprema || null,
+          drzavljanstvo: form.drzavljanstvo || null,
           iban: extra.iban || null,
           company_id: companyId || null,
           poslodavac: companyId
@@ -361,7 +364,7 @@ export default function EmployeeDetail() {
   }
 
   const stanjeSekcija: Record<Sekcija, string> = {
-    osobni: potpis([form.ime, form.prezime, form.datum_rodjenja, form.mjesto_rodjenja, form.oib, form.drzava_rodjenja, form.status_zaposlenika]),
+    osobni: potpis([form.ime, form.prezime, form.datum_rodjenja, form.mjesto_rodjenja, form.drzavljanstvo, form.oib, form.drzava_rodjenja, form.status_zaposlenika]),
     dodatno: potpis(extra),
     rad: potpis([companyId, poslodavacManual, vrsta, ustupanjeOd, ustupanjeDo, ustupanjeOdredeno, form.radno_mjesto]),
     odsutnosti: potpis([vacations, sickLeaves]),
@@ -430,6 +433,14 @@ export default function EmployeeDetail() {
               </Field>
             </div>
             <div className="col-span-1 md:col-span-2">
+              <Field label="Državljanstvo">
+                <select className={inputCls} style={inputStyle} value={form.drzavljanstvo} onChange={e => setF('drzavljanstvo', e.target.value)}>
+                  <option value="">Isto kao država rođenja{form.drzava_rodjenja ? ` (${form.drzava_rodjenja})` : ''}</option>
+                  {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </Field>
+            </div>
+            <div className="col-span-1 md:col-span-2">
               <Field label="Status zaposlenika">
                 <StatusPicker value={form.status_zaposlenika} onChange={v => setF('status_zaposlenika', v)} />
               </Field>
@@ -450,6 +461,10 @@ export default function EmployeeDetail() {
             <div className="col-span-1 md:col-span-2">
               <Field label="Adresa smještaja (HR)"><input className={inputCls} style={inputStyle} value={extra.adresa_smjestaja} onChange={e => setE('adresa_smjestaja', e.target.value)} placeholder="Ulica i broj, Grad" /></Field>
             </div>
+            <div className="col-span-1 md:col-span-2">
+              <Field label="Adresa u matičnoj zemlji"><input className={inputCls} style={inputStyle} value={extra.adresa_domovina} onChange={e => setE('adresa_domovina', e.target.value)} placeholder="npr. House 12, Road 5, Mirpur, Dhaka 1216, Bangladesh" /></Field>
+            </div>
+            <Field label="Stručna sprema"><input className={inputCls} style={inputStyle} value={extra.strucna_sprema} onChange={e => setE('strucna_sprema', e.target.value)} placeholder="npr. SSS" /></Field>
           </div>
         </Section>
 

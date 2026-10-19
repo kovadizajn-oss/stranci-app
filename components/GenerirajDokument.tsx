@@ -9,9 +9,9 @@ import type { Dokument } from '@/lib/dokumenti'
 const inputCls = 'w-full px-3 py-2 rounded-lg border text-sm'
 const SEKCIJE: SekcijaPolja[] = ['Poslodavac', 'Radnik', 'Ostalo']
 
-function nazivDatoteke(obrazac: Obrazac, v: Record<string, string>) {
-  const ime = (v.ime_prezime || 'radnik').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_')
-  return `${obrazac.id}_${ime}.pdf`
+function nazivDatoteke(obrazac: Obrazac, ime: string) {
+  const cisto = (ime || 'radnik').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, '_')
+  return `${obrazac.id}_${cisto}.${obrazac.format}`
 }
 
 export default function GenerirajDokument({ employeeId, onSpremljeno }: {
@@ -53,34 +53,40 @@ export default function GenerirajDokument({ employeeId, onSpremljeno }: {
 
   const poslodavacPromijenjen = !!obrazac && POSLODAVAC_KLJUCEVI.some(k => k in v && v[k] !== (prefill[k]?.value || ''))
 
-  async function pripremi(): Promise<Uint8Array> {
+  async function pripremi() {
     if (!obrazac || !izvor) throw new Error('Obrazac nije odabran.')
     // Zapamti izmijenjene podatke poslodavca (agencija ili tvrtka) za sljedeći put
     if (zapamti && poslodavacPromijenjen) {
+      // Šalju se samo polja koja ovaj obrazac ima (ostala ostaju kako jesu)
+      const promjene: Record<string, string> = {}
+      for (const k of POSLODAVAC_KLJUCEVI) if (k in v) promjene[k.replace('poslodavac_', '')] = v[k] || ''
       const res = await fetch('/api/obrasci/poslodavac', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tip: izvor.poslodavac.tip, company_id: izvor.poslodavac.company_id,
-          naziv: v.poslodavac_naziv, oib: v.poslodavac_oib, adresa: v.poslodavac_adresa, telefon: v.poslodavac_telefon,
-        }),
+        body: JSON.stringify({ tip: izvor.poslodavac.tip, company_id: izvor.poslodavac.company_id, ...promjene }),
       })
       if (res.ok) {
-        const novi = { ...izvor, poslodavac: { ...izvor.poslodavac, naziv: v.poslodavac_naziv || null, oib: v.poslodavac_oib || null, adresa: v.poslodavac_adresa || null, telefon: v.poslodavac_telefon || null } }
-        setIzvor(novi)
-        setPrefill(p => ({ ...p, ...Object.fromEntries(POSLODAVAC_KLJUCEVI.map(k => [k, { value: v[k] || '' }])) }))
+        const novo = Object.fromEntries(Object.entries(promjene).map(([k, x]) => [k, x || null]))
+        setIzvor({
+          ...izvor,
+          poslodavac: { ...izvor.poslodavac, ...novo },
+          agencija: izvor.poslodavac.tip === 'agencija' ? { ...izvor.agencija, ...novo } : izvor.agencija,
+        })
+        setPrefill(p => ({ ...p, ...Object.fromEntries(POSLODAVAC_KLJUCEVI.filter(k => k in v).map(k => [k, { value: v[k] || '' }])) }))
       }
     }
-    const { generirajPdf } = await import('@/lib/obrasci/generiraj')
-    return generirajPdf(obrazac, v)
+    const { generiraj } = await import('@/lib/obrasci/generiraj')
+    return generiraj(obrazac, v)
   }
+
+  const imeRadnika = () => [izvor?.radnik.ime, izvor?.radnik.prezime].filter(Boolean).join(' ')
 
   async function otvori() {
     // Prozor se otvara odmah (inače ga preglednik blokira), PDF se učita kad je gotov
     const prozor = window.open('', '_blank')
     setBusy('otvori'); setError('')
     try {
-      const bytes = await pripremi()
-      const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'application/pdf' }))
+      const { bytes, tip } = await pripremi()
+      const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: tip }))
       if (prozor) prozor.location.href = url
       else window.location.href = url
     } catch (e) {
@@ -93,11 +99,11 @@ export default function GenerirajDokument({ employeeId, onSpremljeno }: {
   async function preuzmi() {
     setBusy('preuzmi'); setError('')
     try {
-      const bytes = await pripremi()
-      const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'application/pdf' }))
+      const { bytes, tip } = await pripremi()
+      const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: tip }))
       const a = document.createElement('a')
       a.href = url
-      a.download = nazivDatoteke(obrazac!, v)
+      a.download = nazivDatoteke(obrazac!, imeRadnika())
       document.body.appendChild(a); a.click(); a.remove()
       setTimeout(() => URL.revokeObjectURL(url), 10000)
     } catch (e) {
@@ -110,13 +116,13 @@ export default function GenerirajDokument({ employeeId, onSpremljeno }: {
     if (!obrazac) return
     setBusy('spremi'); setError(''); setPoruka('')
     try {
-      const bytes = await pripremi()
-      const ime = nazivDatoteke(obrazac, v)
+      const { bytes, tip } = await pripremi()
+      const ime = nazivDatoteke(obrazac, imeRadnika())
       const fd = new FormData()
-      fd.append('file', new File([new Uint8Array(bytes)], ime, { type: 'application/pdf' }))
+      fd.append('file', new File([new Uint8Array(bytes)], ime, { type: tip }))
       fd.append('path', `${employeeId}/doc_${Date.now()}_${ime}`)
       const up = await fetch('/api/upload', { method: 'POST', body: fd })
-      if (!up.ok) throw new Error('Učitavanje PDF-a nije uspjelo.')
+      if (!up.ok) throw new Error('Učitavanje dokumenta nije uspjelo.')
       const { url } = await up.json()
       const danas = new Date().toISOString().slice(0, 10)
       const payload = { employee_id: employeeId, naziv: obrazac.nazivDokumenta, kategorija: 'prateci' as const, datum_izdavanja: danas, datum_isteka: null, file_url: url }
@@ -172,15 +178,15 @@ export default function GenerirajDokument({ employeeId, onSpremljeno }: {
                     <button key={o.id} type="button" onClick={() => odaberi(o)} disabled={busy === 'ucitavanje'}
                       className="text-left flex items-center gap-3 p-3.5 rounded-xl transition-colors hover:bg-slate-50"
                       style={{ border: '1px solid #E2E8F0' }}>
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#EFF6FF' }}>📄</div>
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: o.format === 'pdf' ? '#FEF2F2' : '#EFF6FF' }}>{o.format === 'pdf' ? '📕' : '📘'}</div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold" style={{ color: '#1E293B' }}>{o.naziv}</p>
+                        <p className="text-sm font-semibold" style={{ color: '#1E293B' }}>{o.naziv} <span className="text-xs font-medium ml-1 px-1.5 py-0.5 rounded" style={{ background: '#F1F5F9', color: '#64748B' }}>{o.format === 'pdf' ? 'PDF' : 'Word'}</span></p>
                         <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>{o.opis}</p>
                       </div>
                       <span className="text-xs font-medium" style={{ color: '#2563EB' }}>{busy === 'ucitavanje' ? 'Učitavanje...' : 'Odaberi →'}</span>
                     </button>
                   ))}
-                  <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>Uskoro još obrazaca — svaki novi obrazac dodaje se jednom i onda radi za sve radnike.</p>
+                  <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>📕 PDF obrasci otvaraju se odmah u pregledniku, 📘 Word dokumenti preuzimaju se kao .docx (možeš ih još urediti prije ispisa).</p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-5">
@@ -197,7 +203,7 @@ export default function GenerirajDokument({ employeeId, onSpremljeno }: {
                           {polja.map(p => {
                             const zuto = fali(p.key)
                             const stil = { borderColor: zuto ? '#FACC15' : '#D1D5DB', background: zuto ? '#FEFCE8' : 'white', color: '#1E293B' }
-                            const siroko = p.vrsta === 'dugi' || p.vrsta === 'izbor' || p.key === 'oib_putovnica' || p.key === 'adresa_kontakt' || p.key === 'zadnji_pregled'
+                            const siroko = p.siroko || p.vrsta === 'dugi' || p.vrsta === 'izbor'
                             return (
                               <div key={p.key} className={siroko ? 'sm:col-span-2' : ''}>
                                 <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>{p.label}</label>
@@ -250,9 +256,13 @@ export default function GenerirajDokument({ employeeId, onSpremljeno }: {
                 <button type="button" onClick={spremi} disabled={!!busy} className="btn-secondary px-3 py-2 rounded-lg text-xs font-medium"
                   style={{ background: '#F1F5F9', color: '#374151' }}>{busy === 'spremi' ? 'Sprema...' : '💾 Spremi u dokumente'}</button>
                 <button type="button" onClick={preuzmi} disabled={!!busy} className="btn-secondary px-3 py-2 rounded-lg text-xs font-medium"
-                  style={{ background: '#EFF6FF', color: '#2563EB' }}>{busy === 'preuzmi' ? 'Priprema...' : '⬇ Preuzmi PDF'}</button>
-                <button type="button" onClick={otvori} disabled={!!busy} className="btn-primary px-4 py-2 rounded-lg text-xs font-medium text-white"
-                  style={{ background: busy ? '#93C5FD' : '#2563EB' }}>{busy === 'otvori' ? 'Priprema...' : '↗ Otvori PDF'}</button>
+                  style={obrazac.format === 'pdf' ? { background: '#EFF6FF', color: '#2563EB' } : { background: busy ? '#93C5FD' : '#2563EB', color: 'white' }}>
+                  {busy === 'preuzmi' ? 'Priprema...' : obrazac.format === 'pdf' ? '⬇ Preuzmi PDF' : '⬇ Preuzmi Word'}
+                </button>
+                {obrazac.format === 'pdf' && (
+                  <button type="button" onClick={otvori} disabled={!!busy} className="btn-primary px-4 py-2 rounded-lg text-xs font-medium text-white"
+                    style={{ background: busy ? '#93C5FD' : '#2563EB' }}>{busy === 'otvori' ? 'Priprema...' : '↗ Otvori PDF'}</button>
+                )}
               </div>
             )}
           </div>
