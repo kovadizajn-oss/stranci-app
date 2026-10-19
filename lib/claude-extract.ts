@@ -72,6 +72,8 @@ export interface IzvuceniDokument {
   kategorija: KategorijaDokumenta;
   dokument_vrijedi_do: string | null; // YYYY-MM-DD
   datum_izdavanja: string | null; // YYYY-MM-DD
+  broj_dokumenta: string | null;
+  mjesto_izdavanja: string | null;
   /** Indeks poslane datoteke iz koje je dokument (0 = prva). Koriste ga /uvoz i /bulk-uvoz za upload slike. */
   file_index: number | null;
 }
@@ -84,6 +86,7 @@ export interface IzvuceniRadnik {
   drzava_rodjenja: string | null;
   oib: string | null;
   ime_oca: string | null;
+  mjesto_rodjenja: string | null;
   poslodavac: string | null;
   radno_mjesto: string | null;
   dokumenti: IzvuceniDokument[];
@@ -229,6 +232,7 @@ POLJA RADNIKA
 - ime: osobno ime ili imena (Given names). Srednja imena idu u ime.
 - prezime: prezime (Surname). Ako dokument ima samo jedno ime bez prezimena, stavi ga u ime, a prezime je null.
 - datum_rodjenja: datum rođenja.
+- mjesto_rodjenja: mjesto (grad) rođenja, ako je navedeno (Place of birth). Samo mjesto, bez države.
 - drzava_rodjenja: država rođenja, naziv na hrvatskom jeziku (npr. Nepal, Indija, Filipini, Bangladeš, Šri Lanka, Uzbekistan, Bosna i Hercegovina, Srbija, Sjeverna Makedonija). Ako dokument navodi samo grad ili okrug rođenja, upiši državu kojoj on pripada; ako ni to nije jasno, upiši državu koja je izdala putovnicu.
 - oib: hrvatski osobni identifikacijski broj, točno 11 znamenki. Obično je na hrvatskoj boravišnoj dozvoli, rješenju MUP-a ili ugovoru o radu. Nikad ne upisuj broj putovnice ili broj dokumenta kao OIB.
 - ime_oca: samo ako je izričito navedeno (npr. "Father's name", "Name of father", "Ime oca").
@@ -249,6 +253,8 @@ Za svaki dokument:
 - datoteka: redni broj datoteke iz koje je dokument (kako su označene: 1, 2, 3…). Ako je dokument na više datoteka (prednja i stražnja strana), upiši datoteku s prednjom stranom.
 - dokument_vrijedi_do: datum isteka valjanosti. Za ugovor o radu: datum završetka ako je ugovor na određeno, inače null.
 - datum_izdavanja: datum izdavanja. Za ugovor o radu: datum sklapanja.
+- broj_dokumenta: broj dokumenta točno kako piše (npr. Passport No., broj kartice), inače null.
+- mjesto_izdavanja: mjesto ili tijelo koje je izdalo dokument (Place of issue / Authority), ako je navedeno, inače null.
 Ako dokument ne odgovara nijednoj vrsti, nemoj ga dodati u "dokumenti", ali svejedno iskoristi njegove podatke o osobi.`;
 
 // ─────────────────────────────────────────────────────────────
@@ -264,8 +270,10 @@ const DOKUMENT_SCHEMA = {
     datoteka: { type: "integer", description: "Redni broj datoteke (1, 2, 3…) iz koje je dokument" },
     dokument_vrijedi_do: tekstIliNull("Datum isteka valjanosti, YYYY-MM-DD"),
     datum_izdavanja: tekstIliNull("Datum izdavanja, YYYY-MM-DD"),
+    broj_dokumenta: tekstIliNull("Broj dokumenta"),
+    mjesto_izdavanja: tekstIliNull("Mjesto ili tijelo izdavanja"),
   },
-  required: ["dokument_naziv", "datoteka", "dokument_vrijedi_do", "datum_izdavanja"],
+  required: ["dokument_naziv", "datoteka", "dokument_vrijedi_do", "datum_izdavanja", "broj_dokumenta", "mjesto_izdavanja"],
   additionalProperties: false,
 };
 
@@ -273,6 +281,7 @@ const RADNIK_POLJA = {
   ime: tekstIliNull("Osobno ime ili imena"),
   prezime: tekstIliNull("Prezime"),
   datum_rodjenja: tekstIliNull("Datum rođenja, YYYY-MM-DD"),
+  mjesto_rodjenja: tekstIliNull("Mjesto rođenja"),
   drzava_rodjenja: tekstIliNull("Država rođenja, naziv na hrvatskom"),
   oib: tekstIliNull("Hrvatski OIB, točno 11 znamenki"),
   ime_oca: tekstIliNull("Ime oca, samo ako je izričito navedeno"),
@@ -509,6 +518,7 @@ function normalizirajRadnika(sirovo: unknown, brojDatoteka: number): IzvuceniRad
     drzava_rodjenja: tekst(r.drzava_rodjenja),
     oib: oib(r.oib),
     ime_oca: tekst(r.ime_oca),
+    mjesto_rodjenja: tekst(r.mjesto_rodjenja),
     poslodavac: tekst(r.poslodavac),
     radno_mjesto: tekst(r.radno_mjesto),
     dokumenti: dokumenti(r.dokumenti, brojDatoteka),
@@ -528,6 +538,8 @@ function dokumenti(v: unknown, brojDatoteka: number): IzvuceniDokument[] {
       kategorija: KATEGORIJA_PO_VRSTI[naziv],
       dokument_vrijedi_do: datum(zapis.dokument_vrijedi_do),
       datum_izdavanja: datum(zapis.datum_izdavanja),
+      broj_dokumenta: tekst(zapis.broj_dokumenta),
+      mjesto_izdavanja: tekst(zapis.mjesto_izdavanja),
       file_index: indeksDatoteke(zapis.datoteka, brojDatoteka),
     });
   }

@@ -40,6 +40,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     prezime: body.prezime,
     drzava_rodjenja: body.drzava_rodjenja || null,
     datum_rodjenja: body.datum_rodjenja || null,
+    ...('mjesto_rodjenja' in body ? { mjesto_rodjenja: body.mjesto_rodjenja || null } : {}),
     oib: body.oib || null,
     status_zaposlenika: body.status_zaposlenika,
     email: body.email || null,

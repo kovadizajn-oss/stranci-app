@@ -156,7 +156,7 @@ export default function EmployeeDetail() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  const [form, setForm] = useState({ ime: '', prezime: '', drzava_rodjenja: '', datum_rodjenja: '', oib: '', status_zaposlenika: 'Aktivan', poslodavac: '', radno_mjesto: '' })
+  const [form, setForm] = useState({ ime: '', prezime: '', drzava_rodjenja: '', datum_rodjenja: '', mjesto_rodjenja: '', oib: '', status_zaposlenika: 'Aktivan', poslodavac: '', radno_mjesto: '' })
   const [extra, setExtra] = useState({ email: '', telefon: '', adresa_smjestaja: '', ime_oca: '', iban: '' })
   const [companies, setCompanies] = useState<{ id: string; naziv: string }[]>([])
   const [companyId, setCompanyId] = useState<string>('')
@@ -212,6 +212,7 @@ export default function EmployeeDetail() {
       // Fill empty personal fields only
       if (d.ime)             setForm(p => ({ ...p, ime:            p.ime            || d.ime }))
       if (d.prezime)         setForm(p => ({ ...p, prezime:        p.prezime        || d.prezime }))
+      if (d.mjesto_rodjenja) setForm(p => ({ ...p, mjesto_rodjenja: p.mjesto_rodjenja || d.mjesto_rodjenja }))
       if (d.datum_rodjenja)  setForm(p => ({ ...p, datum_rodjenja: p.datum_rodjenja || d.datum_rodjenja }))
       if (d.drzava_rodjenja) setForm(p => ({ ...p, drzava_rodjenja: p.drzava_rodjenja || d.drzava_rodjenja }))
       if (d.oib)             setForm(p => ({ ...p, oib:            p.oib            || d.oib }))
@@ -225,6 +226,8 @@ export default function EmployeeDetail() {
         kategorija: doc.kategorija === 'osobni' ? 'osobni' : 'prateci',
         datum_izdavanja: doc.datum_izdavanja || '',
         datum_isteka: doc.dokument_vrijedi_do || '',
+        broj_dokumenta: doc.broj_dokumenta || '',
+        mjesto_izdavanja: doc.mjesto_izdavanja || '',
         file: typeof doc.file_index === 'number' && selectedFiles[doc.file_index]
           ? selectedFiles[doc.file_index]
           : (selectedFiles.length === 1 ? selectedFiles[0] : null),
@@ -251,7 +254,7 @@ export default function EmployeeDetail() {
       if (!res.ok) { router.push('/zaposlenici'); return }
       const { employee: emp, documents: docs, vacations: vacs, sick_leaves: sick } = await res.json()
 
-      setForm({ ime: emp.ime || '', prezime: emp.prezime || '', drzava_rodjenja: emp.drzava_rodjenja || '', datum_rodjenja: emp.datum_rodjenja || '', oib: emp.oib || '', status_zaposlenika: emp.status_zaposlenika || 'Aktivan', poslodavac: emp.poslodavac || '', radno_mjesto: emp.radno_mjesto || '' })
+      setForm({ ime: emp.ime || '', prezime: emp.prezime || '', drzava_rodjenja: emp.drzava_rodjenja || '', datum_rodjenja: emp.datum_rodjenja || '', mjesto_rodjenja: emp.mjesto_rodjenja || '', oib: emp.oib || '', status_zaposlenika: emp.status_zaposlenika || 'Aktivan', poslodavac: emp.poslodavac || '', radno_mjesto: emp.radno_mjesto || '' })
       setExtra({ email: emp.email || '', telefon: emp.telefon || '', adresa_smjestaja: emp.adresa_smjestaja || '', ime_oca: emp.ime_oca || '', iban: emp.iban || '' })
       setCompanyId(emp.company_id || '')
       setPoslodavacManual(emp.company_id ? '' : (emp.poslodavac || ''))
@@ -288,6 +291,7 @@ export default function EmployeeDetail() {
           ime: form.ime, prezime: form.prezime,
           drzava_rodjenja: form.drzava_rodjenja || null,
           datum_rodjenja: form.datum_rodjenja || null,
+          mjesto_rodjenja: form.mjesto_rodjenja || null,
           oib: form.oib || null,
           status_zaposlenika: form.status_zaposlenika,
           email: extra.email || null,
@@ -357,7 +361,7 @@ export default function EmployeeDetail() {
   }
 
   const stanjeSekcija: Record<Sekcija, string> = {
-    osobni: potpis([form.ime, form.prezime, form.datum_rodjenja, form.oib, form.drzava_rodjenja, form.status_zaposlenika]),
+    osobni: potpis([form.ime, form.prezime, form.datum_rodjenja, form.mjesto_rodjenja, form.oib, form.drzava_rodjenja, form.status_zaposlenika]),
     dodatno: potpis(extra),
     rad: potpis([companyId, poslodavacManual, vrsta, ustupanjeOd, ustupanjeDo, ustupanjeOdredeno, form.radno_mjesto]),
     odsutnosti: potpis([vacations, sickLeaves]),
@@ -409,14 +413,15 @@ export default function EmployeeDetail() {
         <Section {...sek('osobni')} icon="👤" title="Osobni podaci" desc="Osnovni podaci radnika."
           summary={<>
             <PillTag p={STATUS_CONFIG[form.status_zaposlenika] ? { label: form.status_zaposlenika, ...STATUS_CONFIG[form.status_zaposlenika] } : null} />
-            <span className="truncate">{[form.oib && `OIB ${form.oib}`, form.datum_rodjenja && `rođen ${fmtDatum(form.datum_rodjenja)}`, form.drzava_rodjenja].filter(Boolean).join(' · ')}</span>
+            <span className="truncate">{[form.oib && `OIB ${form.oib}`, form.datum_rodjenja && `rođen ${fmtDatum(form.datum_rodjenja)}`, form.mjesto_rodjenja, form.drzava_rodjenja].filter(Boolean).join(' · ')}</span>
           </>}>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Ime"><input className={inputCls} style={inputStyle} value={form.ime} onChange={e => setF('ime', e.target.value)} required /></Field>
             <Field label="Prezime"><input className={inputCls} style={inputStyle} value={form.prezime} onChange={e => setF('prezime', e.target.value)} required /></Field>
             <Field label="Datum rođenja"><input type="date" className={inputCls} style={inputStyle} value={form.datum_rodjenja} onChange={e => setF('datum_rodjenja', e.target.value)} /></Field>
             <Field label="OIB"><input className={inputCls} style={inputStyle} value={form.oib} onChange={e => setF('oib', e.target.value)} maxLength={11} placeholder="11 znamenki" /></Field>
-            <div className="col-span-1 md:col-span-2">
+            <Field label="Mjesto rođenja"><input className={inputCls} style={inputStyle} value={form.mjesto_rodjenja} onChange={e => setF('mjesto_rodjenja', e.target.value)} placeholder="npr. Dhaka" /></Field>
+            <div>
               <Field label="Država rođenja">
                 <select className={inputCls} style={inputStyle} value={form.drzava_rodjenja} onChange={e => setF('drzava_rodjenja', e.target.value)}>
                   <option value="">Odaberite...</option>

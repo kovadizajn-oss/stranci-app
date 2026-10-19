@@ -16,6 +16,8 @@ export type DokumentNacrt = {
   kategorija: Kategorija
   datum_izdavanja: string
   datum_isteka: string
+  broj_dokumenta?: string
+  mjesto_izdavanja?: string
   file: File | null
 }
 
@@ -25,6 +27,8 @@ type Forma = {
   kategorija: Kategorija
   datum_izdavanja: string
   datum_isteka: string
+  broj_dokumenta: string
+  mjesto_izdavanja: string
 }
 
 const OSTALO = '__ostalo__'
@@ -43,7 +47,7 @@ function imeDatoteke(url: string) {
   } catch { return 'Datoteka' }
 }
 
-function uFormu(d: { naziv: string | null; kategorija: Kategorija | null; datum_izdavanja: string | null; datum_isteka: string | null } | null): Forma {
+function uFormu(d: { naziv: string | null; kategorija: Kategorija | null; datum_izdavanja: string | null; datum_isteka: string | null; broj_dokumenta?: string | null; mjesto_izdavanja?: string | null } | null): Forma {
   const naziv = d?.naziv || ''
   const poznata = kategorijaZaNaziv(naziv)
   return {
@@ -52,6 +56,8 @@ function uFormu(d: { naziv: string | null; kategorija: Kategorija | null; datum_
     kategorija: poznata || d?.kategorija || 'prateci',
     datum_izdavanja: d?.datum_izdavanja || '',
     datum_isteka: d?.datum_isteka || '',
+    broj_dokumenta: d?.broj_dokumenta || '',
+    mjesto_izdavanja: d?.mjesto_izdavanja || '',
   }
 }
 
@@ -145,6 +151,8 @@ function DokumentForma({ initial, fileUrl, initialFile, naslov, istaknuto, savin
       <div className="grid grid-cols-2 gap-2">
         <div><Lbl>Datum izdavanja</Lbl><input type="date" className={inputCls} style={inputStyle} value={f.datum_izdavanja} onChange={e => setF({ ...f, datum_izdavanja: e.target.value })} /></div>
         <div><Lbl>Vrijedi do</Lbl><input type="date" className={inputCls} style={inputStyle} value={f.datum_isteka} onChange={e => setF({ ...f, datum_isteka: e.target.value })} /></div>
+        <div><Lbl>Broj dokumenta</Lbl><input className={inputCls} style={inputStyle} value={f.broj_dokumenta} onChange={e => setF({ ...f, broj_dokumenta: e.target.value })} /></div>
+        <div><Lbl>Mjesto izdavanja</Lbl><input className={inputCls} style={inputStyle} value={f.mjesto_izdavanja} onChange={e => setF({ ...f, mjesto_izdavanja: e.target.value })} /></div>
       </div>
 
       <div>
@@ -224,6 +232,8 @@ export default function RadnikDokumenti({ employeeId, docs, onDocsChange, drafts
         kategorija: f.tip === OSTALO ? f.kategorija : (kategorijaZaNaziv(f.tip) || f.kategorija),
         datum_izdavanja: f.datum_izdavanja || null,
         datum_isteka: f.datum_isteka || null,
+        broj_dokumenta: f.broj_dokumenta.trim() || null,
+        mjesto_izdavanja: f.mjesto_izdavanja.trim() || null,
         file_url: fileUrl,
       }
       const res = await fetch(postojeci ? `/api/documents/${postojeci.id}` : '/api/documents', {
@@ -287,7 +297,7 @@ export default function RadnikDokumenti({ employeeId, docs, onDocsChange, drafts
     }
     const s = dokumentStatus(d.datum_isteka)
     const kat = d.kategorija ? KATEGORIJA_TAG[d.kategorija] : null
-    const datumi = [d.datum_izdavanja && `izdano ${formatDatum(d.datum_izdavanja)}`, d.datum_isteka && `vrijedi do ${formatDatum(d.datum_isteka)}`].filter(Boolean).join(' · ')
+    const datumi = [d.broj_dokumenta && `br. ${d.broj_dokumenta}`, d.datum_izdavanja && `izdano ${formatDatum(d.datum_izdavanja)}`, d.datum_isteka && `vrijedi do ${formatDatum(d.datum_isteka)}`].filter(Boolean).join(' · ')
     return (
       <div key={d.id} className="p-3 rounded-xl" style={{
         background: s.rang === 0 && !star ? '#FFFBFB' : '#F8FAFC',

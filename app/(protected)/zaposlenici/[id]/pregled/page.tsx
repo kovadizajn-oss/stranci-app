@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import RadnaPovijest from '@/components/RadnaPovijest'
 import RadnikDokumenti from '@/components/RadnikDokumenti'
+import GenerirajDokument from '@/components/GenerirajDokument'
 import type { Dokument } from '@/lib/dokumenti'
 import type { Angazman } from '@/lib/radna-povijest'
 import { AGENCIJA, VRSTA_BADGE, ustupanjeUpozorenje, type VrstaZaposlenja } from '@/lib/zaposlenje'
@@ -140,11 +141,14 @@ export default function CandidatePregled() {
             </div>
           </div>
         </div>
+        <div className="flex items-center gap-2 flex-wrap justify-end flex-shrink-0">
+        <GenerirajDokument employeeId={id} onSpremljeno={d => setDocs(p => [...p, d])} />
         <Link href={`/zaposlenici/${id}`}
           className="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white flex-shrink-0"
           style={{ background: '#2563EB' }}>
           ✏️ Uredi
         </Link>
+        </div>
       </div>
 
       {/* Main grid */}

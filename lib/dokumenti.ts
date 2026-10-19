@@ -19,6 +19,8 @@ export type Dokument = {
   datum_izdavanja: string | null
   datum_isteka: string | null
   file_url: string | null
+  broj_dokumenta?: string | null
+  mjesto_izdavanja?: string | null
   created_at?: string | null
 }
 
