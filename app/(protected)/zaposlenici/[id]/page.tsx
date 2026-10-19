@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { AGENCIJA, VRSTA_LABEL, type VrstaZaposlenja } from '@/lib/zaposlenje'
-import StatusPicker from '@/components/StatusPicker'
+import { AGENCIJA, VRSTA_BADGE, VRSTA_LABEL, type VrstaZaposlenja } from '@/lib/zaposlenje'
+import StatusPicker, { STATUS_CONFIG } from '@/components/StatusPicker'
 
 const COUNTRIES = [
   'Afganistan','Albanija','Alžir','Angola','Argentina','Armenija','Australija','Austrija',
@@ -41,22 +41,88 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function Section({ icon, title, desc, children }: { icon: string; title: string; desc: string; children: React.ReactNode }) {
+type Pill = { label: string; color: string; bg: string }
+
+function PillTag({ p }: { p: Pill | null | undefined }) {
+  if (!p) return null
+  return <span className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap" style={{ background: p.bg, color: p.color }}>{p.label}</span>
+}
+
+/** Sklopiva sekcija: zatvorena pokazuje kratak sažetak, klik otvara polja. */
+function Section({ icon, title, desc, summary, open, onToggle, changed, children }: {
+  icon: string; title: string; desc: string; summary: React.ReactNode
+  open: boolean; onToggle: () => void; changed: boolean; children: React.ReactNode
+}) {
   return (
-    <div className="bg-white rounded-2xl p-6 mb-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.05)' }}>
-      <div className="flex items-start gap-3 mb-5" style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: 16 }}>
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#EFF6FF' }}>
+    <div className="bg-white rounded-2xl mb-3" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: open ? '1px solid #BFDBFE' : '1px solid rgba(0,0,0,0.05)' }}>
+      <button type="button" onClick={onToggle} aria-expanded={open}
+        className="w-full flex items-center gap-3 px-5 py-4 text-left rounded-2xl transition-colors hover:bg-slate-50">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#EFF6FF' }}>
           <span>{icon}</span>
         </div>
-        <div>
-          <p className="font-semibold text-sm" style={{ color: '#1E293B' }}>{title}</p>
-          <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>{desc}</p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-semibold text-sm" style={{ color: '#1E293B' }}>{title}</p>
+            {changed && (
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#EFF6FF', color: '#2563EB' }}>● izmijenjeno</span>
+            )}
+          </div>
+          <div className="text-xs mt-1 flex items-center gap-1.5 flex-wrap min-w-0" style={{ color: '#64748B' }}>
+            {open ? desc : summary}
+          </div>
         </div>
-      </div>
-      {children}
+        <span className="text-sm flex-shrink-0 transition-transform duration-200" style={{ color: '#94A3B8', transform: open ? 'rotate(180deg)' : 'none' }}>▾</span>
+      </button>
+      {open && (
+        <div className="px-5 pb-5" style={{ borderTop: '1px solid #F1F5F9' }}>
+          <div className="pt-5">{children}</div>
+        </div>
+      )}
     </div>
   )
 }
+
+function fmtDatum(d: string | null | undefined) {
+  if (!d) return ''
+  const [y, m, day] = d.split('-')
+  return `${day}.${m}.${y}.`
+}
+
+/** Najkritičniji datum isteka među dokumentima -> obojeni tag. */
+function istekPill(datum: string | null | undefined): Pill | null {
+  if (!datum) return null
+  const danas = new Date(); danas.setHours(0, 0, 0, 0)
+  const d = new Date(datum); d.setHours(0, 0, 0, 0)
+  const dana = Math.round((d.getTime() - danas.getTime()) / 86400000)
+  if (dana < 0) return { label: 'Isteklo', color: '#DC2626', bg: '#FEE2E2' }
+  if (dana <= 7) return { label: `Istječe za ${dana} d`, color: '#DC2626', bg: '#FEE2E2' }
+  if (dana <= 30) return { label: `Istječe za ${dana} d`, color: '#CA8A04', bg: '#FEF9C3' }
+  return { label: `Vrijedi do ${fmtDatum(datum)}`, color: '#16A34A', bg: '#DCFCE7' }
+}
+
+function Prazno({ children }: { children: React.ReactNode }) {
+  return <span style={{ color: '#CBD5E1' }}>{children}</span>
+}
+
+function docsSazetak(docs: DocState[]) {
+  const ispunjeni = docs.filter(d => d.naziv || d.file_url || d._newFile || d.datum_isteka)
+  if (ispunjeni.length === 0) return <Prazno>Nema dokumenata</Prazno>
+  const najraniji = ispunjeni.map(d => d.datum_isteka).filter(Boolean).sort()[0]
+  return (
+    <>
+      <span className="truncate" style={{ maxWidth: 360 }}>{ispunjeni.map(d => d.naziv || 'Dokument').join(', ')}</span>
+      <PillTag p={istekPill(najraniji)} />
+    </>
+  )
+}
+
+/** Potpis stanja sekcije — za oznaku "izmijenjeno". */
+function potpis(v: unknown) {
+  return JSON.stringify(v, (_k, x) => (x instanceof File ? `file:${x.name}:${x.size}` : x))
+}
+
+const SEKCIJE = ['osobni', 'dodatno', 'osobniDocs', 'prateciDocs', 'rad', 'odsutnosti'] as const
+type Sekcija = typeof SEKCIJE[number]
 
 function fileNameFromUrl(url: string) {
   try {
@@ -255,6 +321,14 @@ export default function EmployeeDetail() {
   const [aiError, setAiError] = useState('')
   const aiFileRef = useRef<HTMLInputElement>(null)
 
+  const [otvorene, setOtvorene] = useState<Set<Sekcija>>(new Set())
+  const [polazno, setPolazno] = useState<Record<string, string> | null>(null)
+  const [trebaPolazno, setTrebaPolazno] = useState(false)
+  function otvori(...k: Sekcija[]) { setOtvorene(prev => new Set([...prev, ...k])) }
+  function prebaci(k: Sekcija) {
+    setOtvorene(prev => { const n = new Set(prev); if (n.has(k)) n.delete(k); else n.add(k); return n })
+  }
+
   async function handleAiScan(e: React.ChangeEvent<HTMLInputElement>) {
     const selectedFiles = Array.from(e.target.files || [])
     if (!selectedFiles.length) return
@@ -300,6 +374,7 @@ export default function EmployeeDetail() {
       const prateci = docs.filter(d => d.kategorija === 'prateci')
       if (osobni.length)  setOsobniDocs(p => [...p, ...osobni])
       if (prateci.length) setPrateciDocs(p => [...p, ...prateci])
+      otvori('osobni', ...(osobni.length ? ['osobniDocs' as const] : []), ...(prateci.length ? ['prateciDocs' as const] : []))
     } catch (e: any) {
       setAiError(e.message)
     } finally {
@@ -334,18 +409,24 @@ export default function EmployeeDetail() {
       setVacations(vacs || [])
       setSickLeaves(sick || [])
       setLoading(false)
+      setTrebaPolazno(true)
     }
     load()
   }, [id])
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
+    if (!form.ime.trim() || !form.prezime.trim()) {
+      otvori('osobni')
+      setError('Ime i prezime su obavezni.')
+      return
+    }
     setSaving(true)
     setError('')
     setSuccess(false)
 
     try {
-      await fetch(`/api/employees/${id}`, {
+      const putRes = await fetch(`/api/employees/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -369,6 +450,10 @@ export default function EmployeeDetail() {
           ustupanje_do: vrsta === 'ustupanje' && ustupanjeOdredeno ? (ustupanjeDo || null) : null,
         }),
       })
+      if (!putRes.ok) {
+        const j = await putRes.json().catch(() => ({}))
+        throw new Error(j.error || 'Spremanje podataka radnika nije uspjelo.')
+      }
 
       // Delete removed docs
       for (const docId of deletedDocIds) {
@@ -460,6 +545,7 @@ export default function EmployeeDetail() {
         setVacations(vacs || [])
         setSickLeaves(sick || [])
       }
+      setTrebaPolazno(true)
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
@@ -469,27 +555,61 @@ export default function EmployeeDetail() {
     }
   }
 
+  const stanjeSekcija: Record<Sekcija, string> = {
+    osobni: potpis([form.ime, form.prezime, form.datum_rodjenja, form.oib, form.drzava_rodjenja, form.status_zaposlenika]),
+    dodatno: potpis(extra),
+    osobniDocs: potpis(osobniDocs),
+    prateciDocs: potpis(prateciDocs),
+    rad: potpis([companyId, poslodavacManual, vrsta, ustupanjeOd, ustupanjeDo, ustupanjeOdredeno, form.radno_mjesto]),
+    odsutnosti: potpis([vacations, sickLeaves]),
+  }
+  useEffect(() => {
+    if (!trebaPolazno) return
+    setPolazno(stanjeSekcija)
+    setTrebaPolazno(false)
+  }, [trebaPolazno]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const izmijenjeno = (k: Sekcija) => !!polazno && polazno[k] !== stanjeSekcija[k]
+  const imaPromjena = SEKCIJE.some(izmijenjeno)
+  const sek = (k: Sekcija) => ({ open: otvorene.has(k), onToggle: () => prebaci(k), changed: izmijenjeno(k) })
+  const sveOtvoreno = SEKCIJE.every(k => otvorene.has(k))
+
   if (loading) return <div className="p-8 text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</div>
 
   return (
     <div className="p-4 md:p-8 max-w-3xl">
       <Link href="/zaposlenici" className="text-sm" style={{ color: '#64748B' }}>← Zaposlenici</Link>
-      <div className="flex items-center gap-4 mt-2 mb-6">
-        <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg" style={{ background: '#EFF6FF', color: '#2563EB' }}>
+      <div className="flex items-center gap-4 mt-2 mb-4 flex-wrap">
+        <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0" style={{ background: '#EFF6FF', color: '#2563EB' }}>
           {form.ime[0]}{form.prezime[0]}
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-bold" style={{ color: '#0F172A', letterSpacing: '-0.3px' }}>{form.ime} {form.prezime}</h1>
           <p className="text-sm" style={{ color: '#64748B' }}>{form.drzava_rodjenja || 'Nepoznata država'} · {form.poslodavac || 'Bez poslodavca'}</p>
         </div>
+        <label title="Skeniraj putovnicu, DBR ili drugi dokument — AI popunjava prazna polja i dodaje dokumente u listu."
+          className={`cursor-pointer text-sm font-medium px-3.5 py-2 rounded-xl flex items-center gap-2 flex-shrink-0 ${aiScanning ? 'opacity-50 pointer-events-none' : ''}`}
+          style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE' }}>
+          {aiScanning ? '⏳ Skeniranje...' : '🤖 AI skeniranje'}
+          <input ref={aiFileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" multiple className="hidden" onChange={handleAiScan} />
+        </label>
       </div>
+      {aiError && <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: '#FEF2F2', color: '#DC2626' }}>{aiError}</p>}
 
-      {error && <div className="mb-4 p-3 rounded-lg text-sm" style={{ background: '#FEF2F2', color: '#DC2626' }}>{error}</div>}
-      {success && <div className="mb-4 p-3 rounded-lg text-sm" style={{ background: '#F0FDF4', color: '#16A34A' }}>Podaci uspješno spremljeni.</div>}
+      <div className="flex justify-end mb-2">
+        <button type="button" onClick={() => setOtvorene(sveOtvoreno ? new Set() : new Set(SEKCIJE))}
+          className="btn-link text-xs font-medium" style={{ color: '#2563EB' }}>
+          {sveOtvoreno ? 'Zatvori sve' : 'Otvori sve'}
+        </button>
+      </div>
 
       <form onSubmit={handleSave}>
         {/* Osobni podaci */}
-        <Section icon="👤" title="Osobni podaci" desc="Osnovni podaci radnika.">
+        <Section {...sek('osobni')} icon="👤" title="Osobni podaci" desc="Osnovni podaci radnika."
+          summary={<>
+            <PillTag p={STATUS_CONFIG[form.status_zaposlenika] ? { label: form.status_zaposlenika, ...STATUS_CONFIG[form.status_zaposlenika] } : null} />
+            <span className="truncate">{[form.oib && `OIB ${form.oib}`, form.datum_rodjenja && `rođen ${fmtDatum(form.datum_rodjenja)}`, form.drzava_rodjenja].filter(Boolean).join(' · ')}</span>
+          </>}>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Ime"><input className={inputCls} style={inputStyle} value={form.ime} onChange={e => setF('ime', e.target.value)} required /></Field>
             <Field label="Prezime"><input className={inputCls} style={inputStyle} value={form.prezime} onChange={e => setF('prezime', e.target.value)} required /></Field>
@@ -512,7 +632,10 @@ export default function EmployeeDetail() {
         </Section>
 
         {/* Dodatne informacije */}
-        <Section icon="ℹ️" title="Dodatne informacije" desc="Kontakt, smještaj i ostali podaci (opcionalno).">
+        <Section {...sek('dodatno')} icon="ℹ️" title="Dodatne informacije" desc="Kontakt, smještaj i ostali podaci (opcionalno)."
+          summary={[extra.telefon, extra.email, extra.adresa_smjestaja].some(Boolean)
+            ? <span className="truncate">{[extra.telefon, extra.email, extra.adresa_smjestaja].filter(Boolean).join(' · ')}</span>
+            : <Prazno>Nije uneseno</Prazno>}>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Email"><input type="email" className={inputCls} style={inputStyle} value={extra.email} onChange={e => setE('email', e.target.value)} placeholder="email@primjer.com" /></Field>
             <Field label="Telefon"><input className={inputCls} style={inputStyle} value={extra.telefon} onChange={e => setE('telefon', e.target.value)} placeholder="+385..." /></Field>
@@ -524,24 +647,8 @@ export default function EmployeeDetail() {
           </div>
         </Section>
 
-        {/* AI Scan */}
-        <div className="bg-white rounded-2xl p-5 mb-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #E2E8F0' }}>
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <p className="font-semibold text-sm" style={{ color: '#1E293B' }}>🤖 AI skeniranje dokumenta</p>
-              <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>Skeniraj putovnicu, DBR ili drugi dokument — AI će popuniti prazna polja i dodati dokument u listu.</p>
-            </div>
-            <label className={`cursor-pointer text-sm font-medium px-4 py-2 rounded-xl flex items-center gap-2 flex-shrink-0 ${aiScanning ? 'opacity-50 pointer-events-none' : ''}`}
-              style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE' }}>
-              {aiScanning ? '⏳ Skeniranje...' : '📄 Odaberi dokument(e)'}
-              <input ref={aiFileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" multiple className="hidden" onChange={handleAiScan} />
-            </label>
-          </div>
-          {aiError && <p className="text-xs mt-3 px-3 py-2 rounded-lg" style={{ background: '#FEF2F2', color: '#DC2626' }}>{aiError}</p>}
-        </div>
-
         {/* Osobni dokumenti */}
-        <Section icon="🪪" title="Osobni dokumenti" desc="Identifikacijski i osobni dokumenti radnika.">
+        <Section {...sek('osobniDocs')} icon="🪪" title="Osobni dokumenti" desc="Identifikacijski i osobni dokumenti radnika." summary={docsSazetak(osobniDocs)}>
           {osobniDocs.map((doc, i) => (
             <DocCard
               key={doc.id || `osobni-new-${i}`}
@@ -565,7 +672,7 @@ export default function EmployeeDetail() {
         </Section>
 
         {/* Prateći dokumenti */}
-        <Section icon="📋" title="Prateći dokumenti" desc="Radna dozvola, liječnički pregled i ostali prateći dokumenti.">
+        <Section {...sek('prateciDocs')} icon="📋" title="Prateći dokumenti" desc="Radna dozvola, liječnički pregled i ostali prateći dokumenti." summary={docsSazetak(prateciDocs)}>
           {prateciDocs.map((doc, i) => (
             <DocCard
               key={doc.id || `prateci-new-${i}`}
@@ -589,7 +696,15 @@ export default function EmployeeDetail() {
         </Section>
 
         {/* Rad stranca */}
-        <Section icon="💼" title="Rad stranca" desc="Vrsta zaposlenja, tvrtka i radno mjesto.">
+        <Section {...sek('rad')} icon="💼" title="Rad stranca" desc="Vrsta zaposlenja, tvrtka i radno mjesto."
+          summary={(() => {
+            const tvrtka = companyId ? companies.find(c => c.id === companyId)?.naziv : poslodavacManual
+            if (!vrsta && !tvrtka && !form.radno_mjesto) return <Prazno>Nema podataka o zaposlenju</Prazno>
+            return <>
+              <PillTag p={vrsta ? VRSTA_BADGE[vrsta] : null} />
+              <span className="truncate">{[tvrtka, form.radno_mjesto].filter(Boolean).join(' · ')}</span>
+            </>
+          })()}>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <Field label="Vrsta zaposlenja">
@@ -649,7 +764,17 @@ export default function EmployeeDetail() {
         </Section>
 
         {/* Godišnji odmor & Bolovanje */}
-        <Section icon="📅" title="Godišnji odmor & Bolovanje" desc="Evidencija odsutnosti radnika.">
+        <Section {...sek('odsutnosti')} icon="📅" title="Godišnji odmor & Bolovanje" desc="Evidencija odsutnosti radnika."
+          summary={(() => {
+            const danas = new Date().toISOString().slice(0, 10)
+            const aktivno = (l: any[]) => l.some(x => x.datum_od && x.datum_do && x.datum_od <= danas && x.datum_do >= danas)
+            if (vacations.length === 0 && sickLeaves.length === 0) return <Prazno>Nema unesenih odsutnosti</Prazno>
+            return <>
+              <span>{vacations.length} {vacations.length === 1 ? 'godišnji' : 'godišnjih'} · {sickLeaves.length} {sickLeaves.length === 1 ? 'bolovanje' : 'bolovanja'}</span>
+              {aktivno(vacations) && <PillTag p={{ label: 'Na godišnjem', color: '#16A34A', bg: '#DCFCE7' }} />}
+              {aktivno(sickLeaves) && <PillTag p={{ label: 'Na bolovanju', color: '#CA8A04', bg: '#FEF9C3' }} />}
+            </>
+          })()}>
           <div className="mb-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-semibold" style={{ color: '#374151' }}>Godišnji odmor</p>
@@ -707,9 +832,18 @@ export default function EmployeeDetail() {
           </div>
         </Section>
 
-        <div className="flex justify-end gap-3 pb-8">
-          <Link href="/zaposlenici" className="btn-secondary px-4 py-2.5 rounded-lg text-sm font-medium" style={{ background: '#F1F5F9', color: '#374151' }}>Odustani</Link>
-          <button type="submit" disabled={saving} className="btn-primary px-5 py-2.5 rounded-lg text-sm font-medium text-white"
+        <div className="sticky bottom-[68px] md:bottom-4 z-10 mt-4 mb-6 flex items-center gap-3 px-4 py-3 rounded-2xl"
+          style={{ background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(8px)', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+          <div className="flex-1 min-w-0 text-xs">
+            {error ? <span style={{ color: '#DC2626' }}>⚠️ {error}</span>
+              : success ? <span style={{ color: '#16A34A' }}>✓ Podaci uspješno spremljeni.</span>
+              : imaPromjena ? <span style={{ color: '#2563EB' }}>● Imaš nespremljene promjene</span>
+              : <span style={{ color: '#94A3B8' }}>Sve je spremljeno</span>}
+          </div>
+          <Link href="/zaposlenici"
+            onClick={e => { if (imaPromjena && !confirm('Odbaciti nespremljene promjene?')) e.preventDefault() }}
+            className="btn-secondary px-4 py-2.5 rounded-lg text-sm font-medium flex-shrink-0" style={{ background: '#F1F5F9', color: '#374151' }}>Odustani</Link>
+          <button type="submit" disabled={saving} className="btn-primary px-5 py-2.5 rounded-lg text-sm font-medium text-white flex-shrink-0"
             style={{ background: saving ? '#93C5FD' : 'linear-gradient(135deg, #2563EB, #1D4ED8)', boxShadow: saving ? 'none' : '0 4px 14px rgba(37,99,235,0.3)', cursor: saving ? 'not-allowed' : 'pointer' }}>
             {saving ? 'Spremanje...' : '✓ Spremi promjene'}
           </button>
