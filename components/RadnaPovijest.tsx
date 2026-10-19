@@ -286,7 +286,7 @@ export default function RadnaPovijest({ employeeId, trenutno, povijest, onChange
                   </p>
                   {a.napomena && <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>{a.napomena}</p>}
                 </div>
-                <button onClick={() => otvori('planirano', a.id)} className="text-xs flex-shrink-0" style={{ color: '#64748B' }}>Uredi</button>
+                <button onClick={() => otvori('planirano', a.id)} className="btn-secondary text-xs px-2.5 py-1 rounded-lg flex-shrink-0" style={{ background: 'white', color: '#475569', border: '1px solid #E2E8F0' }}>✏️ Uredi</button>
               </div>
 
               {prelazakId === a.id ? (
@@ -309,8 +309,9 @@ export default function RadnaPovijest({ employeeId, trenutno, povijest, onChange
                 </div>
               ) : (
                 <button onClick={() => { setPrelazakId(a.id); setPrelazakDatum(a.datum_od || today()); setEditing(null); setError('') }}
-                  className="mt-2 text-xs font-medium px-2.5 py-1 rounded-lg" style={{ background: '#DCFCE7', color: '#16A34A' }}>
-                  ✓ Prelazak obavljen
+                  className="btn-primary mt-3 flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg text-white"
+                  style={{ background: '#16A34A', boxShadow: '0 2px 8px rgba(22,163,74,0.3)' }}>
+                  ✓ Potvrdi da je prelazak obavljen →
                 </button>
               )}
             </div>
