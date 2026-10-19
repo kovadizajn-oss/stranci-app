@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
 import { requireSession } from '@/lib/session'
+import { dohvatiZamijenjene } from '@/lib/dokumenti-server'
 
 export async function GET() {
   const unauth = await requireSession()
@@ -13,17 +14,19 @@ export async function GET() {
     { data: sick },
     { data: docs },
     { data: obs },
+    zamijenjeni,
   ] = await Promise.all([
     supabase.from('vacations').select('id, employee_id, datum_od, datum_do, employees(ime, prezime)'),
     supabase.from('sick_leaves').select('id, employee_id, datum_od, datum_do, employees(ime, prezime)'),
     supabase.from('documents').select('id, employee_id, naziv, datum_isteka, employees(ime, prezime)').not('datum_isteka', 'is', null),
     supabase.from('obaveze').select('id, naziv, employee_id, rok, employees(ime, prezime)').not('rok', 'is', null).eq('zavrseno', false),
+    dohvatiZamijenjene(supabase),
   ])
 
   return NextResponse.json({
     vacations: vacs || [],
     sick_leaves: sick || [],
-    documents: docs || [],
+    documents: (docs || []).filter(d => !zamijenjeni.has(d.id)),
     obaveze: obs || [],
   })
 }

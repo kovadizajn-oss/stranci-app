@@ -1,10 +1,6 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { createAdminClient } from '@/lib/supabase-server'
+import { dohvatiZamijenjene } from '@/lib/dokumenti-server'
 
 
 function formatDate(dateStr: string) {
@@ -37,7 +33,8 @@ export async function GET(request: Request) {
   const in30Str = in30.toISOString().split('T')[0]
   const in7Str = in7.toISOString().split('T')[0]
 
-  const [{ data: docs, error }, { data: obaveze }] = await Promise.all([
+  const supabase = createAdminClient()
+  const [{ data: sviDocs, error }, { data: obaveze }, zamijenjeni] = await Promise.all([
     supabase
       .from('documents')
       .select('id, naziv, datum_isteka, employees(ime, prezime)')
@@ -50,7 +47,9 @@ export async function GET(request: Request) {
       .lte('rok', in7Str)
       .gte('rok', todayStr)
       .order('rok', { ascending: true }),
+    dohvatiZamijenjene(supabase),
   ])
+  const docs = (sviDocs || []).filter(d => !zamijenjeni.has(d.id))
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if ((!docs || docs.length === 0) && (!obaveze || obaveze.length === 0)) {

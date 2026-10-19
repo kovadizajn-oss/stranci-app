@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { AGENCIJA, VRSTA_BADGE, VRSTA_LABEL, type VrstaZaposlenja } from '@/lib/zaposlenje'
 import StatusPicker, { STATUS_CONFIG } from '@/components/StatusPicker'
+import RadnikDokumenti, { type DokumentNacrt } from '@/components/RadnikDokumenti'
+import type { Dokument } from '@/lib/dokumenti'
 
 const COUNTRIES = [
   'Afganistan','Albanija','Alžir','Angola','Argentina','Armenija','Australija','Austrija',
@@ -25,8 +27,6 @@ const COUNTRIES = [
   'Zambija','Zimbabve',
 ]
 
-const OSOBNI_TYPES = ['Osobna iskaznica', 'Putovnica', 'Vozačka dozvola', 'Boravišna dozvola']
-const PRATECI_TYPES = ['Radna dozvola', 'Liječnički pregled', 'Ugovor o radu', 'Potvrda o boravku']
 const STATUSI = ['Aktivan', 'U postupku', 'Na čekanju', 'Otkazan']
 
 const inputCls = "w-full px-4 py-3 rounded-xl border text-sm transition-all"
@@ -88,32 +88,8 @@ function fmtDatum(d: string | null | undefined) {
   return `${day}.${m}.${y}.`
 }
 
-/** Najkritičniji datum isteka među dokumentima -> obojeni tag. */
-function istekPill(datum: string | null | undefined): Pill | null {
-  if (!datum) return null
-  const danas = new Date(); danas.setHours(0, 0, 0, 0)
-  const d = new Date(datum); d.setHours(0, 0, 0, 0)
-  const dana = Math.round((d.getTime() - danas.getTime()) / 86400000)
-  if (dana < 0) return { label: 'Isteklo', color: '#DC2626', bg: '#FEE2E2' }
-  if (dana <= 7) return { label: `Istječe za ${dana} d`, color: '#DC2626', bg: '#FEE2E2' }
-  if (dana <= 30) return { label: `Istječe za ${dana} d`, color: '#CA8A04', bg: '#FEF9C3' }
-  return { label: `Vrijedi do ${fmtDatum(datum)}`, color: '#16A34A', bg: '#DCFCE7' }
-}
-
 function Prazno({ children }: { children: React.ReactNode }) {
   return <span style={{ color: '#CBD5E1' }}>{children}</span>
-}
-
-function docsSazetak(docs: DocState[]) {
-  const ispunjeni = docs.filter(d => d.naziv || d.file_url || d._newFile || d.datum_isteka)
-  if (ispunjeni.length === 0) return <Prazno>Nema dokumenata</Prazno>
-  const najraniji = ispunjeni.map(d => d.datum_isteka).filter(Boolean).sort()[0]
-  return (
-    <>
-      <span className="truncate" style={{ maxWidth: 360 }}>{ispunjeni.map(d => d.naziv || 'Dokument').join(', ')}</span>
-      <PillTag p={istekPill(najraniji)} />
-    </>
-  )
 }
 
 /** Potpis stanja sekcije — za oznaku "izmijenjeno". */
@@ -121,7 +97,7 @@ function potpis(v: unknown) {
   return JSON.stringify(v, (_k, x) => (x instanceof File ? `file:${x.name}:${x.size}` : x))
 }
 
-const SEKCIJE = ['osobni', 'dodatno', 'osobniDocs', 'prateciDocs', 'rad', 'odsutnosti'] as const
+const SEKCIJE = ['osobni', 'dodatno', 'rad', 'odsutnosti'] as const
 type Sekcija = typeof SEKCIJE[number]
 
 function fileNameFromUrl(url: string) {
@@ -172,125 +148,6 @@ function AbsenceFile({ fileUrl, newFile, onPick, onClear, hint }: {
   )
 }
 
-type DocState = {
-  id?: string
-  naziv: string
-  kategorija: 'osobni' | 'prateci'
-  datum_izdavanja: string
-  datum_isteka: string
-  file_url: string
-  _newFile?: File | null
-  _isCustom: boolean
-}
-
-function emptyDoc(kategorija: 'osobni' | 'prateci'): DocState {
-  return { naziv: '', kategorija, datum_izdavanja: '', datum_isteka: '', file_url: '', _isCustom: false }
-}
-
-function docFromDB(d: any): DocState {
-  const types = d.kategorija === 'osobni' ? OSOBNI_TYPES : PRATECI_TYPES
-  const isCustom = !!d.naziv && !types.includes(d.naziv)
-  return {
-    id: d.id,
-    naziv: d.naziv || '',
-    kategorija: d.kategorija || 'prateci',
-    datum_izdavanja: d.datum_izdavanja || '',
-    datum_isteka: d.datum_isteka || '',
-    file_url: d.file_url || '',
-    _isCustom: isCustom,
-  }
-}
-
-function DocCard({ doc, index, types, onChange, onRemove }: {
-  doc: DocState; index: number; types: string[]
-  onChange: (index: number, updated: DocState) => void
-  onRemove: (index: number) => void
-}) {
-  function update(patch: Partial<DocState>) { onChange(index, { ...doc, ...patch }) }
-
-  return (
-    <div className="mb-4 p-4 rounded-lg" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-      {/* Type + remove */}
-      <div className="flex items-start gap-2 mb-3">
-        <div className="flex-1 flex flex-col gap-2">
-          <select
-            className={inputCls} style={inputStyle}
-            value={doc._isCustom ? '__ostalo__' : doc.naziv}
-            onChange={e => {
-              if (e.target.value === '__ostalo__') update({ _isCustom: true, naziv: '' })
-              else update({ _isCustom: false, naziv: e.target.value })
-            }}
-          >
-            <option value="">Odaberi vrstu dokumenta...</option>
-            {types.map(t => <option key={t} value={t}>{t}</option>)}
-            <option value="__ostalo__">Ostalo (upiši naziv)...</option>
-          </select>
-          {doc._isCustom && (
-            <input
-              className={inputCls} style={inputStyle}
-              placeholder="Naziv dokumenta"
-              value={doc.naziv}
-              onChange={e => update({ naziv: e.target.value })}
-            />
-          )}
-        </div>
-        <button type="button" onClick={() => onRemove(index)}
-          className="btn-danger text-xs px-2.5 py-1.5 rounded-lg flex-shrink-0 mt-0.5"
-          style={{ background: '#FEF2F2', color: '#EF4444' }}>
-          Ukloni
-        </button>
-      </div>
-
-      {/* Dates */}
-      <div className="grid grid-cols-2 gap-3 mb-3">
-        <Field label="Datum izdavanja">
-          <input type="date" className={inputCls} style={inputStyle}
-            value={doc.datum_izdavanja}
-            onChange={e => update({ datum_izdavanja: e.target.value })} />
-        </Field>
-        <Field label="Datum isteka">
-          <input type="date" className={inputCls} style={inputStyle}
-            value={doc.datum_isteka}
-            onChange={e => update({ datum_isteka: e.target.value })} />
-        </Field>
-      </div>
-
-      {/* File */}
-      <div>
-        <p className="text-sm font-medium mb-1.5" style={{ color: '#374151' }}>
-          Preslika dokumenta <span style={{ color: '#94A3B8', fontWeight: 400 }}>(opcionalno)</span>
-        </p>
-        {doc._newFile ? (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
-            <span className="text-xs" style={{ color: '#16A34A' }}>✓ {doc._newFile.name}</span>
-            <button type="button" onClick={() => update({ _newFile: null })} className="text-xs ml-auto" style={{ color: '#94A3B8' }}>✕</button>
-          </div>
-        ) : doc.file_url ? (
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg flex-1" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-              <span style={{ color: '#64748B', fontSize: 14 }}>📄</span>
-              <span className="text-xs truncate" style={{ color: '#374151' }}>{fileNameFromUrl(doc.file_url)}</span>
-              <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-xs ml-auto flex-shrink-0" style={{ color: '#2563EB' }}>↗</a>
-            </div>
-            <label className="cursor-pointer text-xs px-3 py-2 rounded-lg flex-shrink-0" style={{ background: '#F1F5F9', color: '#374151' }}>
-              Zamijeni
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
-                onChange={e => update({ _newFile: e.target.files?.[0] || null })} />
-            </label>
-          </div>
-        ) : (
-          <label className="flex items-center gap-2 cursor-pointer px-3 py-2.5 rounded-lg border text-sm"
-            style={{ borderColor: '#D1D5DB', background: 'white', color: '#374151' }}>
-            ↑ Učitaj (PDF, JPG, PNG do 10 MB)
-            <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
-              onChange={e => update({ _newFile: e.target.files?.[0] || null })} />
-          </label>
-        )}
-      </div>
-    </div>
-  )
-}
-
 export default function EmployeeDetail() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
@@ -308,9 +165,9 @@ export default function EmployeeDetail() {
   const [ustupanjeOd, setUstupanjeOd] = useState('')
   const [ustupanjeDo, setUstupanjeDo] = useState('')
   const [ustupanjeOdredeno, setUstupanjeOdredeno] = useState(false) // zadano: neodređeno
-  const [osobniDocs, setOsobniDocs] = useState<DocState[]>([])
-  const [prateciDocs, setPrateciDocs] = useState<DocState[]>([])
-  const [deletedDocIds, setDeletedDocIds] = useState<string[]>([])
+  // Dokumenti se spremaju odmah (lista desno); AI nalazi čekaju potvrdu kao nacrti
+  const [docs, setDocs] = useState<Dokument[]>([])
+  const [docDrafts, setDocDrafts] = useState<DokumentNacrt[]>([])
 
   const [vacations, setVacations] = useState<any[]>([])
   const [sickLeaves, setSickLeaves] = useState<any[]>([])
@@ -361,20 +218,19 @@ export default function EmployeeDetail() {
       if (d.radno_mjesto)    setForm(p => ({ ...p, radno_mjesto:   p.radno_mjesto   || d.radno_mjesto }))
       if (d.ime_oca)         setExtra(p => ({ ...p, ime_oca:       p.ime_oca        || d.ime_oca }))
 
-      // Add detected documents to the right list
-      const docs: DocState[] = (d.dokumenti || []).map((doc: any) => ({
+      // Pronađeni dokumenti -> nacrti u listi desno, sa skeniranom datotekom kao preslikom
+      const nacrti: DokumentNacrt[] = (d.dokumenti || []).map((doc: any, i: number) => ({
+        key: `ai-${Date.now()}-${i}`,
         naziv: doc.dokument_naziv || '',
         kategorija: doc.kategorija === 'osobni' ? 'osobni' : 'prateci',
         datum_izdavanja: doc.datum_izdavanja || '',
         datum_isteka: doc.dokument_vrijedi_do || '',
-        file_url: '',
-        _isCustom: false,
+        file: typeof doc.file_index === 'number' && selectedFiles[doc.file_index]
+          ? selectedFiles[doc.file_index]
+          : (selectedFiles.length === 1 ? selectedFiles[0] : null),
       }))
-      const osobni = docs.filter(d => d.kategorija === 'osobni')
-      const prateci = docs.filter(d => d.kategorija === 'prateci')
-      if (osobni.length)  setOsobniDocs(p => [...p, ...osobni])
-      if (prateci.length) setPrateciDocs(p => [...p, ...prateci])
-      otvori('osobni', ...(osobni.length ? ['osobniDocs' as const] : []), ...(prateci.length ? ['prateciDocs' as const] : []))
+      if (nacrti.length) setDocDrafts(p => [...p, ...nacrti])
+      otvori('osobni')
     } catch (e: any) {
       setAiError(e.message)
     } finally {
@@ -404,8 +260,7 @@ export default function EmployeeDetail() {
       setUstupanjeDo(emp.ustupanje_do || '')
       setUstupanjeOdredeno(!!(emp.ustupanje_od || emp.ustupanje_do))
 
-      setOsobniDocs((docs || []).filter((d: any) => d.kategorija === 'osobni').map(docFromDB))
-      setPrateciDocs((docs || []).filter((d: any) => d.kategorija !== 'osobni').map(docFromDB))
+      setDocs(docs || [])
       setVacations(vacs || [])
       setSickLeaves(sick || [])
       setLoading(false)
@@ -454,60 +309,6 @@ export default function EmployeeDetail() {
         const j = await putRes.json().catch(() => ({}))
         throw new Error(j.error || 'Spremanje podataka radnika nije uspjelo.')
       }
-
-      // Delete removed docs
-      for (const docId of deletedDocIds) {
-        await fetch(`/api/documents/${docId}`, { method: 'DELETE' })
-      }
-
-      // Save all docs
-      for (const doc of [...osobniDocs, ...prateciDocs]) {
-        if (!doc.naziv && !doc._newFile && !doc.datum_isteka && !doc.datum_izdavanja && !doc.file_url) continue
-
-        let fileUrl = doc.file_url || null
-        if (doc._newFile) {
-          const fd = new FormData()
-          fd.append('file', doc._newFile)
-          fd.append('path', `${id}/doc_${Date.now()}_${doc._newFile.name}`)
-          const upRes = await fetch('/api/upload', { method: 'POST', body: fd })
-          if (upRes.ok) {
-            const { url } = await upRes.json()
-            fileUrl = url
-          }
-        }
-
-        const payload = {
-          employee_id: id,
-          naziv: doc.naziv || null,
-          kategorija: doc.kategorija,
-          datum_izdavanja: doc.datum_izdavanja || null,
-          datum_isteka: doc.datum_isteka || null,
-          file_url: fileUrl,
-        }
-
-        if (doc.id) {
-          await fetch(`/api/documents/${doc.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          })
-        } else {
-          await fetch('/api/documents', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          })
-        }
-      }
-
-      // Reload docs to get fresh ids
-      const empRes = await fetch(`/api/employees/${id}`)
-      if (empRes.ok) {
-        const { documents: freshDocs } = await empRes.json()
-        setOsobniDocs((freshDocs || []).filter((d: any) => d.kategorija === 'osobni').map(docFromDB))
-        setPrateciDocs((freshDocs || []).filter((d: any) => d.kategorija !== 'osobni').map(docFromDB))
-      }
-      setDeletedDocIds([])
 
       // Godišnji odmori i bolovanja (s pripadajućom datotekom)
       async function saveAbsences(list: any[], deletedIds: string[], endpoint: string, prefix: string) {
@@ -558,8 +359,6 @@ export default function EmployeeDetail() {
   const stanjeSekcija: Record<Sekcija, string> = {
     osobni: potpis([form.ime, form.prezime, form.datum_rodjenja, form.oib, form.drzava_rodjenja, form.status_zaposlenika]),
     dodatno: potpis(extra),
-    osobniDocs: potpis(osobniDocs),
-    prateciDocs: potpis(prateciDocs),
     rad: potpis([companyId, poslodavacManual, vrsta, ustupanjeOd, ustupanjeDo, ustupanjeOdredeno, form.radno_mjesto]),
     odsutnosti: potpis([vacations, sickLeaves]),
   }
@@ -570,14 +369,14 @@ export default function EmployeeDetail() {
   }, [trebaPolazno]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const izmijenjeno = (k: Sekcija) => !!polazno && polazno[k] !== stanjeSekcija[k]
-  const imaPromjena = SEKCIJE.some(izmijenjeno)
+  const imaPromjena = SEKCIJE.some(izmijenjeno) || docDrafts.length > 0
   const sek = (k: Sekcija) => ({ open: otvorene.has(k), onToggle: () => prebaci(k), changed: izmijenjeno(k) })
   const sveOtvoreno = SEKCIJE.every(k => otvorene.has(k))
 
   if (loading) return <div className="p-8 text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</div>
 
   return (
-    <div className="p-4 md:p-8 max-w-3xl">
+    <div className="p-4 md:p-8 max-w-6xl">
       <Link href="/zaposlenici" className="text-sm" style={{ color: '#64748B' }}>← Zaposlenici</Link>
       <div className="flex items-center gap-4 mt-2 mb-4 flex-wrap">
         <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0" style={{ background: '#EFF6FF', color: '#2563EB' }}>
@@ -596,6 +395,8 @@ export default function EmployeeDetail() {
       </div>
       {aiError && <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: '#FEF2F2', color: '#DC2626' }}>{aiError}</p>}
 
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px] items-start">
+      <div className="min-w-0">
       <div className="flex justify-end mb-2">
         <button type="button" onClick={() => setOtvorene(sveOtvoreno ? new Set() : new Set(SEKCIJE))}
           className="btn-link text-xs font-medium" style={{ color: '#2563EB' }}>
@@ -645,54 +446,6 @@ export default function EmployeeDetail() {
               <Field label="Adresa smještaja (HR)"><input className={inputCls} style={inputStyle} value={extra.adresa_smjestaja} onChange={e => setE('adresa_smjestaja', e.target.value)} placeholder="Ulica i broj, Grad" /></Field>
             </div>
           </div>
-        </Section>
-
-        {/* Osobni dokumenti */}
-        <Section {...sek('osobniDocs')} icon="🪪" title="Osobni dokumenti" desc="Identifikacijski i osobni dokumenti radnika." summary={docsSazetak(osobniDocs)}>
-          {osobniDocs.map((doc, i) => (
-            <DocCard
-              key={doc.id || `osobni-new-${i}`}
-              doc={doc} index={i} types={OSOBNI_TYPES}
-              onChange={(idx, updated) => setOsobniDocs(prev => prev.map((d, j) => j === idx ? updated : d))}
-              onRemove={idx => {
-                const doc = osobniDocs[idx]
-                if (doc.id) setDeletedDocIds(p => [...p, doc.id!])
-                setOsobniDocs(prev => prev.filter((_, j) => j !== idx))
-              }}
-            />
-          ))}
-          {osobniDocs.length === 0 && (
-            <p className="text-xs mb-3" style={{ color: '#94A3B8' }}>Nema dodanih osobnih dokumenata.</p>
-          )}
-          <button type="button"
-            onClick={() => setOsobniDocs(prev => [...prev, emptyDoc('osobni')])}
-            className="btn-link text-sm font-medium" style={{ color: '#2563EB' }}>
-            + Dodaj osobni dokument
-          </button>
-        </Section>
-
-        {/* Prateći dokumenti */}
-        <Section {...sek('prateciDocs')} icon="📋" title="Prateći dokumenti" desc="Radna dozvola, liječnički pregled i ostali prateći dokumenti." summary={docsSazetak(prateciDocs)}>
-          {prateciDocs.map((doc, i) => (
-            <DocCard
-              key={doc.id || `prateci-new-${i}`}
-              doc={doc} index={i} types={PRATECI_TYPES}
-              onChange={(idx, updated) => setPrateciDocs(prev => prev.map((d, j) => j === idx ? updated : d))}
-              onRemove={idx => {
-                const doc = prateciDocs[idx]
-                if (doc.id) setDeletedDocIds(p => [...p, doc.id!])
-                setPrateciDocs(prev => prev.filter((_, j) => j !== idx))
-              }}
-            />
-          ))}
-          {prateciDocs.length === 0 && (
-            <p className="text-xs mb-3" style={{ color: '#94A3B8' }}>Nema dodanih prateći dokumenata.</p>
-          )}
-          <button type="button"
-            onClick={() => setPrateciDocs(prev => [...prev, emptyDoc('prateci')])}
-            className="btn-link text-sm font-medium" style={{ color: '#2563EB' }}>
-            + Dodaj prateći dokument
-          </button>
         </Section>
 
         {/* Rad stranca */}
@@ -849,6 +602,11 @@ export default function EmployeeDetail() {
           </button>
         </div>
       </form>
+      </div>
+
+      {/* Dokumenti: svi na jednom mjestu, spremaju se odmah */}
+      <RadnikDokumenti sticky employeeId={id} docs={docs} onDocsChange={setDocs} drafts={docDrafts} onDraftsChange={setDocDrafts} />
+      </div>
     </div>
   )
 }

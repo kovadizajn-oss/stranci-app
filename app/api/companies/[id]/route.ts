@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
 import { requireSession } from '@/lib/session'
+import { zamijenjeniIds } from '@/lib/dokumenti'
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const unauth = await requireSession()
@@ -12,7 +13,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const [{ data: co }, { data: emps }, { data: contacts }, { data: links }, { data: obaveze }] = await Promise.all([
     supabase.from('companies').select('*').eq('id', id).single(),
     supabase.from('employees')
-      .select('*, documents(datum_isteka)')
+      .select('*, documents(id, employee_id, naziv, datum_isteka, datum_izdavanja)')
       .eq('company_id', id)
       .order('prezime'),
     supabase.from('company_contacts').select('*').eq('company_id', id).order('created_at'),
@@ -22,7 +23,10 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   ])
 
   if (!co) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json({ company: co, workers: emps || [], contacts: contacts || [], links: links || [], obaveze: obaveze || [] })
+  // stari dokumenti (postoji noviji iste vrste) se ne broje u istek
+  const zamijenjeni = zamijenjeniIds((emps || []).flatMap((e: any) => e.documents || []))
+  const workers = (emps || []).map((e: any) => ({ ...e, documents: (e.documents || []).filter((d: any) => !zamijenjeni.has(d.id)) }))
+  return NextResponse.json({ company: co, workers, contacts: contacts || [], links: links || [], obaveze: obaveze || [] })
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {

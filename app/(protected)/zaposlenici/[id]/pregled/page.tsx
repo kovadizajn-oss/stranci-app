@@ -4,37 +4,15 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import RadnaPovijest from '@/components/RadnaPovijest'
+import RadnikDokumenti from '@/components/RadnikDokumenti'
+import type { Dokument } from '@/lib/dokumenti'
 import type { Angazman } from '@/lib/radna-povijest'
 import { AGENCIJA, VRSTA_BADGE, ustupanjeUpozorenje, type VrstaZaposlenja } from '@/lib/zaposlenje'
-
-function daysUntil(dateStr: string) {
-  const today = new Date(); today.setHours(0,0,0,0)
-  const due = new Date(dateStr); due.setHours(0,0,0,0)
-  return Math.ceil((due.getTime() - today.getTime()) / 86400000)
-}
-
-function expiryBadge(dateStr: string | null) {
-  if (!dateStr) return null
-  const days = daysUntil(dateStr)
-  const d = new Date(dateStr)
-  const label = `${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getFullYear()}.`
-  if (days < 0) return { label: `Isteklo ${label}`, color: '#DC2626', bg: '#FEE2E2' }
-  if (days <= 7) return { label: `Istječe ${label}`, color: '#DC2626', bg: '#FEE2E2' }
-  if (days <= 30) return { label: `Istječe ${label}`, color: '#CA8A04', bg: '#FEF9C3' }
-  return { label: `Vrijedi do ${label}`, color: '#16A34A', bg: '#DCFCE7' }
-}
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return '—'
   const [y, m, d] = dateStr.split('-')
   return `${d}.${m}.${y}.`
-}
-
-function fileNameFromUrl(url: string) {
-  try {
-    const parts = decodeURIComponent(url).split('/')
-    return parts[parts.length - 1].replace(/^(doc|att|photo)_\d+_/, '')
-  } catch { return 'Datoteka' }
 }
 
 const STATUS_ZAP_CONFIG: Record<string, { color: string; bg: string }> = {
@@ -65,50 +43,11 @@ function Row({ label, value }: { label: string; value: string | null | undefined
   )
 }
 
-function DocGroup({ docs, emptyText }: { docs: any[]; emptyText: string }) {
-  if (docs.length === 0) {
-    return <p className="text-sm" style={{ color: '#CBD5E1' }}>{emptyText}</p>
-  }
-  return (
-    <div className="flex flex-col gap-3">
-      {docs.map((doc: any, i: number) => {
-        const badge = expiryBadge(doc.datum_isteka)
-        return (
-          <div key={doc.id || i} className="p-3 rounded-lg" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-            <p className="text-sm font-semibold mb-2" style={{ color: '#1E293B' }}>{doc.naziv || 'Dokument'}</p>
-            {doc.datum_izdavanja && (
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className="text-xs" style={{ color: '#94A3B8' }}>Izdano:</span>
-                <span className="text-xs" style={{ color: '#475569' }}>{formatDate(doc.datum_izdavanja)}</span>
-              </div>
-            )}
-            {badge && (
-              <span className="text-xs px-2 py-0.5 rounded-full font-medium inline-block mb-2"
-                style={{ background: badge.bg, color: badge.color }}>{badge.label}</span>
-            )}
-            {!badge && doc.datum_isteka === null && (
-              <span className="text-xs" style={{ color: '#94A3B8' }}>Bez datuma isteka</span>
-            )}
-            {doc.file_url && (
-              <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1.5 mt-1 text-xs font-medium px-2.5 py-1.5 rounded-lg w-fit"
-                style={{ background: '#EFF6FF', color: '#2563EB' }}>
-                📄 {fileNameFromUrl(doc.file_url)}
-              </a>
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 export default function CandidatePregled() {
   const { id } = useParams<{ id: string }>()
   const [loading, setLoading] = useState(true)
   const [emp, setEmp] = useState<any>(null)
-  const [osobniDocs, setOsobniDocs] = useState<any[]>([])
-  const [prateciDocs, setPrateciDocs] = useState<any[]>([])
+  const [docs, setDocs] = useState<Dokument[]>([])
   const [vacations, setVacations] = useState<any[]>([])
   const [sickLeaves, setSickLeaves] = useState<any[]>([])
   const [smjestaj, setSmjestaj] = useState<any>(null)
@@ -127,9 +66,7 @@ export default function CandidatePregled() {
       if (!employee) return
       setEmp(employee)
 
-      const allDocs = docs || []
-      setOsobniDocs(allDocs.filter((d: any) => d.kategorija === 'osobni'))
-      setPrateciDocs(allDocs.filter((d: any) => d.kategorija !== 'osobni'))
+      setDocs(docs || [])
       setVacations(vacs || [])
       setSickLeaves(sick || [])
       setLoading(false)
@@ -144,7 +81,7 @@ export default function CandidatePregled() {
   const onSickLeave = sickLeaves.some((s: any) => s.datum_od <= today && s.datum_do >= today)
 
   return (
-    <div className="p-4 md:p-8" style={{ maxWidth: 1000 }}>
+    <div className="p-4 md:p-8" style={{ maxWidth: 1100 }}>
       <Link href="/zaposlenici" className="text-sm" style={{ color: '#64748B' }}>← Zaposlenici</Link>
 
       {/* Header */}
@@ -211,7 +148,7 @@ export default function CandidatePregled() {
       </div>
 
       {/* Main grid */}
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-[1fr_360px]">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px] items-start">
 
         {/* LEFT */}
         <div className="flex flex-col gap-4">
@@ -309,13 +246,7 @@ export default function CandidatePregled() {
         {/* RIGHT */}
         <div className="flex flex-col gap-4">
 
-          <Card title="Osobni dokumenti" icon="🪪">
-            <DocGroup docs={osobniDocs} emptyText="Nema osobnih dokumenata." />
-          </Card>
-
-          <Card title="Prateći dokumenti" icon="📋">
-            <DocGroup docs={prateciDocs} emptyText="Nema prateći dokumenata." />
-          </Card>
+          <RadnikDokumenti employeeId={id} docs={docs} onDocsChange={setDocs} />
 
         </div>
       </div>

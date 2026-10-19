@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
 import { requireSession } from '@/lib/session'
+import { zamijenjeniIds } from '@/lib/dokumenti'
 
 export async function GET() {
   const unauth = await requireSession()
@@ -21,7 +22,7 @@ export async function GET() {
     { data: planovi },
   ] = await Promise.all([
     supabase.from('employees').select('*').order('prezime'),
-    supabase.from('documents').select('employee_id, naziv, datum_isteka').order('datum_isteka', { ascending: true }),
+    supabase.from('documents').select('id, employee_id, naziv, datum_isteka, datum_izdavanja').order('datum_isteka', { ascending: true }),
     supabase.from('vacations').select('employee_id').lte('datum_od', today).gte('datum_do', today),
     supabase.from('sick_leaves').select('employee_id').lte('datum_od', today).gte('datum_do', today),
     supabase.from('sick_leaves').select('employee_id').gte('datum_do', sixMonthsAgoStr),
@@ -38,7 +39,9 @@ export async function GET() {
 
   // Group docs by employee, pick earliest expiry
   const docByEmp: Record<string, { naziv: string | null; datum_isteka: string | null }> = {}
+  const zamijenjeni = zamijenjeniIds(docs || [])
   for (const d of (docs || [])) {
+    if (zamijenjeni.has(d.id)) continue // postoji noviji dokument iste vrste
     if (!docByEmp[d.employee_id] && d.datum_isteka) {
       docByEmp[d.employee_id] = { naziv: d.naziv, datum_isteka: d.datum_isteka }
     }

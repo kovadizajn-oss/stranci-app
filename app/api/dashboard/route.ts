@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
 import { requireSession } from '@/lib/session'
+import { dohvatiZamijenjene } from '@/lib/dokumenti-server'
 
 export async function GET() {
   const unauth = await requireSession()
@@ -18,6 +19,7 @@ export async function GET() {
     { data: expiredDocs },
     { data: workers },
     { data: upcomingOb },
+    zamijenjeni,
   ] = await Promise.all([
     supabase
       .from('documents')
@@ -37,11 +39,14 @@ export async function GET() {
       .gte('rok', todayStr)
       .order('rok')
       .limit(5),
+    dohvatiZamijenjene(supabase),
   ])
+  // stari dokumenti (postoji noviji iste vrste) se ne prikazuju kao istek
+  const aktualni = <T extends { id: string }>(l: T[] | null) => (l || []).filter(d => !zamijenjeni.has(d.id))
 
   return NextResponse.json({
-    docs: docs || [],
-    expiredDocs: expiredDocs || [],
+    docs: aktualni(docs),
+    expiredDocs: aktualni(expiredDocs),
     workers: workers || [],
     upcomingOb: upcomingOb || [],
   })
