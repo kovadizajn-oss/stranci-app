@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import {
   KATEGORIJA_TAG, OSOBNI_TYPES, PRATECI_TYPES, dokumentStatus, formatDatum, kategorijaZaNaziv, zamijenjeniIds,
   type Dokument, type Kategorija,
@@ -188,14 +189,17 @@ function DokumentForma({ initial, fileUrl, initialFile, naslov, istaknuto, savin
   )
 }
 
-export default function RadnikDokumenti({ employeeId, docs, onDocsChange, drafts = [], onDraftsChange, sticky }: {
+export default function RadnikDokumenti({ employeeId, docs, onDocsChange, drafts = [], onDraftsChange, sticky, urediHref }: {
   employeeId: string
   docs: Dokument[]
   onDocsChange: (docs: Dokument[]) => void
   drafts?: DokumentNacrt[]
   onDraftsChange?: (d: DokumentNacrt[]) => void
   sticky?: boolean
+  /** Samo pregled (npr. Pregled radnika): bez dodavanja/uređivanja, gumb Uredi vodi na ovu adresu. */
+  urediHref?: string
 }) {
+  const samoPregled = !!urediHref
   const [adding, setAdding] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [savingKey, setSavingKey] = useState<string | null>(null)
@@ -311,10 +315,15 @@ export default function RadnikDokumenti({ employeeId, docs, onDocsChange, drafts
               <a href={d.file_url} target="_blank" rel="noopener noreferrer" className="btn-secondary text-xs px-2.5 py-1 rounded-lg font-medium"
                 style={{ background: '#EFF6FF', color: '#2563EB' }}>Otvori</a>
             )}
-            <button type="button" onClick={() => { setEditId(d.id); setAdding(false); setError(null) }} className="text-xs" style={{ color: '#64748B' }}>Uredi</button>
+            {!samoPregled && (
+              <button type="button" onClick={() => { setEditId(d.id); setAdding(false); setError(null) }} className="text-xs" style={{ color: '#64748B' }}>Uredi</button>
+            )}
           </div>
         </div>
-        {!d.file_url && !star && (
+        {!d.file_url && !star && samoPregled && (
+          <p className="mt-2 text-xs px-2.5 py-1.5 rounded-lg font-medium w-fit" style={{ background: '#FEF9C3', color: '#A16207' }}>⚠ Nema preslike</p>
+        )}
+        {!d.file_url && !star && !samoPregled && (
           <label className={`mt-2 flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg font-medium cursor-pointer w-fit ${prilazemId === d.id ? 'opacity-60 pointer-events-none' : ''}`}
             style={{ background: '#FEF9C3', color: '#A16207' }}>
             {prilazemId === d.id ? 'Učitavanje...' : '⚠ Nema preslike — priloži'}
@@ -330,7 +339,11 @@ export default function RadnikDokumenti({ employeeId, docs, onDocsChange, drafts
     <div className={`bg-white rounded-2xl flex flex-col ${sticky ? 'lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)]' : ''}`} style={card}>
       <div className="flex items-center justify-between px-4 py-3.5 flex-shrink-0" style={{ borderBottom: '1px solid #F1F5F9' }}>
         <p className="text-sm font-semibold" style={{ color: '#1E293B' }}>📁 Dokumenti ({aktualni.length})</p>
-        {!adding && (
+        {samoPregled ? (
+          <Link href={urediHref} className="btn-secondary text-xs px-3 py-1.5 rounded-lg font-medium" style={{ background: '#EFF6FF', color: '#2563EB' }}>
+            ✏️ Uredi
+          </Link>
+        ) : !adding && (
           <button type="button" onClick={() => { setAdding(true); setEditId(null); setError(null) }}
             className="btn-primary text-xs px-3 py-1.5 rounded-lg font-medium text-white" style={{ background: '#2563EB' }}>
             + Dodaj dokument
@@ -354,7 +367,7 @@ export default function RadnikDokumenti({ employeeId, docs, onDocsChange, drafts
 
         {aktualni.length === 0 && !adding && drafts.length === 0 && (
           <p className="text-sm text-center py-6" style={{ color: '#94A3B8' }}>
-            Još nema dokumenata.<br />Klikni „+ Dodaj dokument” ili koristi AI skeniranje.
+            Još nema dokumenata.<br />{samoPregled ? 'Dodaju se na stranici Uredi.' : 'Klikni „+ Dodaj dokument” ili koristi AI skeniranje.'}
           </p>
         )}
 
