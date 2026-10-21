@@ -10,6 +10,7 @@ const navItems = [
   { href: '/tvrtke',       label: 'Tvrtke',       icon: <IconCompany /> },
   { href: '/partneri',     label: 'Partnerske agencije', short: 'Partneri', icon: <IconPartner /> },
   { href: '/smjestaj',     label: 'Smještaj',     icon: <IconHome /> },
+  { href: '/vozila',       label: 'Vozni park',   short: 'Vozila', icon: <IconCar /> },
   { href: '/kalendar',     label: 'Kalendar',     icon: <IconCalendar /> },
   { href: '/obaveze',      label: 'Obaveze',      icon: <IconObaveze /> },
 ]
@@ -25,6 +26,9 @@ function IconCompany() {
 }
 function IconPartner() {
   return <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/></svg>
+}
+function IconCar() {
+  return <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path d="M5 16V11l2-5h10l2 5v5"/><path d="M3 16h18v2a1 1 0 01-1 1h-2a1 1 0 01-1-1v-1H7v1a1 1 0 01-1 1H4a1 1 0 01-1-1z"/><path d="M5 11h14"/><circle cx="7.5" cy="13.5" r=".8" fill="currentColor"/><circle cx="16.5" cy="13.5" r=".8" fill="currentColor"/></svg>
 }
 function IconHome() {
   return <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9v12h14V9"/><path d="M10 21v-6h4v6"/></svg>
@@ -132,13 +136,13 @@ export default function Sidebar() {
       </aside>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 flex items-center justify-around px-1 py-2 z-50"
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 flex items-center justify-between gap-0.5 overflow-x-auto px-1 py-2 z-50"
         style={{ background: '#0F172A', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         {navItems.map(item => {
           const active = isActive(item.href)
           return (
             <Link key={item.href} href={item.href}
-              className="flex flex-col items-center gap-1 px-2 py-1.5 rounded-xl"
+              className="flex flex-col items-center gap-1 px-1.5 py-1.5 rounded-xl flex-shrink-0"
               style={{
                 color: active ? '#60A5FA' : '#475569',
                 background: active ? 'rgba(37,99,235,0.15)' : 'transparent',
