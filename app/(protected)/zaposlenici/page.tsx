@@ -63,6 +63,8 @@ const DOC_TYPES: Record<string, string> = {
 }
 
 const ZAP_STATUSES = ['Aktivan', 'U postupku', 'Na čekanju', 'Otkazan', 'Novi uvoz']
+/** Statusi koje se može postaviti grupno (Novi uvoz postavlja samo uvoz dokumenata). */
+const STATUSI_ZA_PROMJENU = ['Aktivan', 'U postupku', 'Na čekanju', 'Otkazan']
 const DOC_STATUS_CONFIG: Record<string, { color: string; bg: string }> = {
   'Vrijedi':        { color: '#16A34A', bg: '#DCFCE7' },
   'Uskoro istječe': { color: '#CA8A04', bg: '#FEF9C3' },
@@ -105,6 +107,44 @@ export default function ZaposleniciPage() {
   const [popisOtvoren, setPopisOtvoren] = useState(false)
   function prebaciOdabir(id: string) {
     setOdabrani(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  }
+
+  // Grupna promjena statusa zaposlenika
+  const [statusMeni, setStatusMeni] = useState(false)
+  const [mijenjamStatus, setMijenjamStatus] = useState(false)
+  const [poruka, setPoruka] = useState<{ tip: 'ok' | 'greska'; tekst: string } | null>(null)
+  useEffect(() => {
+    if (!poruka) return
+    const t = setTimeout(() => setPoruka(null), 5000)
+    return () => clearTimeout(t)
+  }, [poruka])
+
+  async function promijeniStatus(status: string) {
+    setStatusMeni(false)
+    const ids = [...odabrani]
+    if (ids.length === 0) return
+    if (!confirm(`Promijeniti status zaposlenika u „${status}” za ${ids.length} radnika?`)) return
+    setMijenjamStatus(true)
+    try {
+      const res = await fetch('/api/employees', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, status_zaposlenika: status }),
+      })
+      const json = await res.json().catch(() => ({} as { error?: string; updated?: number }))
+      if (!res.ok) {
+        setPoruka({ tip: 'greska', tekst: json.error || 'Promjena statusa nije uspjela. Pokušajte ponovno.' })
+        return
+      }
+      const promijenjeni = new Set(ids)
+      setEmployees(prev => prev.map(e => promijenjeni.has(e.id) ? { ...e, status_zaposlenika: status } : e))
+      setOdabrani(new Set())
+      setPoruka({ tip: 'ok', tekst: `Status „${status}” postavljen za ${json.updated ?? ids.length} radnika.` })
+    } catch {
+      setPoruka({ tip: 'greska', tekst: 'Promjena statusa nije uspjela (nema veze sa serverom). Pokušajte ponovno.' })
+    } finally {
+      setMijenjamStatus(false)
+    }
   }
 
 
@@ -350,11 +390,44 @@ export default function ZaposleniciPage() {
           </span>
           <button type="button" onClick={() => setOdabrani(new Set())} className="btn-secondary px-3 py-2 rounded-lg text-xs font-medium"
             style={{ background: '#F1F5F9', color: '#374151' }}>Poništi odabir</button>
+          <div className="relative">
+            <button type="button" onClick={() => setStatusMeni(v => !v)} disabled={mijenjamStatus}
+              aria-haspopup="menu" aria-expanded={statusMeni}
+              className="btn-secondary px-3 py-2 rounded-lg text-xs font-medium"
+              style={{ background: '#EEF2FF', color: '#4338CA', border: '1px solid #C7D2FE', opacity: mijenjamStatus ? 0.6 : 1 }}>
+              {mijenjamStatus ? 'Mijenjam status...' : 'Promijeni status ▾'}
+            </button>
+            {statusMeni && (
+              <div role="menu" className="absolute right-0 bottom-full mb-2 z-20 bg-white rounded-xl p-1.5 flex flex-col gap-0.5"
+                style={{ minWidth: 170, border: '1px solid #E2E8F0', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
+                <p className="text-[11px] px-2 pt-1 pb-1.5" style={{ color: '#94A3B8' }}>Novi status za odabrane:</p>
+                {STATUSI_ZA_PROMJENU.map(s => (
+                  <button key={s} type="button" role="menuitem" onClick={() => promijeniStatus(s)}
+                    className="text-left px-2 py-1.5 rounded-lg hover:bg-slate-50">
+                    <span className="text-xs px-2.5 py-1 rounded-full font-medium"
+                      style={{ background: STATUS_ZAP_CONFIG[s].bg, color: STATUS_ZAP_CONFIG[s].color }}>{s}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button type="button" onClick={() => setPopisOtvoren(true)} className="btn-primary px-4 py-2 rounded-lg text-xs font-medium text-white"
             style={{ background: '#2563EB' }}>📘 Popis za liječnički pregled</button>
         </div>
       )}
       {popisOtvoren && <GenerirajPopis employeeIds={[...odabrani]} onClose={() => setPopisOtvoren(false)} />}
+
+      {poruka && (
+        <div role="status" className="fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-30 px-4 py-2.5 rounded-xl text-sm font-medium"
+          style={{
+            background: poruka.tip === 'ok' ? '#F0FDF4' : '#FEF2F2',
+            color: poruka.tip === 'ok' ? '#15803D' : '#B91C1C',
+            border: `1px solid ${poruka.tip === 'ok' ? '#BBF7D0' : '#FECACA'}`,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          }}>
+          {poruka.tip === 'ok' ? '✓ ' : ''}{poruka.tekst}
+        </div>
+      )}
 
 
     </div>

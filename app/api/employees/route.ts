@@ -108,3 +108,39 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
+
+// Grupna promjena statusa zaposlenika (traka za odabrane radnike na /zaposlenici).
+// Ulaz:  { ids: string[], status_zaposlenika: "Aktivan" | "U postupku" | "Na čekanju" | "Otkazan" | "Novi uvoz" }
+// Izlaz: { ok: true, updated: broj } — mijenja SAMO status, ostali podaci radnika ostaju kakvi jesu.
+const STATUSI_ZAPOSLENIKA = ['Aktivan', 'U postupku', 'Na čekanju', 'Otkazan', 'Novi uvoz']
+
+export async function PATCH(request: Request) {
+  const unauth = await requireSession()
+  if (unauth) return unauth
+
+  const body = await request.json().catch(() => null) as { ids?: unknown; status_zaposlenika?: unknown } | null
+  const ids = Array.isArray(body?.ids)
+    ? [...new Set(body.ids.filter((x): x is string => typeof x === 'string' && x.length > 0 && x.length <= 64))]
+    : []
+  const status = body?.status_zaposlenika
+
+  if (ids.length === 0) return NextResponse.json({ error: 'Nije odabran nijedan radnik.' }, { status: 400 })
+  if (typeof status !== 'string' || !STATUSI_ZAPOSLENIKA.includes(status)) {
+    return NextResponse.json({ error: 'Neispravan status.' }, { status: 400 })
+  }
+
+  const supabase = createAdminClient()
+  let updated = 0
+  // Po 100 odjednom, da popis ID-eva ne bude predugačak za jedan upit
+  for (let i = 0; i < ids.length; i += 100) {
+    const { data, error } = await supabase
+      .from('employees')
+      .update({ status_zaposlenika: status })
+      .in('id', ids.slice(i, i + 100))
+      .select('id')
+    if (error) return NextResponse.json({ error: error.message, updated }, { status: 500 })
+    updated += data?.length ?? 0
+  }
+
+  return NextResponse.json({ ok: true, updated })
+}
