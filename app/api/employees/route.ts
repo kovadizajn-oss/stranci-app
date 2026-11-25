@@ -56,6 +56,7 @@ export async function GET() {
       photo_url: emp.photo_url,
       drzava_rodjenja: emp.drzava_rodjenja,
       poslodavac: emp.poslodavac,
+      company_id: emp.company_id || null,
       status_zaposlenika: emp.status_zaposlenika || null,
       oib: emp.oib || null,
       vrsta_zaposlenja: emp.vrsta_zaposlenja || null,

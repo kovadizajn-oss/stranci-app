@@ -21,6 +21,7 @@ type EmployeeRow = {
   photo_url: string | null
   drzava_rodjenja: string | null
   poslodavac: string | null
+  company_id: string | null
   status_zaposlenika: string | null
   oib: string | null
   vrsta_zaposlenja: VrstaZaposlenja | null
@@ -269,7 +270,7 @@ export default function ZaposleniciPage() {
 
       <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.05)' }}>
       <div className="overflow-x-auto">
-        <table className="w-full" style={{ minWidth: 750 }}>
+        <table className="w-full" style={{ minWidth: 920 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #F1F5F9', background: '#F8FAFC' }}>
               <th className="pl-4 pr-1 py-3" style={{ width: 36 }}>
@@ -278,6 +279,7 @@ export default function ZaposleniciPage() {
                   onChange={e => setOdabrani(e.target.checked ? new Set([...odabrani, ...filtered.map(x => x.id)]) : new Set([...odabrani].filter(id => !filtered.some(x => x.id === id))))} />
               </th>
               <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Zaposlenik</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Tvrtka</th>
               <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Status zaposlenika</th>
               <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Nadolazeći istek</th>
               <th className="text-left px-4 py-3 text-xs font-semibold" style={{ color: '#64748B' }}>Status dokumenata</th>
@@ -286,9 +288,9 @@ export default function ZaposleniciPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</td></tr>
+              <tr><td colSpan={7} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>Učitavanje...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={6} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>
+              <tr><td colSpan={7} className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>
                 {employees.length === 0 ? 'Još nema zaposlenika. Dodajte prvog zaposlenika klikom na gumb gore.' : 'Nema rezultata za unesene filtere.'}
               </td></tr>
             ) : (
@@ -333,6 +335,26 @@ export default function ZaposleniciPage() {
                           </div>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {emp.poslodavac ? (
+                        <div className="min-w-0" style={{ maxWidth: 220 }}>
+                          {emp.company_id ? (
+                            <Link href={`/tvrtke/${emp.company_id}`} className="text-sm hover:underline block truncate" style={{ color: '#1E293B' }} title={emp.poslodavac}>
+                              {emp.poslodavac}
+                            </Link>
+                          ) : (
+                            <span className="text-sm block truncate" style={{ color: '#1E293B' }} title={emp.poslodavac}>{emp.poslodavac}</span>
+                          )}
+                          {emp.vrsta_zaposlenja && (
+                            <span className="text-xs" style={{ color: VRSTA_BADGE[emp.vrsta_zaposlenja].color }}>
+                              {VRSTA_BADGE[emp.vrsta_zaposlenja].label}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm" style={{ color: '#CBD5E1' }}>—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {emp.status_zaposlenika && (
