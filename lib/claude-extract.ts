@@ -31,7 +31,8 @@ const SONNET_EFFORT: "low" | "medium" | "high" = "low";
 
 /**
  * Maksimalna ukupna veličina datoteka po zahtjevu. Vercel ionako odbija sve iznad 4.5 MB,
- * a stranice /uvoz i /[id] same ograničavaju na 3.5 MB. Grupni uvoz šalje do 10 datoteka odjednom.
+ * a stranice /uvoz i /[id] same ograničavaju na 3.5 MB. Grupni uvoz šalje do 10 datoteka i ~3,4 MB po zahtjevu
+ * (lib/bulk-uvoz.ts); veće datoteke šalje izravno u spremište, a ruta ih odande preuzima.
  */
 export const MAX_UKUPNO_BAJTOVA = 4.4 * 1024 * 1024;
 
@@ -136,20 +137,28 @@ export async function procitajDatotekeIzForme(formData: FormData): Promise<Pripr
   const rezultat: PripremljenaDatoteka[] = [];
   for (const datoteka of datoteke) {
     const bajtovi = new Uint8Array(await datoteka.arrayBuffer());
-    const mediaType = prepoznajFormat(bajtovi);
-    if (!mediaType) {
-      throw new GreskaEkstrakcije(
-        `Format datoteke "${datoteka.name}" nije podržan. Podržani su JPG, PNG, WEBP, GIF i PDF. (iPhone HEIC slike spremi kao JPG ili napravi screenshot.)`,
-        415,
-      );
-    }
-    rezultat.push({
-      naziv: datoteka.name || "datoteka",
-      mediaType,
-      base64: Buffer.from(bajtovi).toString("base64"),
-    });
+    rezultat.push(pripremiBajtove(datoteka.name || "datoteka", bajtovi));
   }
   return rezultat;
+}
+
+/**
+ * Provjerava format i pretvara bajtove u base64 za AI.
+ * Koristi se i za datoteke koje grupni uvoz šalje izravno u spremište (velike datoteke).
+ */
+export function pripremiBajtove(naziv: string, bajtovi: Uint8Array): PripremljenaDatoteka {
+  const mediaType = prepoznajFormat(bajtovi);
+  if (!mediaType) {
+    throw new GreskaEkstrakcije(
+      `Format datoteke "${naziv}" nije podržan. Podržani su JPG, PNG, WEBP, GIF i PDF. (iPhone HEIC slike spremi kao JPG ili napravi screenshot.)`,
+      415,
+    );
+  }
+  return {
+    naziv: naziv || "datoteka",
+    mediaType,
+    base64: Buffer.from(bajtovi).toString("base64"),
+  };
 }
 
 /** Jedan radnik iz jedne ili više datoteka (putovnica + DBR + ugovor…). */

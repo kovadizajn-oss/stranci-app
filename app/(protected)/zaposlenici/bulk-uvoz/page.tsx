@@ -1,41 +1,55 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import {
+  MAX_DATOTEKA_BAJTOVA, PRIVREMENA_MAPA, VELIKA_DATOTEKA,
+  napraviGrupe, sigurnoIme, smanjiSliku, spojiRadnike, uploadIzravno,
+  type RadnikIzAnalize,
+} from '@/lib/bulk-uvoz'
 
-type DokumentInfo = {
-  dokument_naziv: string | null
-  kategorija: 'osobni' | 'prateci' | null
-  dokument_vrijedi_do: string | null
-  datum_izdavanja: string | null
-  file_index: number | null
-}
+type DetectedWorker = RadnikIzAnalize
 
-type DetectedWorker = {
-  ime: string | null
-  prezime: string | null
-  datum_rodjenja: string | null
-  drzava_rodjenja: string | null
-  oib: string | null
-  ime_oca: string | null
-  radno_mjesto: string | null
-  dokumenti: DokumentInfo[]
-}
+/** Koliko grupa AI analizira istovremeno. */
+const PARALELNO = 2
 
-const BATCH_SIZE = 10
+type Neuspjeh = { indeksi: number[]; poruka: string }
 
 export default function BulkUvoz() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [files, setFiles] = useState<File[]>([])
   const [dragging, setDragging] = useState(false)
   const [phase, setPhase] = useState<'upload' | 'processing' | 'review' | 'saving' | 'done'>('upload')
-  const [batchCurrent, setBatchCurrent] = useState(0)
-  const [batchTotal, setBatchTotal] = useState(0)
-  const [batchProgress, setBatchProgress] = useState(0)
   const [workers, setWorkers] = useState<DetectedWorker[]>([])
   const [error, setError] = useState('')
   const [saveResults, setSaveResults] = useState<{ name: string; id: string }[]>([])
   const [failedCount, setFailedCount] = useState(0)
+  const [failedUploads, setFailedUploads] = useState(0)
+
+  // Napredak analize: stvarno obrađene datoteke + glatko kretanje trake dok AI radi
+  const [korak, setKorak] = useState<'priprema' | 'analiza'>('priprema')
+  const [ukupno, setUkupno] = useState(0)
+  const [obradeno, setObradeno] = useState(0)
+  const [uTijeku, setUTijeku] = useState(0)
+  const [prikaz, setPrikaz] = useState(0)
+  const [neuspjeli, setNeuspjeli] = useState<Neuspjeh[]>([])
+
+  // Smanjene verzije datoteka (isti redoslijed kao `files`); brišu se kad se popis datoteka promijeni
+  const pripremljene = useRef<Map<number, File>>(new Map())
+  useEffect(() => { pripremljene.current = new Map() }, [files])
+
+  useEffect(() => {
+    if (phase !== 'processing' || ukupno === 0) return
+    const t = setInterval(() => {
+      const stvarno = obradeno / ukupno
+      const cilj = Math.min(0.99, (obradeno + 0.9 * uTijeku) / ukupno)
+      setPrikaz(p => {
+        const od = Math.max(p, stvarno)
+        return od >= cilj ? od : od + (cilj - od) * 0.04
+      })
+    }, 200)
+    return () => clearInterval(t)
+  }, [phase, ukupno, obradeno, uTijeku])
 
   const addFiles = useCallback((newFiles: File[]) => {
     const valid = newFiles.filter(f => f.type.startsWith('image/') || f.type === 'application/pdf')
@@ -48,77 +62,112 @@ export default function BulkUvoz() {
     addFiles(Array.from(e.dataTransfer.files))
   }, [addFiles])
 
-  const analyse = async () => {
-    if (files.length === 0) return
+  /** Vraća smanjenu verziju datoteke (fotografije), ili izvornik. */
+  const pripremi = async (i: number): Promise<File> => {
+    const gotova = pripremljene.current.get(i)
+    if (gotova) return gotova
+    const f = await smanjiSliku(files[i])
+    pripremljene.current.set(i, f)
+    return f
+  }
+
+  /**
+   * Analizira sve datoteke (ili samo `samoIndeksi` kod ponovnog pokušaja).
+   * Datoteke idu u grupe do 10 datoteka i ~3,4 MB (Vercel prima najviše 4,5 MB po zahtjevu);
+   * velike datoteke idu izravno u spremište. Neuspjela grupa ne zaustavlja ostale.
+   */
+  const analyse = async (samoIndeksi?: number[]) => {
+    const indeksi = samoIndeksi ?? files.map((_, i) => i)
+    if (indeksi.length === 0) return
+    const ponovno = !!samoIndeksi
+
     setPhase('processing')
     setError('')
+    setKorak('priprema')
+    setUkupno(indeksi.length)
+    setObradeno(0)
+    setUTijeku(0)
+    setPrikaz(0)
 
-    const batches: File[][] = []
-    for (let i = 0; i < files.length; i += BATCH_SIZE) {
-      batches.push(files.slice(i, i + BATCH_SIZE))
+    const noviNeuspjeli: Neuspjeh[] = []
+    const prethodni = ponovno ? workers : []
+
+    // 1. Smanji fotografije
+    const stavke: { indeks: number; ime: string; velicina: number }[] = []
+    for (const i of indeksi) {
+      const f = await pripremi(i)
+      if (f.size > MAX_DATOTEKA_BAJTOVA) {
+        noviNeuspjeli.push({ indeksi: [i], poruka: 'veća od 20 MB — podijelite PDF ili ga spremite u manjoj rezoluciji' })
+        continue
+      }
+      stavke.push({ indeks: i, ime: files[i].name, velicina: f.size })
     }
-    setBatchTotal(batches.length)
+    setObradeno(noviNeuspjeli.length)
 
-    const allWorkers: DetectedWorker[] = []
-    setBatchProgress(0)
+    // 2. Grupe i analiza
+    const grupe = napraviGrupe(stavke)
+    const noviRadnici: DetectedWorker[] = []
+    setKorak('analiza')
 
-    for (let i = 0; i < batches.length; i++) {
-      setBatchCurrent(i + 1)
-      setBatchProgress(0)
-
-      // Simulated progress within each batch
-      const interval = setInterval(() => {
-        setBatchProgress(prev => {
-          const inc = prev < 30 ? 4 : prev < 60 ? 2 : prev < 80 ? 0.8 : prev < 90 ? 0.15 : prev < 95 ? 0.06 : 0.02
-          return Math.min(prev + inc, 99)
-        })
-      }, 200)
-      const batchOffset = i * BATCH_SIZE
-      const fd = new FormData()
-      batches[i].forEach(f => fd.append('files', f))
-
+    const analizirajGrupu = async (grupa: number[]) => {
+      setUTijeku(n => n + grupa.length)
       try {
+        const fd = new FormData()
+        const datoteke = await Promise.all(grupa.map(pripremi))
+        if (grupa.length === 1 && datoteke[0].size > VELIKA_DATOTEKA) {
+          // Velika datoteka: izravno u spremište, analizi šaljemo samo putanju
+          const putanja = `${PRIVREMENA_MAPA}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${sigurnoIme(datoteke[0].name)}`
+          await uploadIzravno(datoteke[0], putanja)
+          fd.append('paths', putanja)
+        } else {
+          datoteke.forEach(f => fd.append('files', f))
+        }
+
         const res = await fetch('/api/extract-document-bulk', { method: 'POST', body: fd })
         const text = await res.text()
-        let json: any
+        let json: { data?: DetectedWorker[]; error?: string }
         try { json = JSON.parse(text) } catch { throw new Error(`Greška servera: ${text.slice(0, 120)}`) }
-        clearInterval(interval)
         if (!res.ok || json.error) throw new Error(json.error || 'Greška')
 
-        setBatchProgress(100)
-        await new Promise(r => setTimeout(r, 300))
-
-        // Offset file_index values so they point to the global files array
-        const batchWorkers: DetectedWorker[] = json.data || []
-        for (const w of batchWorkers) {
+        // file_index iz odgovora je redni broj unutar grupe → pretvori u indeks u popisu svih datoteka
+        for (const w of json.data || []) {
           for (const doc of w.dokumenti || []) {
-            if (doc.file_index != null) doc.file_index += batchOffset
+            doc.file_index = doc.file_index != null && grupa[doc.file_index] != null ? grupa[doc.file_index] : null
           }
+          noviRadnici.push(w)
         }
-        allWorkers.push(...batchWorkers)
-      } catch (e: any) {
-        clearInterval(interval)
-        setError(e.message)
-        setPhase('upload')
-        return
+      } catch (e: unknown) {
+        noviNeuspjeli.push({ indeksi: grupa, poruka: e instanceof Error ? e.message : 'Greška' })
+      } finally {
+        setUTijeku(n => n - grupa.length)
+        setObradeno(n => n + grupa.length)
       }
     }
 
-    // Deduplicate across batches: merge workers with same ime+prezime+datum_rodjenja
-    const merged: DetectedWorker[] = []
-    for (const w of allWorkers) {
-      const key = `${w.ime?.toLowerCase().trim()}_${w.prezime?.toLowerCase().trim()}_${w.datum_rodjenja}`
-      const existing = w.ime && w.prezime
-        ? merged.find(m => `${m.ime?.toLowerCase().trim()}_${m.prezime?.toLowerCase().trim()}_${m.datum_rodjenja}` === key)
-        : null
-      if (existing) {
-        existing.dokumenti.push(...(w.dokumenti || []))
-      } else {
-        merged.push({ ...w, dokumenti: [...(w.dokumenti || [])] })
+    // Najviše PARALELNO grupa istovremeno
+    let sljedeca = 0
+    const radnik = async () => {
+      while (sljedeca < grupe.length) {
+        const g = grupe[sljedeca++]
+        await analizirajGrupu(g)
       }
     }
+    await Promise.all(Array.from({ length: Math.min(PARALELNO, grupe.length) }, radnik))
 
-    setWorkers(merged)
+    // 3. Spoji istu osobu iz različitih grupa
+    const svi = spojiRadnike([...prethodni.map(w => ({ ...w, dokumenti: [...w.dokumenti] })), ...noviRadnici])
+    setPrikaz(1)
+    await new Promise(r => setTimeout(r, 300))
+
+    if (svi.length === 0 && noviNeuspjeli.length > 0) {
+      setNeuspjeli([])
+      setError(noviNeuspjeli[0].poruka + (noviNeuspjeli.length > 1 ? ` (i još ${noviNeuspjeli.length - 1} grupa)` : ''))
+      setPhase('upload')
+      return
+    }
+
+    setWorkers(svi)
+    setNeuspjeli(noviNeuspjeli)
     setPhase('review')
   }
 
@@ -128,6 +177,8 @@ export default function BulkUvoz() {
     setPhase('saving')
     const results: { name: string; id: string }[] = []
     let failed = 0
+    let uploadGreske = 0
+    const urlPoDatoteci = new Map<number, string>()
 
     for (const w of workers) {
       if (!w.ime || !w.prezime) { failed++; continue }
@@ -152,19 +203,21 @@ export default function BulkUvoz() {
       for (const doc of (w.dokumenti || []).filter(d => d.dokument_naziv && d.kategorija)) {
         let fileUrl: string | null = null
 
-        // Upload the source file if Gemini gave us a valid file_index
-        const srcFile = doc.file_index != null ? files[doc.file_index] : null
-        if (srcFile) {
-          try {
-            const fd = new FormData()
-            fd.append('file', srcFile)
-            fd.append('path', `${empId}/doc_${Date.now()}_${srcFile.name}`)
-            const upRes = await fetch('/api/upload', { method: 'POST', body: fd })
-            if (upRes.ok) {
-              const { url } = await upRes.json()
+        // Datoteka ide izravno u spremište (bez Vercelovog ograničenja od 4,5 MB); ista datoteka se šalje samo jednom
+        const idx = doc.file_index
+        if (idx != null && files[idx]) {
+          if (urlPoDatoteci.has(idx)) {
+            fileUrl = urlPoDatoteci.get(idx)!
+          } else {
+            try {
+              const f = await pripremi(idx)
+              const { url } = await uploadIzravno(f, `${empId}/doc_${Date.now()}_${sigurnoIme(f.name)}`)
               fileUrl = url
+              urlPoDatoteci.set(idx, url)
+            } catch {
+              uploadGreske++ // zapis dokumenta se svejedno sprema, samo bez priložene datoteke
             }
-          } catch { /* skip file upload on error, still save the record */ }
+          }
         }
 
         await fetch('/api/documents', {
@@ -186,6 +239,7 @@ export default function BulkUvoz() {
 
     setSaveResults(results)
     setFailedCount(failed)
+    setFailedUploads(uploadGreske)
     setPhase('done')
   }
 
@@ -230,7 +284,7 @@ export default function BulkUvoz() {
                 <button onClick={() => setFiles([])} className="text-xs" style={{ color: '#94A3B8' }}>Ukloni sve</button>
               </div>
               <span className="text-xs" style={{ color: '#64748B' }}>
-                ~{Math.ceil(files.length / BATCH_SIZE)} {Math.ceil(files.length / BATCH_SIZE) === 1 ? 'AI zahtjev' : 'AI zahtjeva'}
+                {(files.reduce((z, f) => z + f.size, 0) / 1024 / 1024).toFixed(1)} MB
               </span>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -249,7 +303,7 @@ export default function BulkUvoz() {
 
         {error && <p className="mt-3 text-sm" style={{ color: '#DC2626' }}>Greška: {error}</p>}
 
-        <button onClick={analyse} disabled={files.length === 0}
+        <button onClick={() => analyse()} disabled={files.length === 0}
           className="btn-primary w-full mt-5 py-3 rounded-xl text-sm font-semibold text-white"
           style={{ background: files.length === 0 ? '#93C5FD' : 'linear-gradient(135deg, #2563EB, #1D4ED8)', cursor: files.length === 0 ? 'not-allowed' : 'pointer' }}>
           ✨ Analiziraj {files.length > 0 ? `${files.length} ${files.length === 1 ? 'dokument' : 'dokumenata'}` : 'dokumente'}
@@ -259,32 +313,35 @@ export default function BulkUvoz() {
   )
 
   // ── Processing ──
-  if (phase === 'processing') return (
-    <div className="p-4 md:p-8 flex items-center justify-center" style={{ minHeight: '60vh' }}>
-      <div className="text-center" style={{ maxWidth: 420 }}>
-        <div className="text-5xl mb-6">🔍</div>
-        <h2 className="text-xl font-bold mb-2" style={{ color: '#0F172A' }}>Analiza u tijeku...</h2>
-        <p className="text-sm mb-6" style={{ color: '#64748B' }}>
-          {batchTotal > 1 ? `Grupa ${batchCurrent} od ${batchTotal} — ` : ''}
-          {batchProgress < 30 ? '📤 Učitavanje dokumenata...' : batchProgress < 70 ? '🔍 Čitanje dokumenata...' : batchProgress < 100 ? '✍️ Grupiranje zaposlenika...' : '✅ Gotovo!'}
-        </p>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs" style={{ color: '#94A3B8' }}>
-            {batchTotal > 1 ? `${batchCurrent} / ${batchTotal} grupa` : ''}
-          </span>
-          <span className="text-xs font-medium" style={{ color: '#94A3B8' }}>{Math.round(batchProgress)}%</span>
-        </div>
-        <div className="w-full rounded-full overflow-hidden" style={{ height: 8, background: '#E2E8F0' }}>
-          <div className="h-full rounded-full"
-            style={{
-              width: `${batchProgress}%`,
-              background: batchProgress === 100 ? '#16A34A' : 'linear-gradient(135deg, #2563EB, #1D4ED8)',
-              transition: 'width 0.2s ease, background 0.3s ease',
-            }} />
+  if (phase === 'processing') {
+    const posto = Math.round(prikaz * 100)
+    return (
+      <div className="p-4 md:p-8 flex items-center justify-center" style={{ minHeight: '60vh' }}>
+        <div className="text-center" style={{ maxWidth: 420, width: '100%' }}>
+          <div className="text-5xl mb-6">🔍</div>
+          <h2 className="text-xl font-bold mb-2" style={{ color: '#0F172A' }}>Analiza u tijeku...</h2>
+          <p className="text-sm mb-6" style={{ color: '#64748B' }}>
+            {korak === 'priprema'
+              ? '📤 Priprema dokumenata...'
+              : posto < 100 ? `🔍 Analizirano ${obradeno} od ${ukupno} ${ukupno === 1 ? 'dokumenta' : 'dokumenata'}` : '✅ Gotovo!'}
+          </p>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs" style={{ color: '#94A3B8' }}>{obradeno} / {ukupno}</span>
+            <span className="text-xs font-medium" style={{ color: '#94A3B8' }}>{posto}%</span>
+          </div>
+          <div className="w-full rounded-full overflow-hidden" style={{ height: 8, background: '#E2E8F0' }}>
+            <div className="h-full rounded-full"
+              style={{
+                width: `${posto}%`,
+                background: posto === 100 ? '#16A34A' : 'linear-gradient(135deg, #2563EB, #1D4ED8)',
+                transition: 'width 0.2s ease, background 0.3s ease',
+              }} />
+          </div>
+          <p className="text-xs mt-4" style={{ color: '#94A3B8' }}>Ne zatvarajte ovu karticu dok analiza ne završi.</p>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   // ── Review ──
   if (phase === 'review') return (
@@ -302,6 +359,27 @@ export default function BulkUvoz() {
           💾 Spremi {workers.length} zaposlenika
         </button>
       </div>
+
+      {neuspjeli.length > 0 && (
+        <div className="rounded-2xl p-4 mb-6" style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+          <p className="text-sm font-semibold mb-1" style={{ color: '#92400E' }}>
+            {neuspjeli.reduce((z, n) => z + n.indeksi.length, 0)} {neuspjeli.reduce((z, n) => z + n.indeksi.length, 0) === 1 ? 'datoteka nije analizirana' : 'datoteka nije analizirano'}
+          </p>
+          <ul className="text-xs mb-3" style={{ color: '#92400E' }}>
+            {neuspjeli.map((n, i) => (
+              <li key={i}>
+                {n.indeksi.map(x => files[x]?.name).filter(Boolean).join(', ')} — {n.poruka}
+              </li>
+            ))}
+          </ul>
+          <button onClick={() => analyse(neuspjeli.flatMap(n => n.indeksi))}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+            style={{ background: '#F59E0B', color: '#fff' }}>
+            Pokušaj ponovno
+          </button>
+          <span className="text-xs ml-3" style={{ color: '#B45309' }}>ili spremite ove zaposlenike, a ostale dodajte kasnije</span>
+        </div>
+      )}
 
       {workers.length === 0 && (
         <p className="text-sm text-center py-12" style={{ color: '#94A3B8' }}>Nema zaposlenika za prikaz.</p>
@@ -376,6 +454,11 @@ export default function BulkUvoz() {
           {saveResults.length} {saveResults.length === 1 ? 'zaposlenik dodan' : 'zaposlenika dodano'}
           {failedCount > 0 ? `, ${failedCount} neuspješno` : ''}
         </p>
+        {failedUploads > 0 && (
+          <p className="text-xs mt-2" style={{ color: '#B45309' }}>
+            {failedUploads} {failedUploads === 1 ? 'datoteka nije priložena' : 'datoteka nije priloženo'} — dokument je evidentiran, datoteku dodajte ručno u profilu zaposlenika.
+          </p>
+        )}
         {saveResults.length > 0 && (
           <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>
             Dokumenti su evidentirani s priloženim datotekama. Kliknite na zaposlenika za pregled.
