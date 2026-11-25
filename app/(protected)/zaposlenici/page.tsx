@@ -63,6 +63,9 @@ const DOC_TYPES: Record<string, string> = {
 }
 
 const ZAP_STATUSES = ['Aktivan', 'U postupku', 'Na čekanju', 'Otkazan', 'Novi uvoz']
+/** Gumb "Popis za liječnički pregled" u traci za odabrane radnike — privremeno skriven (kod i Word predložak ostaju). Vrati na true za ponovni prikaz. */
+const PRIKAZI_POPIS_LIJECNICKI = false
+
 /** Statusi koje se može postaviti grupno (Novi uvoz postavlja samo uvoz dokumenata). */
 const STATUSI_ZA_PROMJENU = ['Aktivan', 'U postupku', 'Na čekanju', 'Otkazan']
 const DOC_STATUS_CONFIG: Record<string, { color: string; bg: string }> = {
@@ -411,8 +414,10 @@ export default function ZaposleniciPage() {
               </div>
             )}
           </div>
-          <button type="button" onClick={() => setPopisOtvoren(true)} className="btn-primary px-4 py-2 rounded-lg text-xs font-medium text-white"
-            style={{ background: '#2563EB' }}>📘 Popis za liječnički pregled</button>
+          {PRIKAZI_POPIS_LIJECNICKI && (
+            <button type="button" onClick={() => setPopisOtvoren(true)} className="btn-primary px-4 py-2 rounded-lg text-xs font-medium text-white"
+              style={{ background: '#2563EB' }}>📘 Popis za liječnički pregled</button>
+          )}
         </div>
       )}
       {popisOtvoren && <GenerirajPopis employeeIds={[...odabrani]} onClose={() => setPopisOtvoren(false)} />}
